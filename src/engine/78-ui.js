@@ -343,6 +343,23 @@ const UI = (() => {
     $('#orthoBtn').setAttribute('aria-pressed', String(state.snap.ortho));
   }
 
+  /* Menu « Exporter » : s'ouvre sous le bouton, se ferme au clic ailleurs, sur Échap ou après le choix d'un format. */
+  function bindExportMenu() {
+    const btn = $('#exportBtn'), pop = $('#exportPop');
+    const close = () => { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!pop.hidden) { close(); return; }
+      const r = btn.getBoundingClientRect();
+      pop.style.top = r.bottom + 6 + 'px'; pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 262)) + 'px';
+      pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
+      pop.querySelector('.dd-i').focus();
+    });
+    pop.addEventListener('click', close);
+    document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { close(); btn.focus(); e.stopPropagation(); } }, true);
+  }
+
   function init() {
     bindCmd();
     bindSections();
@@ -356,6 +373,7 @@ const UI = (() => {
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
+    bindExportMenu();
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());
     $('#pdf').addEventListener('click', () => PDF.dialog());

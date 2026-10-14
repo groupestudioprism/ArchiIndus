@@ -11,9 +11,13 @@
       <button id="new" class="btn" type="button" title="Nouveau projet">Nouveau</button>
       <button id="open" class="btn" type="button" title="Ouvrir un projet .archiindus.json">Ouvrir</button>
       <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
-      <button id="svg" class="btn" type="button" title="Exporter en SVG">SVG</button>
-      <button id="dxf" class="btn" type="button" title="Exporter en DXF">DXF</button>
-      <button id="pdf" class="btn" type="button" title="Exporter en PDF (feuille avec cartouche et nomenclature)">PDF</button>
+      <div class="dd"><button id="exportBtn" class="btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportPop" title="Exporter le dessin">Exporter <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div id="exportPop" class="dd-pop" role="menu" hidden>
+          <button id="pdf" class="dd-i" type="button" role="menuitem"><b>PDF</b><small>Feuille avec cartouche et nomenclature</small></button>
+          <button id="dxf" class="dd-i" type="button" role="menuitem"><b>DXF</b><small>Pour un logiciel de CAO</small></button>
+          <button id="svg" class="dd-i" type="button" role="menuitem"><b>SVG</b><small>Image vectorielle</small></button>
+        </div>
+      </div>
       <button id="bom" class="btn" type="button" title="Nomenclature : longueurs par diamètre et par calque">Nomenclature</button>
     </div>
     <button id="cloud" class="btn" type="button" title="Projets enregistrés sur votre compte Studio Prism">Cloud</button>
@@ -24,15 +28,20 @@
 
   <nav id="rail" aria-label="Outils">
     <button class="tool" type="button" data-tool="select" title="Sélection (V)">Sél.</button>
+    <div class="rail-sep" role="separator" aria-label="Dessin"><span>Dessin</span></div>
     <button class="tool" type="button" data-tool="line" title="Ligne (L)">Ligne</button>
     <button class="tool" type="button" data-tool="poly" title="Polyligne (P)">Poly.</button>
     <button class="tool" type="button" data-tool="rect" title="Rectangle (R)">Rect.</button>
     <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
+    <div class="rail-sep" role="separator" aria-label="Annotation"><span>Note</span></div>
     <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
     <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
+    <div class="rail-sep" role="separator" aria-label="Métier"><span>Métier</span></div>
     <button class="tool" type="button" data-tool="sym" title="Équipements et poteaux (E)">Équip.</button>
+    <div class="rail-sep" role="separator" aria-label="Modifier"><span>Modif.</span></div>
     <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
     <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
+    <div class="rail-sep" role="separator" aria-label="Vue"><span>Vue</span></div>
     <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
   </nav>
 

@@ -89,7 +89,7 @@ with sync_playwright() as p:
     pg.click('dialog >> text=Fermer'); pg.wait_for_timeout(100); ok(pg.locator('dialog[open]').count() == 0, 'fenêtre fermée')
 
     # --- SVG
-    with pg.expect_download() as d: pg.click('#svg')
+    with pg.expect_download() as d: pg.click('#exportBtn'); pg.click('#svg')
     sp = OUT + 'sortie.svg'; d.value.save_as(sp)
     root = ET.parse(sp).getroot(); ns = '{http://www.w3.org/2000/svg}'
     halos = [e for e in root.iter(ns + 'polyline') if e.get('data-dn')]
@@ -97,7 +97,7 @@ with sync_playwright() as p:
     ok(any('EP-01 · DN200' in (t.text or '') for t in root.iter(ns + 'text')), 'SVG : étiquette EP-01 · DN200')
 
     # --- DXF (structure + largeur de polyligne)
-    with pg.expect_download() as d: pg.click('#dxf')
+    with pg.expect_download() as d: pg.click('#exportBtn'); pg.click('#dxf')
     dp = OUT + 'sortie.dxf'; d.value.save_as(dp)
     L = open(dp, encoding='ascii', newline='').read().split('\r\n'); L = L[:-1] if L and L[-1] == '' else L
     pairs = list(zip(L[0::2], L[1::2]))
@@ -114,7 +114,7 @@ with sync_playwright() as p:
     ok(all(ord(ch) < 128 for ch in ''.join(L)), 'DXF : ASCII pur')
 
     # --- PDF
-    pg.click('#pdf'); pg.wait_for_selector('dialog[open]')
+    pg.click('#exportBtn'); pg.click('#pdf'); pg.wait_for_selector('dialog[open]')
     pg.fill('dialog input[aria-label="Client"]', 'Société Éxemple (test)'); pg.fill('dialog input[aria-label="Référence"]', 'AI-2026-001')
     with pg.expect_download() as d: pg.click('dialog >> text=Exporter le PDF')
     pp = OUT + 'sortie.pdf'; d.value.save_as(pp)

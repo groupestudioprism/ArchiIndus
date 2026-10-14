@@ -49,7 +49,16 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .pname:hover,.pname:focus{border-color:var(--line);background:var(--bg);outline:none}
 .saved{flex:0 0 auto;font-size:11.5px;color:var(--mut);white-space:nowrap}
 .saved.err{color:var(--danger);font-weight:600}
-.grp{display:flex;gap:6px;flex:0 0 auto}
+.grp{display:flex;gap:6px;flex:0 0 auto;align-items:center}
+.grp+.grp{padding-left:12px;border-left:1px solid var(--line)}
+.dd{position:relative}
+.dd .btn{display:inline-flex;align-items:center;gap:4px}
+.ic.sm{width:14px;height:14px}
+.dd-pop{position:fixed;z-index:70;min-width:250px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 36px rgb(7 27 85 / .22)}
+.dd-pop[hidden]{display:none}
+.dd-i{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);cursor:pointer;text-align:left;font:inherit}
+.dd-i:hover,.dd-i:focus-visible{background:var(--accent-soft);outline:none}
+.dd-i b{font-weight:700}.dd-i small{color:var(--mut);font-size:11.5px}
 
 .btn{font:inherit;font-weight:600;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
 .btn:hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent)}
@@ -60,6 +69,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 
 /* Outils */
 #rail{grid-area:rail;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto}
+.rail-sep{flex:0 0 auto;display:flex;align-items:center;gap:4px;margin:6px 0 0;color:var(--mut);font:600 9px var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+.rail-sep::before,.rail-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.rail-sep span{flex:0 0 auto}
 .tool{flex:0 0 40px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);font:600 11px var(--f-body);cursor:pointer;padding:0}
 .tool:hover{border-color:var(--accent)}
 .tool.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
@@ -437,9 +449,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
       <button id="new" class="btn" type="button" title="Nouveau projet">Nouveau</button>
       <button id="open" class="btn" type="button" title="Ouvrir un projet .archiindus.json">Ouvrir</button>
       <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
-      <button id="svg" class="btn" type="button" title="Exporter en SVG">SVG</button>
-      <button id="dxf" class="btn" type="button" title="Exporter en DXF">DXF</button>
-      <button id="pdf" class="btn" type="button" title="Exporter en PDF (feuille avec cartouche et nomenclature)">PDF</button>
+      <div class="dd"><button id="exportBtn" class="btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportPop" title="Exporter le dessin">Exporter <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div id="exportPop" class="dd-pop" role="menu" hidden>
+          <button id="pdf" class="dd-i" type="button" role="menuitem"><b>PDF</b><small>Feuille avec cartouche et nomenclature</small></button>
+          <button id="dxf" class="dd-i" type="button" role="menuitem"><b>DXF</b><small>Pour un logiciel de CAO</small></button>
+          <button id="svg" class="dd-i" type="button" role="menuitem"><b>SVG</b><small>Image vectorielle</small></button>
+        </div>
+      </div>
       <button id="bom" class="btn" type="button" title="Nomenclature : longueurs par diamètre et par calque">Nomenclature</button>
     </div>
     <button id="cloud" class="btn" type="button" title="Projets enregistrés sur votre compte Studio Prism">Cloud</button>
@@ -450,15 +466,20 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 
   <nav id="rail" aria-label="Outils">
     <button class="tool" type="button" data-tool="select" title="Sélection (V)">Sél.</button>
+    <div class="rail-sep" role="separator" aria-label="Dessin"><span>Dessin</span></div>
     <button class="tool" type="button" data-tool="line" title="Ligne (L)">Ligne</button>
     <button class="tool" type="button" data-tool="poly" title="Polyligne (P)">Poly.</button>
     <button class="tool" type="button" data-tool="rect" title="Rectangle (R)">Rect.</button>
     <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
+    <div class="rail-sep" role="separator" aria-label="Annotation"><span>Note</span></div>
     <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
     <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
+    <div class="rail-sep" role="separator" aria-label="Métier"><span>Métier</span></div>
     <button class="tool" type="button" data-tool="sym" title="Équipements et poteaux (E)">Équip.</button>
+    <div class="rail-sep" role="separator" aria-label="Modifier"><span>Modif.</span></div>
     <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
     <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
+    <div class="rail-sep" role="separator" aria-label="Vue"><span>Vue</span></div>
     <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
   </nav>
 
@@ -2961,6 +2982,23 @@ const UI = (() => {
     $('#orthoBtn').setAttribute('aria-pressed', String(state.snap.ortho));
   }
 
+  /* Menu « Exporter » : s'ouvre sous le bouton, se ferme au clic ailleurs, sur Échap ou après le choix d'un format. */
+  function bindExportMenu() {
+    const btn = $('#exportBtn'), pop = $('#exportPop');
+    const close = () => { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!pop.hidden) { close(); return; }
+      const r = btn.getBoundingClientRect();
+      pop.style.top = r.bottom + 6 + 'px'; pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 262)) + 'px';
+      pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
+      pop.querySelector('.dd-i').focus();
+    });
+    pop.addEventListener('click', close);
+    document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { close(); btn.focus(); e.stopPropagation(); } }, true);
+  }
+
   function init() {
     bindCmd();
     bindSections();
@@ -2974,6 +3012,7 @@ const UI = (() => {
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
+    bindExportMenu();
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());
     $('#pdf').addEventListener('click', () => PDF.dialog());

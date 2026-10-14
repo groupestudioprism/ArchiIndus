@@ -111,7 +111,7 @@ with sync_playwright() as p:
     pg.set_input_files('#file',bad); pg.wait_for_timeout(300); ok(n()==total and 'Ouverture impossible' in pg.inner_text('#msg'),f"import invalide refusé : {pg.inner_text('#msg')[:80]}")
     open(bad,'w').write('pas du json'); pg.set_input_files('#file',bad); pg.wait_for_timeout(300); ok('JSON' in pg.inner_text('#msg'),'JSON illisible refusé')
     # --- SVG
-    with pg.expect_download() as d: pg.click('#svg')
+    with pg.expect_download() as d: pg.click('#exportBtn'); pg.click('#svg')
     sp=OUT+'sortie.svg'; d.value.save_as(sp)
     try:
         root=ET.parse(sp).getroot(); ns='{http://www.w3.org/2000/svg}'
@@ -119,7 +119,7 @@ with sync_playwright() as p:
         ok(root.tag==ns+'svg' and cnt['circle']==2 and cnt['polygon']==1 and cnt['text']>=2 and cnt['line']>=3,f'SVG bien formé {cnt}')
     except Exception as e: ok(False,f'SVG mal formé : {e}')
     # --- DXF (contrôle de structure uniquement)
-    with pg.expect_download() as d: pg.click('#dxf')
+    with pg.expect_download() as d: pg.click('#exportBtn'); pg.click('#dxf')
     dp=OUT+'sortie.dxf'; d.value.save_as(dp)
     L=open(dp,encoding='ascii',newline='').read().split('\r\n'); L=L[:-1] if L and L[-1]=='' else L
     ok(len(L)%2==0,'DXF : nombre de lignes pair (paires code/valeur)')
