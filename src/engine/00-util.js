@@ -20,7 +20,7 @@ function el(tag, attrs = {}, ...kids) {
 const Dlg = {
   open(title, body, actions = []) {
     const dlg = el('dialog', { class: 'dlg', 'aria-label': title });
-    const close = el('button', { type: 'button', class: 'ib', 'aria-label': 'Fermer' }, '✕');
+    const close = el('button', { type: 'button', class: 'ibs', 'aria-label': 'Fermer' }, '✕');
     const foot = el('div', { class: 'dlg-f' });
     for (const a of actions) {
       const b = el('button', { type: 'button', class: 'btn' + (a.primary ? ' pri' : '') }, a.label);

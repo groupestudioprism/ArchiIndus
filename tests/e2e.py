@@ -19,6 +19,8 @@ def ok(cond,msg):
 def near(a,b,t=1e-3): return abs(a-b)<=t
 def pteq(p,q,t=1e-3): return near(p[0],q[0],t) and near(p[1],q[1],t)
 
+def fmenu(sel): pg.click('#fileBtn'); pg.click(sel)
+
 with sync_playwright() as p:
     b=p.chromium.launch()
     ctx=b.new_context(viewport={'width':1280,'height':760}, accept_downloads=True)
@@ -101,11 +103,11 @@ with sync_playwright() as p:
     pg.wait_for_timeout(800); ok(pg.inner_text('#saved').startswith('enregistré'),f"état d'enregistrement {pg.inner_text('#saved')}")
     pg.reload(); pg.wait_for_timeout(400); pg.click('#authSkip'); ok(n()==total,f'restauration après rechargement {n()} / {total}')
     # --- export / import JSON
-    with pg.expect_download() as d: pg.click('#save')
+    with pg.expect_download() as d: fmenu('#save')
     path=OUT+'sortie.archiindus.json'; d.value.save_as(path)
     saved=json.load(open(path)); ok(saved['schemaVersion']==1 and len(saved['objects'])==total,'JSON exporté cohérent')
-    pg.keyboard.press('Escape'); pg.click('#new'); ok(n()==0,'nouveau projet vide'); pg.keyboard.press('Control+z'); ok(n()==total,'annuler « nouveau » restaure le projet')
-    pg.click('#new'); pg.set_input_files('#file',path); pg.wait_for_timeout(300); ok(n()==total,f'import JSON {n()}')
+    pg.keyboard.press('Escape'); fmenu('#new'); ok(n()==0,'nouveau projet vide'); pg.keyboard.press('Control+z'); ok(n()==total,'annuler « nouveau » restaure le projet')
+    fmenu('#new'); pg.set_input_files('#file',path); pg.wait_for_timeout(300); ok(n()==total,f'import JSON {n()}')
     # import invalide
     bad=OUT+'mauvais.json'; open(bad,'w').write(json.dumps({'schemaVersion':1,'layers':[{'id':1,'name':'x'}],'objects':[{'type':'line','a':[0,0],'b':['a',1]}]}))
     pg.set_input_files('#file',bad); pg.wait_for_timeout(300); ok(n()==total and 'Ouverture impossible' in pg.inner_text('#msg'),f"import invalide refusé : {pg.inner_text('#msg')[:80]}")

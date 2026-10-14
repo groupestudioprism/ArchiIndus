@@ -14,6 +14,8 @@ def ok(cond, msg):
     global checks; checks += 1
     if not cond: fails.append(msg); print('ÉCHEC :', msg)
 
+def fmenu(sel): pg.click('#fileBtn'); pg.click(sel)
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     ctx = b.new_context(viewport={'width': 1400, 'height': 800}, accept_downloads=True)
@@ -34,7 +36,7 @@ with sync_playwright() as p:
 
     ok(fb_reqs == [], f'aucun chargement Firebase avant la connexion {fb_reqs}')
     ok(pg.is_visible('#auth') and 'Connexion à ARCHIINDUS' in pg.inner_text('#apCard'), 'page de connexion affichée au démarrage')
-    ok(pg.inner_text('#acct') == 'Compte', 'bouton Compte au départ')
+    ok(pg.get_attribute('#acct', 'aria-label') == 'Compte Studio Prism', 'bouton Compte au départ')
 
     # --- connexion
     pg.fill('#apCard input[aria-label="Email"]', 'alice@example.org'); pg.fill('#apCard input[aria-label="Mot de passe"]', 'mauvais1')
@@ -43,7 +45,7 @@ with sync_playwright() as p:
     pg.click('#apCard .ap-eye'); ok(pg.get_attribute('#apPw', 'type') == 'text', 'bouton Afficher le mot de passe')
     pg.fill('#apCard input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('#apCard button[type=submit]'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
     ok(not pg.is_visible('#auth') and S('Account.me().email') == 'alice@example.org', 'connexion réussie, page de connexion fermée, accueil affiché')
-    ok(pg.inner_text('#homeHello') == 'Bonjour Alice' and pg.inner_text('#acct') == 'Alice', f"accueil personnalisé {pg.inner_text('#homeHello')!r}")
+    ok(pg.inner_text('#homeHello') == 'Bonjour Alice' and 'Alice' in pg.get_attribute('#acct', 'aria-label'), f"accueil personnalisé {pg.inner_text('#homeHello')!r}")
     ok(S('window.__fb.cfg.projectId') == 'archivision-studioprism', f"projet Firebase utilisé : {S('window.__fb.cfg.projectId')}")
     ok(sorted(fb_reqs) == ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'], f'SDK chargé à la demande {fb_reqs}')
     ok(S('Account.access().level') == 'licensed', 'licence archiindus active détectée')
@@ -113,7 +115,7 @@ with sync_playwright() as p:
 
     # --- ouvrir un autre projet : annulable, plus de lien avec l'ancien
     pg.click('#homeBack'); ok(not pg.is_visible('#home'), 'retour au dessin')
-    pg.click('#new'); ok(S('Doc.get().objects.length') == 0 and S('Cloud.linked()') == '', 'nouveau projet : lien cloud rompu')
+    fmenu('#new'); ok(S('Doc.get().objects.length') == 0 and S('Cloud.linked()') == '', 'nouveau projet : lien cloud rompu')
     pg.evaluate("Doc.mutate(d=>{d.name='ne doit pas écraser'})"); pg.wait_for_timeout(3300)
     ok(S(f"window.__fb.docs['{ids[0]}'].name") == 'Réseau EU', 'le dessin non lié n\'est jamais écrit dans le cloud')
     pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
@@ -125,7 +127,7 @@ with sync_playwright() as p:
     ok(S(f"window.__fb.docs['{ids[0]}/content/main'].data").count('"type":"line"') == 2, 'le projet cloud n\'est pas écrasé par un annuler')
 
     # --- enregistrer le dessin actuel dans le cloud
-    pg.click('#new'); pg.evaluate("Doc.mutate(d=>{const o={type:'line',a:[0,0],b:[900,0]};o.id=d.nextId++;o.layer=3;d.objects.push(o)})")
+    fmenu('#new'); pg.evaluate("Doc.mutate(d=>{const o={type:'line',a:[0,0],b:[900,0]};o.id=d.nextId++;o.layer=3;d.objects.push(o)})")
     pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
     ok('sur cet appareil' in pg.inner_text('#homeBody'), 'bandeau : un dessin local peut être enregistré dans le cloud')
     pg.click('#homeSave'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Dessin local'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
@@ -161,7 +163,7 @@ with sync_playwright() as p:
 
     # --- déconnexion
     pg.click('#homeUser'); pg.click('#homeMenu >> text=Se déconnecter'); pg.wait_for_timeout(300)
-    ok(pg.is_visible('#auth') and not pg.is_visible('#home') and pg.inner_text('#acct') == 'Compte' and S('Account.me()') is None, 'déconnexion : retour à la page de connexion')
+    ok(pg.is_visible('#auth') and not pg.is_visible('#home') and pg.get_attribute('#acct', 'aria-label') == 'Compte Studio Prism' and S('Account.me()') is None, 'déconnexion : retour à la page de connexion')
     pg.reload(); pg.wait_for_timeout(500); ok(pg.is_visible('#auth') and S('Account.me()') is None, 'pas de session après déconnexion + rechargement')
     pg.click('#authSkip'); ok(not pg.is_visible('#auth'), 'continuer sans compte : éditeur local')
     pg.click('#cloud'); ok(pg.is_visible('#auth'), 'Cloud sans compte : ouvre la connexion')
@@ -177,7 +179,7 @@ with sync_playwright() as p:
     pg.check('#apCard input[type=checkbox]'); pg.click('#apCard button[type=submit]'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(400)
     prof = S("window.__fb.docs['users/' + window.__fb.users['nora@example.org'].uid]")
     ok(prof and prof['role'] == 'user' and prof['status'] == 'active' and prof['accountKind'] == 'individual' and prof['subscription'] == 'free' and prof['firstName'] == 'Nora' and 'termsAcceptedAt' in prof, f'profil Studio Prism par défaut {prof}')
-    ok(pg.inner_text('#acct') == 'Nora' and S('Account.access().level') == 'free', 'compte créé et connecté, offre gratuite')
+    ok('Nora' in pg.get_attribute('#acct', 'aria-label') and S('Account.access().level') == 'free', 'compte créé et connecté, offre gratuite')
     q = pg.inner_text('#homeQuota'); ok('10 Mo' in q and 'Gratuit' in q, f'quota gratuit 10 Mo : {q!r}')
     pg.click('#homeUser'); pg.click('#homeMenu >> text=Se déconnecter'); pg.wait_for_timeout(300)
     # email déjà utilisé

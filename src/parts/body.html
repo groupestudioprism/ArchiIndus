@@ -1,51 +1,52 @@
 <div id="app">
   <header id="top">
+    <button class="ib ghost" id="cloud" type="button" title="Accueil : mes projets et dossiers dans le cloud" aria-label="Accueil, mes projets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg></button>
     <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
     <input id="pname" class="pname" type="text" maxlength="80" aria-label="Nom du projet" value="Projet sans titre">
-    <span id="saved" class="saved">enregistré dans ce navigateur</span>
-    <div class="grp">
-      <button id="undo" class="btn" type="button" title="Annuler (Ctrl+Z)" disabled>Annuler</button>
-      <button id="redo" class="btn" type="button" title="Rétablir (Ctrl+Y)" disabled>Rétablir</button>
+    <span id="saved" class="cs">enregistré dans ce navigateur</span>
+    <nav class="modes" aria-label="Mode d'affichage"><button type="button" id="mode2d" data-mode="2d" aria-pressed="true">Plan</button><button type="button" id="mode3d" data-mode="3d" aria-pressed="false">3D</button></nav>
+    <div class="acts">
+      <button id="undo" class="ib" type="button" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5L4 9l4 4M4 9h11a5 5 0 0 1 0 10h-4"/></svg></button>
+      <button id="redo" class="ib" type="button" title="Rétablir (Ctrl+Y)" aria-label="Rétablir" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5l4 4-4 4M20 9H9a5 5 0 0 0 0 10h4"/></svg></button>
+      <button id="fileBtn" class="ib" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="fileMenu">Fichier</button>
+      <button id="bom" class="ib" type="button" title="Nomenclature : quantités par calque, réseau, équipement et structure"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM4 10h16M10 5v14"/></svg><span class="lb">Nomenclature</span></button>
+      <button id="exportBtn" class="ib primary" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportPop" title="Exporter le dessin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Exporter</span></button>
+      <button id="theme" class="ib" type="button" aria-label="Basculer le thème clair / sombre" title="Thème clair / sombre"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button>
+      <button id="acct" class="ib user" type="button" aria-haspopup="true" aria-label="Compte Studio Prism" title="Compte Studio Prism"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+      <button id="panelBtn" class="ib" type="button" aria-expanded="false" aria-controls="panel" aria-label="Ouvrir le panneau d'options" title="Panneau d'options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM14 5v14"/></svg></button>
     </div>
-    <div class="grp">
-      <button id="new" class="btn" type="button" title="Nouveau projet">Nouveau</button>
-      <button id="open" class="btn" type="button" title="Ouvrir un projet .archiindus.json">Ouvrir</button>
-      <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
-      <div class="dd"><button id="exportBtn" class="btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportPop" title="Exporter le dessin">Exporter <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-        <div id="exportPop" class="dd-pop" role="menu" hidden>
-          <button id="pdf" class="dd-i" type="button" role="menuitem"><b>PDF</b><small>Feuille avec cartouche et nomenclature</small></button>
-          <button id="dxf" class="dd-i" type="button" role="menuitem"><b>DXF</b><small>Pour un logiciel de CAO</small></button>
-          <button id="svg" class="dd-i" type="button" role="menuitem"><b>SVG</b><small>Image vectorielle</small></button>
-        </div>
-      </div>
-      <button id="bom" class="btn" type="button" title="Nomenclature : longueurs par diamètre et par calque">Nomenclature</button>
-    </div>
-    <button id="v3d" class="btn" type="button" title="Aperçu 3D en fil de fer des calques visibles">3D</button>
-    <button id="settings" class="btn" type="button" title="Paramètres du projet : nom, cartouche, informations">Projet</button>
-    <button id="cloud" class="btn" type="button" title="Projets enregistrés sur votre compte Studio Prism">Cloud</button>
-    <button id="acct" class="btn" type="button" title="Compte Studio Prism">Compte</button>
-    <button id="panelBtn" class="btn" type="button" aria-expanded="false" aria-controls="panel" title="Afficher ou masquer le panneau d'options">Options</button>
-    <button id="theme" class="btn" type="button" aria-label="Basculer le thème clair / sombre">Thème</button>
     <input id="file" type="file" accept=".json,application/json" hidden>
   </header>
+  <div class="menu" id="fileMenu" role="menu" hidden>
+    <button id="new" type="button" role="menuitem"><b>Nouveau projet</b><span>Page blanche (Ctrl+Z pour revenir)</span></button>
+    <button id="open" type="button" role="menuitem"><b>Importer un projet…</b><span>Fichier ARCHIINDUS .json</span></button>
+    <button id="save" type="button" role="menuitem"><b>Enregistrer sur l'appareil</b><span>Télécharger le projet (.archiindus.json)</span></button>
+    <hr>
+    <button id="settings" type="button" role="menuitem"><b>Paramètres du projet</b><span>Nom, format de feuille, cartouche</span></button>
+  </div>
+  <div class="menu" id="exportPop" role="menu" hidden><div class="lbl">Exporter</div>
+    <button id="pdf" type="button" role="menuitem"><b>PDF</b><span>Feuille avec cartouche et nomenclature</span></button>
+    <button id="dxf" type="button" role="menuitem"><b>DXF</b><span>Pour un logiciel de CAO</span></button>
+    <button id="svg" type="button" role="menuitem"><b>SVG</b><span>Image vectorielle</span></button>
+    <button id="csv" type="button" role="menuitem"><b>Nomenclature (.csv)</b><span>Tableaux pour Excel (séparateur « ; »)</span></button>
+  </div>
 
-  <nav id="rail" aria-label="Outils">
-    <button class="tool" type="button" data-tool="select" title="Sélection (V)">Sél.</button>
-    <div class="rail-sep" role="separator" aria-label="Dessin"><span>Dessin</span></div>
-    <button class="tool" type="button" data-tool="line" title="Ligne (L)">Ligne</button>
-    <button class="tool" type="button" data-tool="poly" title="Polyligne (P)">Poly.</button>
-    <button class="tool" type="button" data-tool="rect" title="Rectangle (R)">Rect.</button>
-    <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
-    <div class="rail-sep" role="separator" aria-label="Annotation"><span>Note</span></div>
-    <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
-    <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
-    <div class="rail-sep" role="separator" aria-label="Métier"><span>Métier</span></div>
-    <button class="tool" type="button" data-tool="sym" title="Équipements et poteaux (E)">Équip.</button>
-    <div class="rail-sep" role="separator" aria-label="Modifier"><span>Modif.</span></div>
-    <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
-    <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
-    <div class="rail-sep" role="separator" aria-label="Vue"><span>Vue</span></div>
-    <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
+  <nav id="rail" aria-label="Outils" role="toolbar">
+    <button class="tool" type="button" data-tool="select" aria-pressed="false" title="Sélection (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l13 8-6 1.5L9 19z"/></svg><span>Sélection</span><kbd>V</kbd></button>
+    <button class="tool" type="button" data-tool="move" aria-pressed="false" title="Déplacer (M)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span>Déplacer</span><kbd>M</kbd></button>
+    <button class="tool" type="button" data-tool="copy" aria-pressed="false" title="Copier (K)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h12v12H8zM4 16V4h12"/></svg><span>Copier</span><kbd>K</kbd></button>
+    <hr>
+    <button class="tool" type="button" data-tool="line" aria-pressed="false" title="Ligne (L)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L19 5M4 20h2M18 4h2"/></svg><span>Ligne</span><kbd>L</kbd></button>
+    <button class="tool" type="button" data-tool="poly" aria-pressed="false" title="Polyligne (P)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18l5-9 5 6 6-10"/></svg><span>Polyligne</span><kbd>P</kbd></button>
+    <button class="tool" type="button" data-tool="rect" aria-pressed="false" title="Rectangle (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/></svg><span>Rectangle</span><kbd>R</kbd></button>
+    <button class="tool" type="button" data-tool="circle" aria-pressed="false" title="Cercle (C)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/></svg><span>Cercle</span><kbd>C</kbd></button>
+    <hr>
+    <button class="tool" type="button" data-tool="dim" aria-pressed="false" title="Cote (D)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8v8M20 8v8M4 12h16M7 10l-3 2 3 2M17 10l3 2-3 2"/></svg><span>Cote</span><kbd>D</kbd></button>
+    <button class="tool" type="button" data-tool="text" aria-pressed="false" title="Texte (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M12 6v13M9 19h6"/></svg><span>Texte</span><kbd>T</kbd></button>
+    <hr>
+    <button class="tool" type="button" data-tool="sym" aria-pressed="false" title="Équipements et poteaux (E)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM10 8.5l5 3.5-5 3.5z"/></svg><span>Équipement</span><kbd>E</kbd></button>
+    <hr>
+    <button class="tool" type="button" data-tool="pan" aria-pressed="false" title="Main : déplacer la vue (H)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V6a1.5 1.5 0 0 1 3 0v5M10 11V4.5a1.5 1.5 0 0 1 3 0V11M13 11V5.5a1.5 1.5 0 0 1 3 0V13M16 9a1.5 1.5 0 0 1 3 0v5a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.5-1.5L7 14"/></svg><span>Main</span><kbd>H</kbd></button>
   </nav>
 
   <main id="stage">
@@ -118,8 +119,8 @@
 
   <footer id="status">
     <span id="coords">x : 0 mm · y : 0 mm</span>
-    <button id="snapBtn" class="chip" type="button" aria-pressed="true">Accroches : oui</button>
-    <button id="orthoBtn" class="chip" type="button" aria-pressed="false">Ortho : non</button>
+    <button id="snapBtn" class="chip" type="button" aria-pressed="true">Accroches</button>
+    <button id="orthoBtn" class="chip" type="button" aria-pressed="false">Ortho</button>
     <button id="fitBtn" class="chip" type="button">Tout voir</button>
     <span id="msg" role="status" aria-live="polite"></span>
     <span id="zoom">1 m = 100 px</span>

@@ -14,6 +14,8 @@ def ok(cond, msg):
     global checks; checks += 1
     if not cond: fails.append(msg); print('ÉCHEC :', msg)
 
+def fmenu(sel): pg.click('#fileBtn'); pg.click(sel)
+
 with sync_playwright() as p:
     b = p.chromium.launch()
     ctx = b.new_context(viewport={'width': 1400, 'height': 820}, accept_downloads=True)
@@ -140,7 +142,7 @@ with sync_playwright() as p:
     ok(any(abs(s['b'][2] - s['a'][2] - 3000) < 1e-6 for s in walls), 'mur 3D extrudé de 3 m par défaut')
     p0 = pg.evaluate("View3D.project([1000,0,0],0,0)"); p1 = pg.evaluate("View3D.project([0,0,1000],0,0)")
     ok(abs(p0[0] - 1000) < 1e-6 and abs(p1[1] + 1000) < 1e-6, 'projection : X vers la droite, Z vers le haut')
-    pg.click('#v3d'); pg.wait_for_selector('dialog canvas.v3d')
+    pg.click('#mode3d'); pg.wait_for_selector('dialog canvas.v3d')
     ok(pg.locator('dialog canvas.v3d').count() == 1, 'fenêtre aperçu 3D ouverte')
     cb = pg.locator('dialog canvas.v3d').bounding_box(); pg.mouse.move(cb['x'] + 200, cb['y'] + 200); pg.mouse.down(); pg.mouse.move(cb['x'] + 260, cb['y'] + 230); pg.mouse.up()
     pg.screenshot(path=OUT + 'v3d.png')
@@ -160,7 +162,7 @@ with sync_playwright() as p:
     pg.set_viewport_size({'width': 1400, 'height': 820}); pg.wait_for_timeout(200)
     ok(pg.is_visible('#panel') and not pg.is_visible('#panelBtn'), 'ordinateur : panneau fixe, bouton Options masqué')
     # --- paramètres du projet
-    pg.click('#settings'); pg.wait_for_selector('dialog[open]')
+    fmenu('#settings'); pg.wait_for_selector('dialog[open]')
     pg.fill('dialog input[aria-label="Client"]', 'ACME'); pg.fill('dialog input[aria-label="Nom du projet"]', 'Usine test')
     pg.click('dialog .dlg-f .btn.pri'); pg.wait_for_timeout(150)
     ok(pg.evaluate('Doc.get().sheet.client') == 'ACME' and pg.evaluate('Doc.get().name') == 'Usine test' and pg.input_value('#pname') == 'Usine test', 'paramètres du projet enregistrés (cartouche, nom)')
@@ -169,7 +171,7 @@ with sync_playwright() as p:
     pg.click('#exportBtn'); ok(pg.is_visible('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'true', 'menu Exporter ouvert')
     pg.keyboard.press('Escape'); ok(pg.is_hidden('#exportPop'), 'Échap ferme le menu Exporter')
     pg.click('#exportBtn'); pg.click('#panel'); ok(pg.is_hidden('#exportPop'), 'clic ailleurs ferme le menu Exporter')
-    ok(pg.locator('#rail .rail-sep').count() == 5, "familles d'outils séparées dans la barre latérale")
+    ok(pg.locator('#rail hr').count() == 4, "familles d'outils séparées dans la barre latérale")
     # --- exports
     d = lambda sel: (lambda dl: (dl.value.save_as(OUT + dl.value.suggested_filename), OUT + dl.value.suggested_filename)[1])
     with pg.expect_download() as dl: pg.click('#exportBtn'); pg.click('#svg')
@@ -205,7 +207,7 @@ with sync_playwright() as p:
     ok('Équipements et poteaux' in c and 'Structures (murs et poutres)' in c, 'CSV : nouvelles tables')
 
     # --- sauvegarde / import et validation
-    with pg.expect_download() as dl: pg.click('#save')
+    with pg.expect_download() as dl: fmenu('#save')
     sj = OUT + 'e.json'; dl.value.save_as(sj); base = json.load(open(sj))
     ok(any(o['type'] == 'sym' for o in base['objects']) and any('st' in o for o in base['objects']), 'JSON : sym et st sauvegardés')
     L = base['layers'][0]['id']

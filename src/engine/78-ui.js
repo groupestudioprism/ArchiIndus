@@ -38,7 +38,7 @@ const UI = (() => {
     return s;
   }
   function toggleBtn(on, names, label, title, run) {
-    const b = el('button', { type: 'button', class: 'ib tg' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': label, title });
+    const b = el('button', { type: 'button', class: 'ibs tg' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': label, title });
     b.append(icon(on ? names[0] : names[1]));
     b.addEventListener('click', (e) => { e.stopPropagation(); run(); });
     return b;
@@ -68,7 +68,7 @@ const UI = (() => {
       const vis = toggleBtn(l.visible, ['eye', 'eyeOff'], `Visible : ${l.name}`, l.visible ? 'Masquer le calque' : 'Afficher le calque', () => Doc.mutate((dd) => { const x = dd.layers.find((y) => y.id === id); x.visible = !x.visible; }));
       const lock = toggleBtn(l.locked, ['lock', 'unlock'], `Verrouillé : ${l.name}`, l.locked ? 'Déverrouiller (objets modifiables)' : 'Verrouiller (objets non modifiables)', () => Doc.mutate((dd) => { const x = dd.layers.find((y) => y.id === id); x.locked = !x.locked; }));
       lock.classList.add('lk');
-      const del = el('button', { type: 'button', class: 'ib del', title: n ? 'Calque non vide : impossible à supprimer' : 'Supprimer le calque', 'aria-label': `Supprimer le calque ${l.name}`, disabled: n > 0 || d.layers.length <= 1 });
+      const del = el('button', { type: 'button', class: 'ibs del', title: n ? 'Calque non vide : impossible à supprimer' : 'Supprimer le calque', 'aria-label': `Supprimer le calque ${l.name}`, disabled: n > 0 || d.layers.length <= 1 });
       del.append(icon('trash'));
       del.addEventListener('click', () => Doc.mutate((dd) => {
         dd.layers = dd.layers.filter((x) => x.id !== id);
@@ -387,9 +387,9 @@ const UI = (() => {
   }
 
   function refreshModes() {
-    $('#snapBtn').textContent = 'Accroches : ' + (state.snap.on ? 'oui' : 'non');
+    $('#snapBtn').title = 'Accroches aux objets et à la grille (F3) : ' + (state.snap.on ? 'activées' : 'désactivées');
     $('#snapBtn').setAttribute('aria-pressed', String(state.snap.on));
-    $('#orthoBtn').textContent = 'Ortho : ' + (state.snap.ortho ? 'oui' : 'non');
+    $('#orthoBtn').title = 'Mode ortho (F8) : ' + (state.snap.ortho ? 'activé' : 'désactivé');
     $('#orthoBtn').setAttribute('aria-pressed', String(state.snap.ortho));
   }
 
@@ -411,17 +411,21 @@ const UI = (() => {
     } }]);
   }
 
-  /* Menu « Exporter » : s'ouvre sous le bouton, se ferme au clic ailleurs, sur Échap ou après le choix d'un format. */
-  function bindExportMenu() {
-    const btn = $('#exportBtn'), pop = $('#exportPop');
+  /* Menus déroulants de la barre haute (Fichier, Exporter) : sous le bouton, fermés par Échap, clic ailleurs ou choix d'une entrée. */
+  function bindMenu(btnSel, menuSel) {
+    const btn = $(btnSel), pop = $(menuSel);
     const close = () => { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!pop.hidden) { close(); return; }
+      const wasOpen = !pop.hidden;
+      document.querySelectorAll('#top ~ .menu[role="menu"]').forEach((m) => { m.hidden = true; });
+      document.querySelectorAll('#top [aria-haspopup]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+      if (wasOpen) return;
       const r = btn.getBoundingClientRect();
-      pop.style.top = r.bottom + 6 + 'px'; pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 262)) + 'px';
-      pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
-      pop.querySelector('.dd-i').focus();
+      pop.style.top = r.bottom + 6 + 'px'; pop.hidden = false;
+      pop.style.left = Math.max(8, Math.min(r.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+      btn.setAttribute('aria-expanded', 'true');
+      pop.querySelector('button').focus();
     });
     pop.addEventListener('click', close);
     document.addEventListener('click', (e) => { if (!pop.hidden && !pop.contains(e.target)) close(); });
@@ -441,8 +445,10 @@ const UI = (() => {
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
-    bindExportMenu();
-    $('#v3d').addEventListener('click', () => View3D.show());
+    $('#mode3d').addEventListener('click', () => View3D.show());
+    bindMenu('#fileBtn', '#fileMenu');
+    bindMenu('#exportBtn', '#exportPop');
+    $('#csv').addEventListener('click', () => BOM.exportCSV());
     $('#settings').addEventListener('click', projectDialog);
     $('#panelBtn').addEventListener('click', () => { const o = $('#app').classList.toggle('pn-open'); $('#panelBtn').setAttribute('aria-expanded', String(o)); });
     $('#svg').addEventListener('click', () => IO.exportSVG());
@@ -451,7 +457,8 @@ const UI = (() => {
     $('#acct').addEventListener('click', () => Account.open());
     $('#cloud').addEventListener('click', () => Home.open());
     Cloud.on(refreshChrome);
-    Account.on(() => { const m = Account.me(); $('#acct').textContent = m ? (m.firstName || 'Compte') : 'Compte'; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
+    const acctIcon = $('#acct').innerHTML;
+    Account.on(() => { const m = Account.me(); $('#acct').classList.toggle('on', !!m); $('#acct').setAttribute('aria-label', m ? `Compte de ${m.firstName || m.email}` : 'Compte Studio Prism'); if (m) $('#acct').textContent = (m.firstName || m.email || '?').trim().charAt(0).toUpperCase(); else $('#acct').innerHTML = acctIcon; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
     $('#bom').addEventListener('click', () => BOM.show());
     $('#addLayer').addEventListener('click', addLayer);
     $('#snapBtn').addEventListener('click', () => Tools.toggleSnap());
