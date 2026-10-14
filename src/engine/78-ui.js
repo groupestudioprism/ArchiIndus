@@ -492,14 +492,20 @@ const UI = (() => {
     bindTrade();
     applyTrade();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
-    $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
+    const toggleTheme = () => { Theme.toggle(); Canvas2D.draw(); if (View3D.isOn()) View3D.refresh(); };
+    $('#theme').addEventListener('click', toggleTheme);
+    $('#themeMenu').addEventListener('click', toggleTheme);
+    $('#bomMenu').addEventListener('click', () => BOM.show());
     $('#undo').addEventListener('click', () => Doc.undo());
     $('#redo').addEventListener('click', () => Doc.redo());
     $('#new').addEventListener('click', () => { Cloud.forget(); Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
-    $('#mode3d').addEventListener('click', () => View3D.show());
+    document.querySelectorAll('#top .modes [data-mode]').forEach((b) => b.addEventListener('click', () => View3D.setMode(b.dataset.mode === '3d')));
+    $('#glb').addEventListener('click', () => View3D.exportGLB());
+    document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.addEventListener('click', () => View3D.setStyle(b.dataset.style)));
+    document.querySelectorAll('#v3dCams [data-cam]').forEach((b) => b.addEventListener('click', () => window.Scene3D && window.Scene3D.view(b.dataset.cam)));
     bindMenu('#fileBtn', '#fileMenu');
     bindMenu('#exportBtn', '#exportPop');
     $('#csv').addEventListener('click', () => BOM.exportCSV());
@@ -524,7 +530,7 @@ const UI = (() => {
     });
     $('#pname').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
-    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); });
+    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); if (View3D.isOn()) View3D.refresh(); });
     Tools.onChange((reason) => {
       if (reason === 'selection') renderProps();
       else if (reason === 'tool') { refreshTools(); renderLib(); }

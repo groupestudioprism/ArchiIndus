@@ -23,12 +23,15 @@
     <button id="save" type="button" role="menuitem"><b>Enregistrer sur l'appareil</b><span>Télécharger le projet (.archiindus.json)</span></button>
     <hr>
     <button id="settings" type="button" role="menuitem"><b>Paramètres du projet</b><span>Nom, format de feuille, cartouche</span></button>
+    <button id="themeMenu" type="button" role="menuitem"><b>Thème clair / sombre</b><span>Change l'apparence sur cet appareil</span></button>
+    <button id="bomMenu" type="button" role="menuitem"><b>Nomenclature</b><span>Quantités par calque, réseau, équipement</span></button>
   </div>
   <div class="menu" id="exportPop" role="menu" hidden><div class="lbl">Exporter</div>
     <button id="pdf" type="button" role="menuitem"><b>PDF</b><span>Feuille avec cartouche et nomenclature</span></button>
     <button id="dxf" type="button" role="menuitem"><b>DXF</b><span>Pour un logiciel de CAO</span></button>
     <button id="svg" type="button" role="menuitem"><b>SVG</b><span>Image vectorielle</span></button>
     <button id="csv" type="button" role="menuitem"><b>Nomenclature (.csv)</b><span>Tableaux pour Excel (séparateur « ; »)</span></button>
+    <button id="glb" type="button" role="menuitem"><b>Modèle 3D (.glb)</b><span>Pour Archi Vision et les visionneuses 3D</span></button>
   </div>
 
   <nav id="rail" aria-label="Outils" role="toolbar">
@@ -51,6 +54,14 @@
 
   <main id="stage">
     <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
+    <div id="v3dView" hidden>
+      <canvas id="cv3d" aria-label="Vue 3D : glisser pour tourner, molette pour zoomer, clic droit ou Maj pour déplacer"></canvas>
+      <div class="vtools" role="toolbar" aria-label="Affichage 3D">
+        <div class="vgrp" id="v3dStyle"><button type="button" data-style="shaded" aria-pressed="true">Ombré</button><button type="button" data-style="wire" aria-pressed="false">Filaire</button><button type="button" data-style="xray" aria-pressed="false">Rayons X</button></div>
+        <div class="vgrp" id="v3dCams"><button type="button" data-cam="iso">ISO</button><button type="button" data-cam="top">Dessus</button><button type="button" data-cam="front">Face</button><button type="button" data-cam="right">Droite</button><button type="button" data-cam="iso" data-fit="1">Tout voir</button></div>
+      </div>
+      <div class="v3d-note" id="v3dNote" role="status"></div>
+    </div>
     <div id="hud"><label class="pill"><span>Métier</span><select id="tradeSel" aria-label="Corps de métier"></select></label></div>
     <div id="live" hidden></div>
     <input id="tbox" type="text" maxlength="500" placeholder="Texte" aria-label="Texte à placer" hidden>

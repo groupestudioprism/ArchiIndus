@@ -60,6 +60,60 @@ const View3D = (() => {
     return out;
   }
 
+
+  /* ---- Solides pour le moteur 3D (Three.js) : mm, plan XY, Z vers le haut ----
+     pipe {a,b,r}      réseau : cylindre de rayon DN/2 entre deux points 3D
+     prism {rings,z0,z1} bande de mur / poutre ou empreinte d'équipement extrudée (rings[0] contour, les suivants trous)
+     cyl {c,r,z0,z1}   empreinte circulaire extrudée
+     line {pts}        arêtes, éléments à plat
+     Hauteurs : mur h (propriété) ou 3000 ; poutre : hauteur nominale lue dans le nom du profilé (IPE 200 → 200 mm), sinon propriété h, sinon 200 ;
+     équipement : 0,6 × sa taille (cuve, ballon, coffret : plus haut), poteaux 3000, semelle 400. Ce sont des volumes de principe, pas des modèles de fabricants. */
+  const EQ_H = { cuve: 1.5, ballon: 1.2, coffret: 1.8, armoire: 1.6, regard: 0.2, chambre: 0.15, chambreRac: 0.15, candelabre: 0.3, semelle: 0, hydrant: 1.0 };
+  const area = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
+  const beamDepth = (o) => { const m = /(?:IPE|HEA|HEB|HEM|UPN|IPN)\s*(\d{2,3})/i.exec(o.st.prof || ''); return m ? +m[1] : (o.props && o.props.h) || 200; };
+
+  function solids() {
+    const out = [];
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      const col = l.color, pr = o.props || {};
+      if (o.net && (o.type === 'line' || o.type === 'poly')) { const sg = []; netSegs(o, col, sg); for (const s of sg) out.push({ k: 'pipe', a: s.a, b: s.b, r: o.net.dn / 2, col }); continue; }
+      if (o.st && (o.type === 'line' || o.type === 'poly')) {
+        const pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
+        const beam = o.st.kind === 'poutre';
+        const top = (typeof pr.z === 'number' ? pr.z : beam ? DEF_BEAM_Z / 1000 : 0) * 1000;
+        const bands = Sym.band(pts, closed, o.st.w).map((b) => b.pts);
+        const hh = beam ? beamDepth(o) : (pr.h || DEF_WALL_H);
+        const z0 = beam ? top - hh : top;
+        const rings = closed && bands.length === 2 ? (area(bands[0]) >= area(bands[1]) ? [bands[0], bands[1]] : [bands[1], bands[0]]) : bands;
+        out.push({ k: 'prism', rings, z0, z1: z0 + hh, col });
+        continue;
+      }
+      if (o.type === 'sym') {
+        const z0 = (typeof pr.z === 'number' ? pr.z : 0) * 1000;
+        const h = o.k === 'poteau' || o.k === 'poteauRond' ? COL_H : (o.k in EQ_H ? EQ_H[o.k] : 0.6) * o.s;
+        let base = null;
+        const edges = [];
+        for (const e of Sym.world(o)) {
+          if (!base && e.type === 'circle') base = { k: 'cyl', c: e.c, r: e.r, z0, z1: z0 + (h || 50), col };
+          else if (!base && e.type === 'poly' && e.closed && e.pts.length >= 3) base = { k: 'prism', rings: [e.pts], z0, z1: z0 + (h || 50), col };
+          else if (e.type === 'line') edges.push([[e.a[0], e.a[1], z0 + h], [e.b[0], e.b[1], z0 + h]]);
+          else if (e.type === 'poly') edges.push(e.pts.map((p) => [p[0], p[1], z0 + h]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], z0 + h]] : []));
+        }
+        if (base) out.push(base);
+        for (const pts of edges) out.push({ k: 'line', pts, col });
+        continue;
+      }
+      for (const e of Sym.expand(o)) {
+        if (e.type === 'line') out.push({ k: 'line', pts: [[e.a[0], e.a[1], 0], [e.b[0], e.b[1], 0]], col });
+        else if (e.type === 'poly') out.push({ k: 'line', pts: e.pts.map((p) => [p[0], p[1], 0]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], 0]] : []), col });
+        else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 37 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 18), e.c[1] + e.r * Math.sin(i * Math.PI / 18), 0]), col });
+      }
+    }
+    return out;
+  }
+
   /* Projection orthographique : lacet (autour de Z) puis tangage. Renvoie [x écran, y écran (vers le bas), profondeur]. */
   function project(p, yaw, pitch) {
     const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
@@ -112,5 +166,39 @@ const View3D = (() => {
     draw();
   }
 
-  return { model, project, show };
+
+  /* ---- Mode 3D de la fenêtre principale (Three.js) ; repli : aperçu fil de fer si le moteur n'est pas chargé ---- */
+  let on = false, style = 'shaded';
+  const isOn = () => on;
+  function note(t) { const n = document.getElementById('v3dNote'); if (n) n.textContent = t; }
+  function refresh() {
+    if (!on || !window.Scene3D) return;
+    const solidsNow = solids();
+    const info = window.Scene3D.show(document.getElementById('cv3d'), solidsNow, { style });
+    note(!solidsNow.length ? 'Rien à afficher : le dessin est vide ou tous les calques sont masqués.'
+      : `Vue 3D en lecture seule : modifiez le dessin en mode Plan. Volumes de principe (murs ${DEF_WALL_H / 1000} m, poutres selon le profilé, équipements à hauteur type), calques visibles uniquement.${info.capped ? ` Affichage limité aux ${info.max} premiers éléments.` : ''}`);
+  }
+  function setMode(want) {
+    if (want && !window.Scene3D) { Status.msg('Moteur 3D indisponible (Three.js non chargé, connexion nécessaire) : aperçu en fil de fer.', 7000); show(); return false; }
+    on = !!want;
+    document.getElementById('app').classList.toggle('m3d', on);
+    document.getElementById('v3dView').hidden = !on;
+    document.querySelectorAll('#top .modes [data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (on ? '3d' : '2d'))));
+    if (on) { Tools.setTool('select'); refresh(); window.Scene3D.resume(); } else { if (window.Scene3D) window.Scene3D.hide(); Canvas2D.requestDraw(); }
+    return true;
+  }
+  function setStyle(st) { style = st; document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === st))); if (on && window.Scene3D) window.Scene3D.setStyle(st, solids()); }
+  async function exportGLB() {
+    if (!window.Scene3D) { Status.msg('Export 3D indisponible : Three.js n\'a pas pu se charger (connexion nécessaire).', 7000); return; }
+    const s = solids();
+    if (!s.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    try {
+      window.Scene3D.show(document.getElementById('cv3d'), s, { style: 'shaded' });
+      const buf = await window.Scene3D.exportGLB();
+      IO.download(`${IO.safeName(Doc.get().name)}.glb`, new Uint8Array(buf), 'model/gltf-binary');
+      Status.msg('Modèle 3D envoyé vers vos téléchargements (.glb, mètres, Y vers le haut).');
+    } catch (e) { Status.msg('Export 3D impossible : ' + (e && e.message ? e.message : e), 8000); }
+  }
+
+  return { model, solids, project, show, setMode, setStyle, refresh, isOn, exportGLB };
 })();

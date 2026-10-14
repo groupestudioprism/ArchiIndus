@@ -195,3 +195,18 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .ly-other{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
 .ly-other summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--mut);padding:4px 0}
 .seg{display:flex}.seg button{flex:1}
+
+#v3dView{position:absolute;inset:0;background:var(--vp)}
+#cv3d{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+#v3dView .vtools{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.vgrp{display:flex;gap:2px;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:11px;padding:3px;box-shadow:var(--shadow-s)}
+.vgrp button{border:0;background:transparent;border-radius:8px;height:30px;padding:0 10px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer}
+.vgrp button:hover{background:var(--chip);color:var(--ink)}
+.vgrp button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.v3d-note{position:absolute;left:12px;bottom:12px;max-width:min(560px,calc(100% - 24px));font-size:11.5px;line-height:1.4;color:var(--mut);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+#app.m3d #cv,#app.m3d #hint,#app.m3d #hud,#app.m3d #live,#app.m3d #cmd,#app.m3d #tbox{display:none!important}
+#app.m3d #rail .tool:not([data-tool="select"]){opacity:.35;pointer-events:none}
+
+@media (max-width:760px){ .brand small{display:none} .pname{flex:0 1 120px} }
+@media (max-width:560px){ #top{gap:6px;padding:6px 8px} .brand,#pname,#redo,#bom,#theme{display:none} #exportBtn span{display:none} .modes{margin-left:auto} .modes button{padding:7px 12px} .acts{margin-left:6px} }
+@media (max-width:560px){ #top .ib{min-width:34px;height:34px;padding:0 8px} #top .ib.user{width:34px;padding:0} .acts{gap:4px} .modes{padding:2px} .modes button{padding:6px 10px} }

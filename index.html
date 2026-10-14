@@ -226,6 +226,21 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .ly-other{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
 .ly-other summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--mut);padding:4px 0}
 .seg{display:flex}.seg button{flex:1}
+
+#v3dView{position:absolute;inset:0;background:var(--vp)}
+#cv3d{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+#v3dView .vtools{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.vgrp{display:flex;gap:2px;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:11px;padding:3px;box-shadow:var(--shadow-s)}
+.vgrp button{border:0;background:transparent;border-radius:8px;height:30px;padding:0 10px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer}
+.vgrp button:hover{background:var(--chip);color:var(--ink)}
+.vgrp button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.v3d-note{position:absolute;left:12px;bottom:12px;max-width:min(560px,calc(100% - 24px));font-size:11.5px;line-height:1.4;color:var(--mut);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+#app.m3d #cv,#app.m3d #hint,#app.m3d #hud,#app.m3d #live,#app.m3d #cmd,#app.m3d #tbox{display:none!important}
+#app.m3d #rail .tool:not([data-tool="select"]){opacity:.35;pointer-events:none}
+
+@media (max-width:760px){ .brand small{display:none} .pname{flex:0 1 120px} }
+@media (max-width:560px){ #top{gap:6px;padding:6px 8px} .brand,#pname,#redo,#bom,#theme{display:none} #exportBtn span{display:none} .modes{margin-left:auto} .modes button{padding:7px 12px} .acts{margin-left:6px} }
+@media (max-width:560px){ #top .ib{min-width:34px;height:34px;padding:0 8px} #top .ib.user{width:34px;padding:0} .acts{gap:4px} .modes{padding:2px} .modes button{padding:6px 10px} }
 /* Page de connexion et accueil : reprend auth.css et home.css d'ArchiPlan (relevé le 2026-10-14), adapté aux jetons ArchiIndus. */
 /* ===== Compte Studio Prism : connexion, fiche client, code PIN — écran volontairement clair, comme le logo ===== */
 #auth[hidden]{display:none!important}
@@ -497,12 +512,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
     <button id="save" type="button" role="menuitem"><b>Enregistrer sur l'appareil</b><span>Télécharger le projet (.archiindus.json)</span></button>
     <hr>
     <button id="settings" type="button" role="menuitem"><b>Paramètres du projet</b><span>Nom, format de feuille, cartouche</span></button>
+    <button id="themeMenu" type="button" role="menuitem"><b>Thème clair / sombre</b><span>Change l'apparence sur cet appareil</span></button>
+    <button id="bomMenu" type="button" role="menuitem"><b>Nomenclature</b><span>Quantités par calque, réseau, équipement</span></button>
   </div>
   <div class="menu" id="exportPop" role="menu" hidden><div class="lbl">Exporter</div>
     <button id="pdf" type="button" role="menuitem"><b>PDF</b><span>Feuille avec cartouche et nomenclature</span></button>
     <button id="dxf" type="button" role="menuitem"><b>DXF</b><span>Pour un logiciel de CAO</span></button>
     <button id="svg" type="button" role="menuitem"><b>SVG</b><span>Image vectorielle</span></button>
     <button id="csv" type="button" role="menuitem"><b>Nomenclature (.csv)</b><span>Tableaux pour Excel (séparateur « ; »)</span></button>
+    <button id="glb" type="button" role="menuitem"><b>Modèle 3D (.glb)</b><span>Pour Archi Vision et les visionneuses 3D</span></button>
   </div>
 
   <nav id="rail" aria-label="Outils" role="toolbar">
@@ -525,6 +543,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 
   <main id="stage">
     <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
+    <div id="v3dView" hidden>
+      <canvas id="cv3d" aria-label="Vue 3D : glisser pour tourner, molette pour zoomer, clic droit ou Maj pour déplacer"></canvas>
+      <div class="vtools" role="toolbar" aria-label="Affichage 3D">
+        <div class="vgrp" id="v3dStyle"><button type="button" data-style="shaded" aria-pressed="true">Ombré</button><button type="button" data-style="wire" aria-pressed="false">Filaire</button><button type="button" data-style="xray" aria-pressed="false">Rayons X</button></div>
+        <div class="vgrp" id="v3dCams"><button type="button" data-cam="iso">ISO</button><button type="button" data-cam="top">Dessus</button><button type="button" data-cam="front">Face</button><button type="button" data-cam="right">Droite</button><button type="button" data-cam="iso" data-fit="1">Tout voir</button></div>
+      </div>
+      <div class="v3d-note" id="v3dNote" role="status"></div>
+    </div>
     <div id="hud"><label class="pill"><span>Métier</span><select id="tradeSel" aria-label="Corps de métier"></select></label></div>
     <div id="live" hidden></div>
     <input id="tbox" type="text" maxlength="500" placeholder="Texte" aria-label="Texte à placer" hidden>
@@ -2854,6 +2880,60 @@ const View3D = (() => {
     return out;
   }
 
+
+  /* ---- Solides pour le moteur 3D (Three.js) : mm, plan XY, Z vers le haut ----
+     pipe {a,b,r}      réseau : cylindre de rayon DN/2 entre deux points 3D
+     prism {rings,z0,z1} bande de mur / poutre ou empreinte d'équipement extrudée (rings[0] contour, les suivants trous)
+     cyl {c,r,z0,z1}   empreinte circulaire extrudée
+     line {pts}        arêtes, éléments à plat
+     Hauteurs : mur h (propriété) ou 3000 ; poutre : hauteur nominale lue dans le nom du profilé (IPE 200 → 200 mm), sinon propriété h, sinon 200 ;
+     équipement : 0,6 × sa taille (cuve, ballon, coffret : plus haut), poteaux 3000, semelle 400. Ce sont des volumes de principe, pas des modèles de fabricants. */
+  const EQ_H = { cuve: 1.5, ballon: 1.2, coffret: 1.8, armoire: 1.6, regard: 0.2, chambre: 0.15, chambreRac: 0.15, candelabre: 0.3, semelle: 0, hydrant: 1.0 };
+  const area = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
+  const beamDepth = (o) => { const m = /(?:IPE|HEA|HEB|HEM|UPN|IPN)\s*(\d{2,3})/i.exec(o.st.prof || ''); return m ? +m[1] : (o.props && o.props.h) || 200; };
+
+  function solids() {
+    const out = [];
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      const col = l.color, pr = o.props || {};
+      if (o.net && (o.type === 'line' || o.type === 'poly')) { const sg = []; netSegs(o, col, sg); for (const s of sg) out.push({ k: 'pipe', a: s.a, b: s.b, r: o.net.dn / 2, col }); continue; }
+      if (o.st && (o.type === 'line' || o.type === 'poly')) {
+        const pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
+        const beam = o.st.kind === 'poutre';
+        const top = (typeof pr.z === 'number' ? pr.z : beam ? DEF_BEAM_Z / 1000 : 0) * 1000;
+        const bands = Sym.band(pts, closed, o.st.w).map((b) => b.pts);
+        const hh = beam ? beamDepth(o) : (pr.h || DEF_WALL_H);
+        const z0 = beam ? top - hh : top;
+        const rings = closed && bands.length === 2 ? (area(bands[0]) >= area(bands[1]) ? [bands[0], bands[1]] : [bands[1], bands[0]]) : bands;
+        out.push({ k: 'prism', rings, z0, z1: z0 + hh, col });
+        continue;
+      }
+      if (o.type === 'sym') {
+        const z0 = (typeof pr.z === 'number' ? pr.z : 0) * 1000;
+        const h = o.k === 'poteau' || o.k === 'poteauRond' ? COL_H : (o.k in EQ_H ? EQ_H[o.k] : 0.6) * o.s;
+        let base = null;
+        const edges = [];
+        for (const e of Sym.world(o)) {
+          if (!base && e.type === 'circle') base = { k: 'cyl', c: e.c, r: e.r, z0, z1: z0 + (h || 50), col };
+          else if (!base && e.type === 'poly' && e.closed && e.pts.length >= 3) base = { k: 'prism', rings: [e.pts], z0, z1: z0 + (h || 50), col };
+          else if (e.type === 'line') edges.push([[e.a[0], e.a[1], z0 + h], [e.b[0], e.b[1], z0 + h]]);
+          else if (e.type === 'poly') edges.push(e.pts.map((p) => [p[0], p[1], z0 + h]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], z0 + h]] : []));
+        }
+        if (base) out.push(base);
+        for (const pts of edges) out.push({ k: 'line', pts, col });
+        continue;
+      }
+      for (const e of Sym.expand(o)) {
+        if (e.type === 'line') out.push({ k: 'line', pts: [[e.a[0], e.a[1], 0], [e.b[0], e.b[1], 0]], col });
+        else if (e.type === 'poly') out.push({ k: 'line', pts: e.pts.map((p) => [p[0], p[1], 0]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], 0]] : []), col });
+        else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 37 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 18), e.c[1] + e.r * Math.sin(i * Math.PI / 18), 0]), col });
+      }
+    }
+    return out;
+  }
+
   /* Projection orthographique : lacet (autour de Z) puis tangage. Renvoie [x écran, y écran (vers le bas), profondeur]. */
   function project(p, yaw, pitch) {
     const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
@@ -2906,7 +2986,41 @@ const View3D = (() => {
     draw();
   }
 
-  return { model, project, show };
+
+  /* ---- Mode 3D de la fenêtre principale (Three.js) ; repli : aperçu fil de fer si le moteur n'est pas chargé ---- */
+  let on = false, style = 'shaded';
+  const isOn = () => on;
+  function note(t) { const n = document.getElementById('v3dNote'); if (n) n.textContent = t; }
+  function refresh() {
+    if (!on || !window.Scene3D) return;
+    const solidsNow = solids();
+    const info = window.Scene3D.show(document.getElementById('cv3d'), solidsNow, { style });
+    note(!solidsNow.length ? 'Rien à afficher : le dessin est vide ou tous les calques sont masqués.'
+      : `Vue 3D en lecture seule : modifiez le dessin en mode Plan. Volumes de principe (murs ${DEF_WALL_H / 1000} m, poutres selon le profilé, équipements à hauteur type), calques visibles uniquement.${info.capped ? ` Affichage limité aux ${info.max} premiers éléments.` : ''}`);
+  }
+  function setMode(want) {
+    if (want && !window.Scene3D) { Status.msg('Moteur 3D indisponible (Three.js non chargé, connexion nécessaire) : aperçu en fil de fer.', 7000); show(); return false; }
+    on = !!want;
+    document.getElementById('app').classList.toggle('m3d', on);
+    document.getElementById('v3dView').hidden = !on;
+    document.querySelectorAll('#top .modes [data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (on ? '3d' : '2d'))));
+    if (on) { Tools.setTool('select'); refresh(); window.Scene3D.resume(); } else { if (window.Scene3D) window.Scene3D.hide(); Canvas2D.requestDraw(); }
+    return true;
+  }
+  function setStyle(st) { style = st; document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === st))); if (on && window.Scene3D) window.Scene3D.setStyle(st, solids()); }
+  async function exportGLB() {
+    if (!window.Scene3D) { Status.msg('Export 3D indisponible : Three.js n\'a pas pu se charger (connexion nécessaire).', 7000); return; }
+    const s = solids();
+    if (!s.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    try {
+      window.Scene3D.show(document.getElementById('cv3d'), s, { style: 'shaded' });
+      const buf = await window.Scene3D.exportGLB();
+      IO.download(`${IO.safeName(Doc.get().name)}.glb`, new Uint8Array(buf), 'model/gltf-binary');
+      Status.msg('Modèle 3D envoyé vers vos téléchargements (.glb, mètres, Y vers le haut).');
+    } catch (e) { Status.msg('Export 3D impossible : ' + (e && e.message ? e.message : e), 8000); }
+  }
+
+  return { model, solids, project, show, setMode, setStyle, refresh, isOn, exportGLB };
 })();
 
 /* ==== 78-ui.js ==== */
@@ -3404,14 +3518,20 @@ const UI = (() => {
     bindTrade();
     applyTrade();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
-    $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
+    const toggleTheme = () => { Theme.toggle(); Canvas2D.draw(); if (View3D.isOn()) View3D.refresh(); };
+    $('#theme').addEventListener('click', toggleTheme);
+    $('#themeMenu').addEventListener('click', toggleTheme);
+    $('#bomMenu').addEventListener('click', () => BOM.show());
     $('#undo').addEventListener('click', () => Doc.undo());
     $('#redo').addEventListener('click', () => Doc.redo());
     $('#new').addEventListener('click', () => { Cloud.forget(); Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
-    $('#mode3d').addEventListener('click', () => View3D.show());
+    document.querySelectorAll('#top .modes [data-mode]').forEach((b) => b.addEventListener('click', () => View3D.setMode(b.dataset.mode === '3d')));
+    $('#glb').addEventListener('click', () => View3D.exportGLB());
+    document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.addEventListener('click', () => View3D.setStyle(b.dataset.style)));
+    document.querySelectorAll('#v3dCams [data-cam]').forEach((b) => b.addEventListener('click', () => window.Scene3D && window.Scene3D.view(b.dataset.cam)));
     bindMenu('#fileBtn', '#fileMenu');
     bindMenu('#exportBtn', '#exportPop');
     $('#csv').addEventListener('click', () => BOM.exportCSV());
@@ -3436,7 +3556,7 @@ const UI = (() => {
     });
     $('#pname').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
-    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); });
+    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); if (View3D.isOn()) View3D.refresh(); });
     Tools.onChange((reason) => {
       if (reason === 'selection') renderProps();
       else if (reason === 'tool') { refreshTools(); renderLib(); }
@@ -4253,6 +4373,175 @@ document.addEventListener('DOMContentLoaded', () => {
     Account.restore().then(() => { if (Account.me()) Home.open(); else { Home.close(); Auth.show(); } });
   } else Auth.show();
 });
+
+</script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+/* Moteur 3D d'ARCHIINDUS (Three.js r160, même version et même chargement qu'ARCHIPLAN : importmap + module ES).
+   Reçoit des « solides » calculés par View3D.solids() (classic script) : réseaux (cylindres), murs / poutres / équipements (volumes extrudés),
+   lignes. Lecture seule : orbite, zoom, vues, styles ; export GLB pour Archi Vision. Si Three.js ne se charge pas (hors ligne), l'application
+   garde l'aperçu en fil de fer (View3D.show). Repère : plan (x, y, z haut) en mm → Three (x, z, −y) en m. */
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+const MAX_SOLIDS = 20000;
+let renderer = null, scene = null, camera = null, controls = null, canvas = null, root = null, grid = null, raf = 0, ro = null;
+let style = 'shaded', box = new THREE.Box3(), last = { n: 0, capped: false };
+
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#ffffff';
+const V = (x, y, z) => new THREE.Vector3(x / 1000, z / 1000, -y / 1000);
+
+function mats(col) {
+  const c = new THREE.Color(col);
+  const base = { color: c, roughness: 0.62, metalness: 0.08 };
+  if (style === 'wire') return new THREE.MeshBasicMaterial({ color: c, wireframe: true });
+  if (style === 'xray') return new THREE.MeshStandardMaterial({ ...base, transparent: true, opacity: 0.28, depthWrite: false });
+  return new THREE.MeshStandardMaterial(base);
+}
+
+function shapeOf(rings) {
+  const sh = new THREE.Shape(rings[0].map((p) => new THREE.Vector2(p[0] / 1000, p[1] / 1000)));
+  for (const h of rings.slice(1)) sh.holes.push(new THREE.Path(h.map((p) => new THREE.Vector2(p[0] / 1000, p[1] / 1000))));
+  return sh;
+}
+
+function buildSolids(solids, minR) {
+  const g = new THREE.Group();
+  const edgeMat = (col) => new THREE.LineBasicMaterial({ color: new THREE.Color(col).multiplyScalar(0.55) });
+  let n = 0;
+  for (const s of solids) {
+    if (n++ >= MAX_SOLIDS) break;
+    if (s.k === 'pipe') {
+      const a = V(...s.a), b = V(...s.b), len = a.distanceTo(b);
+      if (len < 1e-6) continue;
+      const r = Math.max(s.r / 1000, minR);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14, 1), mats(s.col));
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      g.add(m);
+      const j = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mats(s.col)); j.position.copy(b); g.add(j);
+    } else if (s.k === 'prism') {
+      if (!s.rings.length || s.rings[0].length < 3 || s.z1 <= s.z0) continue;
+      const geo = new THREE.ExtrudeGeometry(shapeOf(s.rings), { depth: (s.z1 - s.z0) / 1000, bevelEnabled: false });
+      const m = new THREE.Mesh(geo, mats(s.col));
+      m.rotation.x = -Math.PI / 2; m.position.y = s.z0 / 1000;
+      g.add(m);
+      if (style !== 'wire') { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(s.col)); e.rotation.x = -Math.PI / 2; e.position.y = s.z0 / 1000; g.add(e); }
+    } else if (s.k === 'cyl') {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(s.r / 1000, s.r / 1000, (s.z1 - s.z0) / 1000, 28), mats(s.col));
+      m.position.copy(V(s.c[0], s.c[1], (s.z0 + s.z1) / 2));
+      g.add(m);
+    } else if (s.k === 'line') {
+      const geo = new THREE.BufferGeometry().setFromPoints(s.pts.map((p) => V(...p)));
+      g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(s.col) })));
+    }
+  }
+  last = { n: Math.min(n, MAX_SOLIDS), capped: solids.length > MAX_SOLIDS };
+  return g;
+}
+
+function extentOf(solids) {
+  const b = new THREE.Box3();
+  const add = (x, y, z) => b.expandByPoint(V(x, y, z));
+  for (const s of solids) {
+    if (s.k === 'pipe') { add(...s.a); add(...s.b); }
+    else if (s.k === 'prism') { for (const p of s.rings[0]) { add(p[0], p[1], s.z0); add(p[0], p[1], s.z1); } }
+    else if (s.k === 'cyl') { add(s.c[0] - s.r, s.c[1] - s.r, s.z0); add(s.c[0] + s.r, s.c[1] + s.r, s.z1); }
+    else if (s.k === 'line') for (const p of s.pts) add(...p);
+  }
+  return b;
+}
+
+function lights() {
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.1));
+  const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(30, 60, 20); scene.add(d);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.5); d2.position.set(-40, 30, -30); scene.add(d2);
+}
+
+function frame() {
+  if (box.isEmpty()) { camera.position.set(8, 8, 8); controls.target.set(0, 0, 0); controls.update(); return; }
+  const c = box.getCenter(new THREE.Vector3()), r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1);
+  controls.target.copy(c);
+  const dist = r / Math.sin((camera.fov * Math.PI / 180) / 2) * 0.95;
+  camera.near = Math.max(dist / 1000, 0.01); camera.far = dist * 40; camera.updateProjectionMatrix();
+  return { c, dist };
+}
+
+function setView(name) {
+  const f = frame(); if (!f) return;
+  const { c, dist } = f;
+  const dirs = { iso: [1, 0.8, 1], top: [0, 1, 0.0001], front: [0, 0.0001, 1], right: [1, 0.0001, 0] };
+  const d = new THREE.Vector3(...(dirs[name] || dirs.iso)).normalize();
+  camera.position.copy(c).addScaledVector(d, dist);
+  camera.up.set(0, 1, 0); if (name === 'top') camera.up.set(0, 0, -1);
+  controls.update(); render();
+}
+
+function render() { if (renderer) renderer.render(scene, camera); }
+function loop() { raf = requestAnimationFrame(loop); controls.update(); render(); }
+
+function size() {
+  if (!renderer) return;
+  const r = canvas.parentElement.getBoundingClientRect();
+  if (r.width < 2 || r.height < 2) return;
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); render();
+}
+
+function build(solids) {
+  if (root) { scene.remove(root); root.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
+  box = extentOf(solids);
+  const ext = box.isEmpty() ? 10 : box.getSize(new THREE.Vector3()).length();
+  root = buildSolids(solids, Math.max(ext / 900, 0.004));
+  scene.add(root);
+  if (grid) scene.remove(grid);
+  const sz = Math.max(10, Math.ceil(ext * 1.5));
+  grid = new THREE.GridHelper(sz, Math.min(100, sz), new THREE.Color(css('--grid-major')), new THREE.Color(css('--grid-minor')));
+  const c = box.isEmpty() ? new THREE.Vector3() : box.getCenter(new THREE.Vector3());
+  grid.position.set(c.x, box.isEmpty() ? 0 : Math.min(box.min.y, 0), c.z);
+  scene.add(grid);
+}
+
+const Scene3D = {
+  ready: true,
+  /* Affiche (ou met à jour) la vue 3D dans le canevas donné. Renvoie des informations d'état pour l'interface. */
+  show(cv, solids, opts = {}) {
+    canvas = cv;
+    if (!renderer) {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
+      controls = new OrbitControls(camera, canvas); controls.enableDamping = true; controls.dampingFactor = 0.08;
+      lights();
+      ro = new ResizeObserver(size); ro.observe(canvas.parentElement);
+    }
+    if (opts.style) style = opts.style;
+    scene.background = new THREE.Color(css('--vp'));
+    build(solids);
+    size(); setView('iso');
+    if (!raf) loop();
+    return { count: last.n, capped: last.capped, max: MAX_SOLIDS };
+  },
+  hide() { if (raf) { cancelAnimationFrame(raf); raf = 0; } },
+  resume() { if (renderer && !raf) { loop(); size(); } },
+  view: setView,
+  setStyle(st, solids) { style = st; if (renderer) { build(solids); render(); } },
+  /* Export GLB (binaire glTF 2.0) de la scène courante : même géométrie que l'affichage. */
+  async exportGLB() {
+    if (!root) throw new Error('Aucune scène 3D à exporter.');
+    const ex = new GLTFExporter();
+    const tmp = new THREE.Scene(); tmp.add(root.clone(true));
+    return new Promise((res, rej) => ex.parse(tmp, (buf) => res(buf), (e) => rej(e), { binary: true }));
+  },
+  stats() { return { objects: root ? root.children.length : 0, ...last }; },
+  screenshot() { render(); return canvas.toDataURL('image/png'); },
+};
+window.Scene3D = Scene3D;
+window.dispatchEvent(new Event('scene3d-ready'));
 
 </script>
 </body></html>
