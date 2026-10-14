@@ -270,12 +270,31 @@ const UI = (() => {
       el('label', { class: 'lbl' }, 'Repère', tag));
   }
 
+  /* Rien de sélectionné : résumé du projet (calques visibles uniquement, comme la nomenclature). */
+  function projectSummary() {
+    const d = Doc.get(), b = BOM.compute();
+    const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
+    const dl = el('dl', { class: 'kv' });
+    dl.append(...kv('Projet', d.name), ...kv('Unité', 'millimètres'), ...kv('Objets', String(d.objects.length)), ...kv('Calques', String(d.layers.length)));
+    const net = b.nets.reduce((a, r) => a + r.length, 0), st = b.structs.reduce((a, r) => a + r.length, 0), eq = b.syms.reduce((a, r) => a + r.count, 0);
+    if (net) dl.append(...kv('Réseaux', BOM.f2(net) + ' m'));
+    if (st) dl.append(...kv('Murs et poutres', BOM.f2(st) + ' m'));
+    if (eq) dl.append(...kv('Équipements', String(eq)));
+    const box = el('div', {}, dl);
+    if (!d.objects.length) box.append(el('p', { class: 'mut small' }, 'Dessin vide. Choisissez un outil à gauche, ou posez un équipement depuis la bibliothèque ci-dessus.'));
+    else box.append(el('p', { class: 'mut small' }, 'Cliquez un objet pour modifier ses propriétés. Maj + clic ajoute à la sélection ; Ctrl+A sélectionne tout.'));
+    const bom = el('button', { type: 'button', class: 'btn wide' }, 'Ouvrir la nomenclature');
+    bom.addEventListener('click', () => BOM.show());
+    box.append(bom);
+    return box;
+  }
+
   /* --- Propriétés de la sélection --- */
   function renderProps() {
     const box = $('#props');
     box.textContent = '';
     const objs = Doc.get().objects.filter((o) => Tools.selection.has(o.id));
-    if (!objs.length) { box.append(el('p', { class: 'mut' }, 'Aucune sélection.')); return; }
+    if (!objs.length) { box.append(projectSummary()); return; }
     const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
     const dl = el('dl', { class: 'kv' });
     if (objs.length === 1) {
@@ -292,6 +311,11 @@ const UI = (() => {
       if (o.net) dl.append(...kv('Réseau', `DN${o.net.dn}${o.net.mat ? ' · ' + o.net.mat : ''}${o.net.tag ? ' · ' + o.net.tag : ''}`));
     } else {
       dl.append(...kv('Objets', String(objs.length)));
+      const by = new Map();
+      for (const o of objs) by.set(o.type, (by.get(o.type) || 0) + 1);
+      for (const [t, n] of by) dl.append(...kv(TYPE_LABEL[t] || t, String(n)));
+      const tot = objs.reduce((a, o) => a + ((o.type === 'line' || o.type === 'poly') ? (Geo.length(o) || 0) : 0), 0);
+      if (tot > 0) dl.append(...kv('Longueur cumulée', fmt(tot / 1000) + ' m'));
     }
     box.append(dl);
     if (objs.every((o) => o.type === 'line' || o.type === 'poly')) { box.append(netForm(objs)); box.append(stForm(objs)); }
@@ -374,6 +398,7 @@ const UI = (() => {
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
     bindExportMenu();
+    $('#panelBtn').addEventListener('click', () => { const o = $('#app').classList.toggle('pn-open'); $('#panelBtn').setAttribute('aria-expanded', String(o)); });
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());
     $('#pdf').addEventListener('click', () => PDF.dialog());

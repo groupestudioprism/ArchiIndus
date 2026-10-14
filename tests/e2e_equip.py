@@ -112,6 +112,19 @@ with sync_playwright() as p:
     n = len(objs()); pg.evaluate("Doc.undo()"); ok(len(objs()) == n or True, 'undo sans erreur')
     pg.evaluate("Doc.redo()")
 
+    # --- panneau contextuel : résumé du projet, sélection multiple
+    pg.evaluate('Tools.selection.clear()'); pg.wait_for_timeout(100)
+    ok('Projet' in pg.inner_text('#props') and 'Ouvrir la nomenclature' in pg.inner_text('#props'), 'rien de sélectionné : résumé du projet')
+    key('v'); key('Control+a'); pg.wait_for_timeout(100)
+    ok('Longueur cumulée' in pg.inner_text('#props') and 'Équipement' in pg.inner_text('#props'), 'sélection multiple : répartition par type et longueur cumulée')
+    pg.evaluate('Tools.selection.clear()')
+    # --- tablette : panneau en tiroir
+    pg.set_viewport_size({'width': 820, 'height': 800}); pg.wait_for_timeout(200)
+    ok(not pg.is_visible('#panel') and pg.is_visible('#panelBtn'), 'tablette : panneau masqué, bouton Options visible')
+    pg.click('#panelBtn'); pg.wait_for_timeout(300); ok(pg.is_visible('#panel') and pg.is_visible('#modeNet'), 'tablette : tiroir ouvert')
+    pg.click('#panelBtn'); pg.wait_for_timeout(300); ok(not pg.is_visible('#panel'), 'tablette : tiroir refermé')
+    pg.set_viewport_size({'width': 1400, 'height': 820}); pg.wait_for_timeout(200)
+    ok(pg.is_visible('#panel') and not pg.is_visible('#panelBtn'), 'ordinateur : panneau fixe, bouton Options masqué')
     # --- menu Exporter
     ok(pg.is_hidden('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'false', 'menu Exporter fermé au départ')
     pg.click('#exportBtn'); ok(pg.is_visible('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'true', 'menu Exporter ouvert')

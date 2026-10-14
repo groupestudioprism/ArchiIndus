@@ -154,8 +154,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .chip{font:600 11px var(--f-body);height:22px;padding:0 9px;border:1px solid var(--line);border-radius:11px;background:var(--chip);color:var(--ink);cursor:pointer;flex:0 0 auto}
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 
+#panelBtn{display:none}
 @media (max-width:900px){
   #app{grid-template-columns:56px minmax(0,1fr);grid-template-areas:"top top" "rail stage" "status status"}
-  #panel{display:none}
+  #panel{position:fixed;right:0;top:52px;bottom:30px;z-index:40;width:min(320px,92vw);box-shadow:var(--shadow);transform:translateX(105%);visibility:hidden;transition:transform .18s,visibility .18s}
+  #app.pn-open #panel{transform:none;visibility:visible}
+  #panelBtn{display:inline-block}
   #hint{display:none}
 }
