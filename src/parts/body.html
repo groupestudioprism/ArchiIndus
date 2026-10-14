@@ -13,7 +13,11 @@
       <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
       <button id="svg" class="btn" type="button" title="Exporter en SVG">SVG</button>
       <button id="dxf" class="btn" type="button" title="Exporter en DXF">DXF</button>
+      <button id="pdf" class="btn" type="button" title="Exporter en PDF (feuille avec cartouche et nomenclature)">PDF</button>
+      <button id="bom" class="btn" type="button" title="Nomenclature : longueurs par diamètre et par calque">Nomenclature</button>
     </div>
+    <button id="cloud" class="btn" type="button" title="Projets enregistrés sur votre compte Studio Prism">Cloud</button>
+    <button id="acct" class="btn" type="button" title="Compte Studio Prism">Compte</button>
     <button id="theme" class="btn" type="button" aria-label="Basculer le thème clair / sombre">Thème</button>
     <input id="file" type="file" accept=".json,application/json" hidden>
   </header>
@@ -44,11 +48,18 @@
     <p class="mut small">Rond = calque actif · 1re case = visible · 2e case = verrouillé</p>
     <div id="layers"></div>
     <button id="addLayer" class="btn wide" type="button">+ Calque</button>
+    <h2>Réseau</h2>
+    <label class="chk"><input id="netOn" type="checkbox"> Tracer en réseau (lignes et polylignes)</label>
+    <div class="row2">
+      <label class="lbl">DN (mm)<input id="netDn" class="fld" type="number" min="1" max="5000" step="any" value="100"></label>
+      <label class="lbl">Matériau<input id="netMat" class="fld" type="text" list="netMats" maxlength="30"></label>
+    </div>
+    <datalist id="netMats"></datalist>
     <h2>Sélection</h2>
     <div id="props"></div>
     <h2>Raccourcis</h2>
     <p class="mut small">V L P R C D T M K H : outils · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
-    <p class="mut small">Version de démarrage : enregistrement local dans ce navigateur, pas de compte ni de cloud.</p>
+    <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud » (le cloud n'est utilisable qu'une fois ses règles de sécurité publiées).</p>
   </aside>
 
   <footer id="status">

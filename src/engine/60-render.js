@@ -53,12 +53,42 @@ const Render = (() => {
     ctx.restore();
   }
 
+  /* Réseau : bande translucide dont la largeur suit le diamètre (en mm réels, bornée à l'écran). */
+  function netHalo(ctx, pts, closed, o) {
+    const w = clamp(o.net.dn * state.view.scale, 4, 60);
+    ctx.save();
+    ctx.globalAlpha = 0.26; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    strokePath(ctx, pts, closed);
+    ctx.restore();
+  }
+
+  /* Étiquette « repère · DN » au milieu du plus long tronçon, tournée dans le sens du tracé et jamais à l'envers. */
+  function netLabel(ctx, o, col) {
+    let best = null, bl = 0;
+    for (const [a, b] of Geo.segments(o)) { const l = G.dist(a, b); if (l > bl) { bl = l; best = [a, b]; } }
+    if (!best || bl * state.view.scale < 70) return;
+    const a = Canvas2D.toScreen(best[0]), b = Canvas2D.toScreen(best[1]);
+    let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+    const txt = (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn;
+    ctx.save();
+    ctx.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    ctx.rotate(ang);
+    ctx.font = '600 11px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3; ctx.strokeStyle = css('--vp'); ctx.lineJoin = 'round';
+    const dy = -(clamp(o.net.dn * state.view.scale, 4, 60) / 2 + 2);
+    ctx.strokeText(txt, 0, dy);
+    ctx.fillStyle = col; ctx.fillText(txt, 0, dy);
+    ctx.restore();
+  }
+
   function drawObject(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
     switch (o.type) {
-      case 'line': strokePath(ctx, [o.a, o.b], false); break;
-      case 'poly': strokePath(ctx, o.pts, o.closed); break;
+      case 'line': if (o.net) netHalo(ctx, [o.a, o.b], false, o); strokePath(ctx, [o.a, o.b], false); if (o.net) netLabel(ctx, o, col); break;
+      case 'poly': if (o.net) netHalo(ctx, o.pts, o.closed, o); strokePath(ctx, o.pts, o.closed); if (o.net) netLabel(ctx, o, col); break;
       case 'circle': {
         const c = S(o.c);
         ctx.beginPath(); ctx.arc(c[0], c[1], Math.max(o.r * state.view.scale, 0.5), 0, Math.PI * 2); ctx.stroke();

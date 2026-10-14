@@ -2,7 +2,7 @@
 
 Application de conception de plans industriels et de réseaux techniques (réseaux humides, réseaux secs, structures industrielles, génie civil), de la suite **Studio Prism**. Elle reprend l'identité graphique d'ArchiPlan et vise la compatibilité avec les autres applications de l'écosystème.
 
-> **État : éditeur 2D de démarrage, local au navigateur.** Pas de compte, pas de licence, pas de cloud : Firebase n'est pas branché (voir plus bas). Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
+> **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le cloud ne fonctionne qu'une fois le bloc de règles `ai*` publié dans le projet commun (non fait, à valider). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
 
 ## Ce qui fonctionne (testé dans Chromium sans interface, `tests/e2e.py`)
 
@@ -13,12 +13,18 @@ Application de conception de plans industriels et de réseaux techniques (résea
 - **Calques** : 9 calques de départ (réseaux humides, réseaux secs, structures, équipements, cotations…), couleur, visibilité, verrouillage, ajout, renommage, suppression des calques vides.
 - **Propriétés** de la sélection : longueur, périmètre, rayon, surface, changement de calque.
 - **Fichiers** : enregistrement automatique dans le navigateur (localStorage), projet `.archiindus.json` (enregistrer / ouvrir, avec validation stricte), export **SVG** et export **DXF** (R12, ASCII, cotes éclatées en lignes et texte).
+- **Réseaux** : case « Réseau » dans le panneau (diamètre DN en mm, matériau, repère) appliquée aux lignes et polylignes ouvertes ; halo à l'échelle du DN, étiquette, propriétés modifiables.
+- **Nomenclature** (calques visibles) : longueurs par DN / matériau, autres objets, export CSV (séparateur `;`, virgule décimale).
+- **Export PDF** vectoriel (A4 / A3, échelle au choix, cartouche, nomenclature), écrit à la main ; contrôlé avec qpdf, pypdf et poppler.
+- **Compte Studio Prism et projets cloud** (bouton Compte / Cloud) : connexion, création de compte, licence `licenses/{uid}_archiindus`, quota 10 Mo / 50 Mo (licence active) / 1 Go (admin). Données dans `aiProjects`, `aiUsage` du projet commun.
 - Thème clair et sombre.
 
 ### Limites connues
 
 - Le DXF n'a pas été ouvert dans un logiciel de CAO : seule sa structure a été contrôlée. Les accents sont supprimés, les couleurs sont ramenées aux indices AutoCAD.
-- Les nomenclatures, les symboles de réseaux (diamètres, sections), les équipements, la mise en page et le PDF **n'existent pas encore**.
+- Structures, équipements, symboles et vue 3D / ArchiVision **n'existent pas encore** (phases 4 et 7).
+- Compte : pas de code PIN ni de verrouillage, pas de partage de projets. Le lien projet courant ↔ projet cloud n'est gardé qu'en mémoire. Le compteur d'usage cloud dépend des règles ; non vérifié en production.
+- L'export PDF n'a pas été ouvert dans tous les lecteurs (seulement qpdf, pypdf, poppler).
 - Pas de gestion du tactile à deux doigts ; l'outil Main permet de déplacer la vue au doigt.
 - Le stockage local est propre à un navigateur : vider les données du site efface le projet. Utiliser « Enregistrer » pour garder un fichier.
 
@@ -29,8 +35,10 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | `src/parts/` | Structure de la page : en-tête (polices, thème) et corps (barre haute, outils, zone de dessin, panneau, barre d'état). |
 | `src/css/tokens.css` | Charte Studio Prism : valeurs relevées dans ArchiPlan (`src/css/app.css`), thème clair et sombre. |
 | `src/css/app.css` | Mise en page et composants. |
-| `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `78-ui`, `80-main`. |
+| `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `79-cloudstore`, `79-account`, `80-main`. |
 | `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html`. |
+| `tests/e2e_reseaux.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
+| `tests/rules/` | Règles Firestore testées à l'émulateur contre les règles publiées d'ArchiPlan + le bloc `ai*` proposé : `cd tests/rules && npm install && PUBLISHED_RULES=<chemin firestore.rules> npm test`. |
 | `tests/e2e.py` | Test de bout en bout (Playwright pour Python) : `pip install playwright`, `playwright install chromium`, puis `python3 tests/e2e.py`. |
 | `firebase/firestore.ai.rules.proposed` | **Brouillon non publié et non testé** : bloc de règles `ai*` (projets privés, quota) à relire avant d'être ajouté au fichier de règles commun. Ne modifie rien tant qu'on ne le publie pas. |
 | `index.html` | Version publiée (**générée, ne pas modifier à la main**). |
@@ -41,9 +49,9 @@ On modifie `src/`, on lance `python3 tools/build.py`, on enregistre (commit) : s
 
 JSON : `name`, `units` (`mm`), `layers` (`id`, `name`, `color`, `group`, `visible`, `locked`), `objects` (`id`, `type`, `layer` + géométrie), `active`, compteurs. Types d'objets : `line {a,b}`, `poly {pts,closed}`, `circle {c,r}`, `dim {a,b,off,h}`, `text {p,text,h}`. Axe Y vers le haut. À l'ouverture, tout fichier est validé (types, nombres finis, tailles) ; un fichier invalide est refusé sans toucher au projet courant.
 
-## Comptes et licences (à faire, rien de branché)
+## Comptes et licences (codés, non activés)
 
-Prévu, non réalisé :
+Réalisé dans le code : comptes et licence. Reste à faire :
 
 - Réutiliser les comptes Studio Prism (`users/{uid}`) et le code PIN, dans le projet Firebase commun.
 - Licence propre : `licenses/{uid}_archiindus`. Une licence ArchiPlan ne donne pas droit à ArchiIndus.
@@ -59,7 +67,7 @@ Prévu, non réalisé :
 
 Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Les règles publiées dans le projet commun (relues le 14/10/2026) contiennent les blocs `ap*` et aucun bloc `ai*`.
 
-La configuration publique des deux projets est dans `src/engine/01-firebase-config.js` (clés d'application web, non secrètes ; pas encore utilisée par le moteur). `.firebaserc` déclare les deux projets. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
+La configuration publique des deux projets est dans `src/engine/01-firebase-config.js` (clés d'application web, non secrètes ; chargée à la demande par le module Compte (SDK compat 10.12.2)). `.firebaserc` déclare les deux projets. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
 
 ## Conventions
 

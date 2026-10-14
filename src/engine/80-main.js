@@ -5,4 +5,5 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.init();
   Canvas2D.init();
   if (Doc.get().objects.length) Canvas2D.zoomExtents();
+  Account.restore();
 });

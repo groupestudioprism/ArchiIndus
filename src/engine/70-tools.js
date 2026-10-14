@@ -415,7 +415,11 @@ const Tools = (() => {
   function onKey(e) {
     const t = e.target;
     const k = e.key;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    /* Les champs de saisie gardent leurs touches ; une case à cocher ou une pastille ne doivent pas bloquer les raccourcis. */
+    const typing = t && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable
+      || (t.tagName === 'INPUT' && !['checkbox', 'radio', 'color', 'button'].includes(t.type)));
+    if (typing) return;
+    if (t && t.tagName === 'INPUT' && (k === ' ' || k === 'Enter')) return;
     if (t && t.tagName === 'BUTTON' && (k === ' ' || k === 'Enter')) return;
     const mod = e.ctrlKey || e.metaKey;
     const low = k.length === 1 ? k.toLowerCase() : k;

@@ -99,6 +99,38 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .lbl{display:block;color:var(--mut);margin-top:6px}
 .lbl select{display:block;width:100%;height:32px;margin-top:4px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;padding:0 8px}
 
+.chk{display:flex;align-items:center;gap:8px;margin:0 0 6px;cursor:pointer}
+.chk input{accent-color:var(--accent);margin:0}
+.row2{display:grid;grid-template-columns:90px 1fr;gap:8px}
+.fld{display:block;width:100%;height:32px;margin-top:4px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;padding:0 8px;min-width:0}
+.fld:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.netbox{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0}
+.netbox b{font-family:var(--f-display);font-size:12.5px}
+
+/* Boîtes de dialogue */
+.dlg{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--panel);color:var(--ink);box-shadow:var(--shadow);width:min(860px,94vw);max-height:88vh}
+.dlg::backdrop{background:rgb(7 27 85 / .35)}
+.dlg[open]{display:flex;flex-direction:column}
+.dlg-h{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-family:var(--f-display)}
+.dlg-b{padding:14px 16px;overflow:auto;flex:1 1 auto}
+.dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn.pri{color:#0B1620}
+.tbl{width:100%;border-collapse:collapse;margin:6px 0 16px;font-size:13px}
+.tbl caption{text-align:left;font:700 14px var(--f-display);padding:4px 0}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+.tbl th{color:var(--mut);font-weight:600;font-size:12px}
+.tbl td.n,.tbl th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tbl tfoot td{font-weight:700}
+.frm{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.frm .lbl{margin-top:0}
+
+.err{color:var(--danger);margin:6px 0;min-height:1em}
+.lnks{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
+.lnk{border:0;background:none;color:var(--accent);font:inherit;cursor:pointer;padding:2px 0;text-decoration:underline}
+.lnk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grp.right{justify-content:flex-end}
+
 /* Barre d'état */
 #status{grid-area:status;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line);font:500 11.5px var(--f-mono);color:var(--mut);font-variant-numeric:tabular-nums;overflow:hidden;white-space:nowrap}
 #msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-body);color:var(--ink)}
@@ -126,7 +158,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
       <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
       <button id="svg" class="btn" type="button" title="Exporter en SVG">SVG</button>
       <button id="dxf" class="btn" type="button" title="Exporter en DXF">DXF</button>
+      <button id="pdf" class="btn" type="button" title="Exporter en PDF (feuille avec cartouche et nomenclature)">PDF</button>
+      <button id="bom" class="btn" type="button" title="Nomenclature : longueurs par diamètre et par calque">Nomenclature</button>
     </div>
+    <button id="cloud" class="btn" type="button" title="Projets enregistrés sur votre compte Studio Prism">Cloud</button>
+    <button id="acct" class="btn" type="button" title="Compte Studio Prism">Compte</button>
     <button id="theme" class="btn" type="button" aria-label="Basculer le thème clair / sombre">Thème</button>
     <input id="file" type="file" accept=".json,application/json" hidden>
   </header>
@@ -157,11 +193,18 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
     <p class="mut small">Rond = calque actif · 1re case = visible · 2e case = verrouillé</p>
     <div id="layers"></div>
     <button id="addLayer" class="btn wide" type="button">+ Calque</button>
+    <h2>Réseau</h2>
+    <label class="chk"><input id="netOn" type="checkbox"> Tracer en réseau (lignes et polylignes)</label>
+    <div class="row2">
+      <label class="lbl">DN (mm)<input id="netDn" class="fld" type="number" min="1" max="5000" step="any" value="100"></label>
+      <label class="lbl">Matériau<input id="netMat" class="fld" type="text" list="netMats" maxlength="30"></label>
+    </div>
+    <datalist id="netMats"></datalist>
     <h2>Sélection</h2>
     <div id="props"></div>
     <h2>Raccourcis</h2>
     <p class="mut small">V L P R C D T M K H : outils · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
-    <p class="mut small">Version de démarrage : enregistrement local dans ce navigateur, pas de compte ni de cloud.</p>
+    <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud » (le cloud n'est utilisable qu'une fois ses règles de sécurité publiées).</p>
   </aside>
 
   <footer id="status">
@@ -192,6 +235,29 @@ function el(tag, attrs = {}, ...kids) {
   for (const k of kids) n.append(k);
   return n;
 }
+
+/* Boîte de dialogue modale (élément <dialog>). `body` est un nœud ; `actions` : [{ label, run }] — run() retourne false pour garder la boîte ouverte. */
+const Dlg = {
+  open(title, body, actions = []) {
+    const dlg = el('dialog', { class: 'dlg', 'aria-label': title });
+    const close = el('button', { type: 'button', class: 'ib', 'aria-label': 'Fermer' }, '✕');
+    const foot = el('div', { class: 'dlg-f' });
+    for (const a of actions) {
+      const b = el('button', { type: 'button', class: 'btn' + (a.primary ? ' pri' : '') }, a.label);
+      b.addEventListener('click', () => { if (a.run() !== false) dlg.close(); });
+      foot.append(b);
+    }
+    const done = el('button', { type: 'button', class: 'btn' }, 'Fermer');
+    foot.append(done);
+    close.addEventListener('click', () => dlg.close());
+    done.addEventListener('click', () => dlg.close());
+    dlg.append(el('div', { class: 'dlg-h' }, el('b', {}, title), close), el('div', { class: 'dlg-b' }, body), foot);
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg);
+    dlg.showModal();
+    return dlg;
+  },
+};
 
 const Status = {
   t: 0,
@@ -251,6 +317,8 @@ const state = {
   units: 'mm',
   view: { x: 0, y: 0, scale: 0.1, placed: false },
   snap: { on: true, ortho: false },
+  /* Tracé en réseau : si `on`, les lignes et polylignes ouvertes créées reçoivent {dn, mat} (voir Doc.add). */
+  net: { on: false, dn: 100, mat: '' },
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };
@@ -575,6 +643,26 @@ const LAYER_DEFAULTS = [
 ];
 const LAYER_GROUPS = ['humide', 'sec', 'structure', 'equipement', 'divers'];
 
+/* Réseau : attribut optionnel `net` des lignes et polylignes ouvertes ou fermées : {dn (mm), mat, tag}. */
+const NET_MATERIALS = ['PVC', 'PEHD', 'Fonte ductile', 'Acier', 'Acier galvanisé', 'Inox', 'Béton', 'Grès', 'Cuivre', 'Câble'];
+const NET_DN_MAX = 5000;
+function cleanNet(n) {
+  if (!n || typeof n !== 'object') return null;
+  const dn = Number(n.dn);
+  if (!Number.isFinite(dn) || dn <= 0 || dn > NET_DN_MAX) return null;
+  const s = (v) => (typeof v === 'string' ? v.trim().slice(0, 30) : '');
+  return { dn: Math.round(dn * 10) / 10, mat: s(n.mat), tag: s(n.tag) };
+}
+
+/* Cartouche et format de feuille (export PDF). */
+const SHEET_FORMATS = { A4: [297, 210], A3: [420, 297] };
+const SHEET_DEFAULT = { format: 'A3', client: '', author: '', ref: '', rev: 'A' };
+function cleanSheet(s) {
+  const t = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+  s = s && typeof s === 'object' ? s : {};
+  return { format: SHEET_FORMATS[s.format] ? s.format : 'A3', client: t(s.client, 60), author: t(s.author, 60), ref: t(s.ref, 40), rev: t(s.rev, 10) || 'A' };
+}
+
 const Doc = (() => {
   const KEY = 'ai.doc.v1';
   const MAX_HISTORY = 100;
@@ -589,7 +677,7 @@ const Doc = (() => {
 
   function fresh() {
     const layers = LAYER_DEFAULTS.map((l, i) => ({ id: i + 1, name: l.name, color: l.color, group: l.group, visible: true, locked: false }));
-    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1 };
+    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT } };
   }
 
   function emit(reason) { for (const f of subs) f(reason); }
@@ -647,12 +735,13 @@ const Doc = (() => {
       if (!o || typeof o !== 'object') bad(where + '.');
       const out = { type: o.type };
       switch (o.type) {
-        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); break;
+        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); { const nt = cleanNet(o.net); if (nt) out.net = nt; } break;
         case 'poly':
           if (!Array.isArray(o.pts) || o.pts.length < 2 || o.pts.length > 100000) bad(where + ' (polyligne).');
           out.pts = o.pts.map(pt);
           if (out.pts.some((p) => !p)) bad(where + ' (polyligne).');
           out.closed = o.closed === true;
+          { const nt = cleanNet(o.net); if (nt) out.net = nt; }
           break;
         case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
         case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
@@ -679,6 +768,7 @@ const Doc = (() => {
       nextId: maxO + 1,
       nextLayerId: maxL + 1,
       active: layerIds.has(raw.active) ? raw.active : layers[0].id,
+      sheet: cleanSheet(raw.sheet),
     };
   }
 
@@ -696,7 +786,15 @@ const Doc = (() => {
     mutate(fn) { checkpoint(); fn(data); changed(); },
 
     /* À appeler dans mutate : ajoute un objet sur le calque actif. */
-    add(o) { o.id = data.nextId++; o.layer = data.active; data.objects.push(o); return o; },
+    add(o) {
+      o.id = data.nextId++; o.layer = data.active;
+      if (state.net.on && (o.type === 'line' || (o.type === 'poly' && !o.closed))) {
+        const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' });
+        if (nt) o.net = nt;
+      }
+      data.objects.push(o);
+      return o;
+    },
 
     setActive(id) { if (data.active !== id && Doc.layer(id)) { data.active = id; changed(); } },
 
@@ -833,12 +931,42 @@ const Render = (() => {
     ctx.restore();
   }
 
+  /* Réseau : bande translucide dont la largeur suit le diamètre (en mm réels, bornée à l'écran). */
+  function netHalo(ctx, pts, closed, o) {
+    const w = clamp(o.net.dn * state.view.scale, 4, 60);
+    ctx.save();
+    ctx.globalAlpha = 0.26; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    strokePath(ctx, pts, closed);
+    ctx.restore();
+  }
+
+  /* Étiquette « repère · DN » au milieu du plus long tronçon, tournée dans le sens du tracé et jamais à l'envers. */
+  function netLabel(ctx, o, col) {
+    let best = null, bl = 0;
+    for (const [a, b] of Geo.segments(o)) { const l = G.dist(a, b); if (l > bl) { bl = l; best = [a, b]; } }
+    if (!best || bl * state.view.scale < 70) return;
+    const a = Canvas2D.toScreen(best[0]), b = Canvas2D.toScreen(best[1]);
+    let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+    const txt = (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn;
+    ctx.save();
+    ctx.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    ctx.rotate(ang);
+    ctx.font = '600 11px "IBM Plex Mono", ui-monospace, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3; ctx.strokeStyle = css('--vp'); ctx.lineJoin = 'round';
+    const dy = -(clamp(o.net.dn * state.view.scale, 4, 60) / 2 + 2);
+    ctx.strokeText(txt, 0, dy);
+    ctx.fillStyle = col; ctx.fillText(txt, 0, dy);
+    ctx.restore();
+  }
+
   function drawObject(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
     switch (o.type) {
-      case 'line': strokePath(ctx, [o.a, o.b], false); break;
-      case 'poly': strokePath(ctx, o.pts, o.closed); break;
+      case 'line': if (o.net) netHalo(ctx, [o.a, o.b], false, o); strokePath(ctx, [o.a, o.b], false); if (o.net) netLabel(ctx, o, col); break;
+      case 'poly': if (o.net) netHalo(ctx, o.pts, o.closed, o); strokePath(ctx, o.pts, o.closed); if (o.net) netLabel(ctx, o, col); break;
       case 'circle': {
         const c = S(o.c);
         ctx.beginPath(); ctx.arc(c[0], c[1], Math.max(o.r * state.view.scale, 0.5), 0, Math.PI * 2); ctx.stroke();
@@ -1313,7 +1441,11 @@ const Tools = (() => {
   function onKey(e) {
     const t = e.target;
     const k = e.key;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    /* Les champs de saisie gardent leurs touches ; une case à cocher ou une pastille ne doivent pas bloquer les raccourcis. */
+    const typing = t && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable
+      || (t.tagName === 'INPUT' && !['checkbox', 'radio', 'color', 'button'].includes(t.type)));
+    if (typing) return;
+    if (t && t.tagName === 'INPUT' && (k === ' ' || k === 'Enter')) return;
     if (t && t.tagName === 'BUTTON' && (k === ' ' || k === 'Enter')) return;
     const mod = e.ctrlKey || e.metaKey;
     const low = k.length === 1 ? k.toLowerCase() : k;
@@ -1409,6 +1541,16 @@ const IO = (() => {
     return { lines, mid: G.mid(g.p1, g.p2), deg, str: fmt(g.L), h: o.h || 150 };
   }
 
+  /* Étiquette d'un réseau : milieu du plus long tronçon, angle lisible, texte « repère · DN ». */
+  function netLabelInfo(o) {
+    let best = null, bl = 0;
+    for (const [a, b] of Geo.segments(o)) { const l = G.dist(a, b); if (l > bl) { bl = l; best = [a, b]; } }
+    if (!best) return null;
+    let deg = Math.atan2(best[1][1] - best[0][1], best[1][0] - best[0][0]) * 180 / Math.PI;
+    if (deg > 90 || deg < -90) deg += 180;
+    return { mid: G.mid(best[0], best[1]), deg, str: (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn, h: 120 };
+  }
+
   const xmlEsc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function exportSVG() {
@@ -1425,6 +1567,13 @@ const IO = (() => {
       if (!l.visible || !items.length) continue;
       const g = [`<g data-layer="${xmlEsc(l.name)}" fill="none" stroke="${l.color}" stroke-width="1.5" font-family="Arial, Helvetica, sans-serif">`];
       for (const o of items) {
+        if ((o.type === 'line' || o.type === 'poly') && o.net) {
+          /* bande à la largeur réelle du diamètre (mm), puis axe et étiquette */
+          const pts = (o.type === 'line' ? [o.a, o.b] : o.pts).map((p) => X(p[0]) + ',' + Y(p[1])).join(' ');
+          g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${pts}" stroke-width="${o.net.dn}" stroke-opacity="0.26" stroke-linecap="round" stroke-linejoin="round" style="vector-effect:none" data-dn="${o.net.dn}"/>`);
+          const nl = netLabelInfo(o);
+          if (nl) g.push(`<text transform="translate(${X(nl.mid[0])},${Y(nl.mid[1])}) rotate(${+(-nl.deg).toFixed(3)})" text-anchor="middle" y="${-(o.net.dn / 2 + nl.h * 0.25)}" font-size="${nl.h}" fill="${l.color}" stroke="none">${xmlEsc(nl.str)}</text>`);
+        }
         if (o.type === 'line') g.push(line(o.a, o.b));
         else if (o.type === 'poly') g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${o.pts.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>`);
         else if (o.type === 'circle') g.push(`<circle cx="${X(o.c[0])}" cy="${Y(o.c[1])}" r="${X(o.r)}"/>`);
@@ -1487,12 +1636,23 @@ const IO = (() => {
     const text = (ly, p, h, str, rot) => { w(0, 'TEXT'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); w(40, nf(h)); w(1, ascii(str)); w(50, nf(rot)); };
     for (const o of objs) {
       const ly = names.get(o.layer);
-      if (o.type === 'line') line(ly, o.a, o.b);
+      if (o.type === 'line' && !o.net) line(ly, o.a, o.b);
       else if (o.type === 'circle') { w(0, 'CIRCLE'); w(8, ly); w(10, nf(o.c[0])); w(20, nf(o.c[1])); w(30, nf(0)); w(40, nf(o.r)); }
-      else if (o.type === 'poly') {
+      else if (o.type === 'poly' || (o.type === 'line' && o.net)) {
+        /* un réseau devient une POLYLINE de largeur constante égale au DN (mm) ; son repère est ajouté en texte */
+        const pts = o.type === 'line' ? [o.a, o.b] : o.pts;
         w(0, 'POLYLINE'); w(8, ly); w(66, 1); w(10, nf(0)); w(20, nf(0)); w(30, nf(0)); w(70, o.closed ? 1 : 0);
-        for (const p of o.pts) { w(0, 'VERTEX'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); }
+        if (o.net) { w(40, nf(o.net.dn)); w(41, nf(o.net.dn)); }
+        for (const p of pts) { w(0, 'VERTEX'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); }
         w(0, 'SEQEND'); w(8, ly);
+        const nl = o.net && netLabelInfo(o);
+        if (nl) {
+          const th = nl.deg * Math.PI / 180;
+          const u = [Math.cos(th), Math.sin(th)], up = [-Math.sin(th), Math.cos(th)];
+          const str = nl.str.replace(' · ', ' - ');
+          const wd = str.length * nl.h * 0.6, off = o.net.dn / 2 + nl.h * 0.25;
+          text(ly, [nl.mid[0] - u[0] * wd / 2 + up[0] * off, nl.mid[1] - u[1] * wd / 2 + up[1] * off], nl.h, str, nl.deg);
+        }
       } else if (o.type === 'text') text(ly, o.p, o.h, o.text, 0);
       else if (o.type === 'dim') {
         const d = dimExplode(o);
@@ -1508,7 +1668,364 @@ const IO = (() => {
     Status.msg('Export DXF envoyé vers vos téléchargements (unité : mm, cotes éclatées).');
   }
 
-  return { saveJSON, openFile, exportSVG, exportDXF };
+  return { saveJSON, openFile, exportSVG, exportDXF, download, safeName, visibleObjects, dimExplode, netLabelInfo };
+})();
+
+/* ==== 76-pdf.js ==== */
+/* Export PDF vectoriel, sans bibliothèque : feuille A3 ou A4 paysage, dessin à une échelle normalisée (1:N),
+   cartouche, puis pages de nomenclature. Polices Helvetica standard du PDF (encodage WinAnsi) : les caractères
+   hors Latin-1 sont remplacés par « ? ». Largeur du texte : estimation (0,52 × corps), suffisante pour centrer.
+   Le résultat doit être vérifié visuellement dans un lecteur PDF avant diffusion. */
+const PDF = (() => {
+  const MM = 72 / 25.4;
+  const SCALES = [1, 2, 5, 10, 20, 25, 50, 75, 100, 125, 150, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 50000, 100000];
+  const MARGIN = 10, CART_W = 170, CART_H = 36, STRIP = 40;
+
+  const num = (v) => (+v).toFixed(3).replace(/\.?0+$/, '') || '0';
+  const rgb = (hex) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => num(c / 255)).join(' '); };
+  const enc = (s) => {
+    let o = '';
+    for (const ch of String(s)) {
+      const c = ch.codePointAt(0);
+      o += (c >= 32 && c < 127) || (c >= 160 && c < 256) ? ch : (c === 0x2013 || c === 0x2014 ? '-' : c === 0x2019 ? "'" : c === 0x2026 ? '...' : '?');
+    }
+    return o;
+  };
+  const esc = (s) => enc(s).replace(/[\\()]/g, '\\$&');
+
+  /* Page : opérations de dessin en millimètres, origine en bas à gauche. */
+  function page(w, h) {
+    const ops = [];
+    const P = {
+      w, h, ops,
+      color(hex) { ops.push(`${rgb(hex)} RG ${rgb(hex)} rg`); },
+      width(mm) { ops.push(`${num(Math.max(mm, 0.05) * MM)} w`); },
+      alpha(on) { ops.push(on ? '/GS1 gs' : '/GS0 gs'); },
+      cap(round) { ops.push(round ? '1 J 1 j' : '0 J 0 j'); },
+      path(pts, closed) {
+        pts.forEach((p, i) => ops.push(`${num(p[0] * MM)} ${num(p[1] * MM)} ${i ? 'l' : 'm'}`));
+        ops.push(closed ? 's' : 'S');
+      },
+      line(a, b) { P.path([a, b], false); },
+      rect(x, y, rw, rh) { ops.push(`${num(x * MM)} ${num(y * MM)} ${num(rw * MM)} ${num(rh * MM)} re S`); },
+      circle(c, r) {
+        const k = 0.5522847498 * r, x = c[0], y = c[1], m = (v) => num(v * MM);
+        ops.push(`${m(x + r)} ${m(y)} m`,
+          `${m(x + r)} ${m(y + k)} ${m(x + k)} ${m(y + r)} ${m(x)} ${m(y + r)} c`,
+          `${m(x - k)} ${m(y + r)} ${m(x - r)} ${m(y + k)} ${m(x - r)} ${m(y)} c`,
+          `${m(x - r)} ${m(y - k)} ${m(x - k)} ${m(y - r)} ${m(x)} ${m(y - r)} c`,
+          `${m(x + k)} ${m(y - r)} ${m(x + r)} ${m(y - k)} ${m(x + r)} ${m(y)} c S`);
+      },
+      /* Texte : (x, y) = point d'ancrage sur la ligne de base ; size en mm ; align : 'l' | 'c' | 'r' ; deg : rotation. */
+      text(x, y, str, size, o = {}) {
+        const sz = Math.max(size, 0.8) * MM;
+        const wd = enc(str).length * sz * (o.bold ? 0.56 : 0.52) / MM;
+        const dx = o.align === 'c' ? -wd / 2 : o.align === 'r' ? -wd : 0;
+        const th = (o.deg || 0) * Math.PI / 180, c = Math.cos(th), s = Math.sin(th);
+        const px = x + dx * c, py = y + dx * s;
+        ops.push(`BT /${o.bold ? 'F2' : 'F1'} ${num(sz)} Tf ${num(c)} ${num(s)} ${num(-s)} ${num(c)} ${num(px * MM)} ${num(py * MM)} Tm (${esc(str)}) Tj ET`);
+      },
+    };
+    return P;
+  }
+
+  const today = () => new Date().toLocaleDateString('fr-FR');
+
+  function frame(P, sheet, name, no, total, scaleLabel) {
+    P.alpha(false); P.cap(false); P.color('#111827');
+    P.width(0.7); P.rect(MARGIN, MARGIN, P.w - 2 * MARGIN, P.h - 2 * MARGIN);
+    const x0 = P.w - MARGIN - CART_W, y0 = MARGIN, y1 = y0 + CART_H;
+    P.width(0.5); P.rect(x0, y0, CART_W, CART_H);
+    P.width(0.3);
+    const r1 = y1 - 14, r2 = r1 - 11;
+    P.line([x0, r1], [x0 + CART_W, r1]);
+    P.line([x0, r2], [x0 + CART_W, r2]);
+    const cols = [0, 62, 112, 146, CART_W];
+    for (const c of cols.slice(1, -1)) { P.line([x0 + c, r2], [x0 + c, r1]); P.line([x0 + c, y0], [x0 + c, r2]); }
+    P.color('#071B55');
+    P.text(x0 + 3, y1 - 6, name.length > 44 ? name.slice(0, 43) + '...' : name, 5, { bold: true });
+    P.text(x0 + 3, y1 - 11.2, 'ARCHIINDUS · Studio Prism', 2.6);
+    P.color('#4B5563');
+    const cell = (cx, y, label, value) => {
+      P.color('#4B5563'); P.text(x0 + cx + 1.5, y + 7.2, label, 2);
+      P.color('#111827'); P.text(x0 + cx + 1.5, y + 2.6, value, 3.4, { bold: true });
+    };
+    cell(cols[0], r1 - 11, 'Client', sheet.client || '—');
+    cell(cols[1], r1 - 11, 'Dessiné par', sheet.author || '—');
+    cell(cols[2], r1 - 11, 'Référence', sheet.ref || '—');
+    cell(cols[3], r1 - 11, 'Indice', sheet.rev || 'A');
+    cell(cols[0], y0, 'Échelle', scaleLabel);
+    cell(cols[1], y0, 'Format', sheet.format + ' paysage');
+    cell(cols[2], y0, 'Date', today());
+    cell(cols[3], y0, 'Feuille', `${no} / ${total}`);
+  }
+
+  /* --- Feuille de dessin --- */
+  function drawingPage(sheet, name, PW, PH) {
+    const objs = IO.visibleObjects();
+    if (!objs.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const o of objs) {
+      const b = Geo.bbox(o), pad = o.net ? o.net.dn / 2 : 0;
+      x0 = Math.min(x0, b[0] - pad); y0 = Math.min(y0, b[1] - pad); x1 = Math.max(x1, b[2] + pad); y1 = Math.max(y1, b[3] + pad);
+    }
+    const aw = PW - 2 * (MARGIN + 5), ah = PH - 2 * MARGIN - STRIP - 10;
+    const w = Math.max(x1 - x0, 1), h = Math.max(y1 - y0, 1);
+    const N = SCALES.find((n) => w / n <= aw && h / n <= ah) || SCALES[SCALES.length - 1];
+    const ox = MARGIN + 5 + (aw - w / N) / 2 - x0 / N;
+    const oy = MARGIN + STRIP + 5 + (ah - h / N) / 2 - y0 / N;
+    const T = (p) => [ox + p[0] / N, oy + p[1] / N];
+    const P = page(PW, PH);
+    P.cap(true);
+    for (const l of Doc.get().layers) {
+      if (!l.visible) continue;
+      const items = objs.filter((o) => o.layer === l.id);
+      if (!items.length) continue;
+      P.color(l.color); P.alpha(false);
+      for (const o of items) {
+        if ((o.type === 'line' || o.type === 'poly') && o.net) {
+          P.alpha(true); P.width(Math.max(o.net.dn / N, 0.5)); P.cap(true);
+          P.path((o.type === 'line' ? [o.a, o.b] : o.pts).map(T), !!o.closed);
+          P.alpha(false);
+        }
+        P.width(0.25);
+        if (o.type === 'line') P.line(T(o.a), T(o.b));
+        else if (o.type === 'poly') P.path(o.pts.map(T), !!o.closed);
+        else if (o.type === 'circle') P.circle(T(o.c), o.r / N);
+        else if (o.type === 'text') P.text(...T(o.p), o.text, o.h / N);
+        else if (o.type === 'dim') {
+          const d = IO.dimExplode(o);
+          P.width(0.18);
+          for (const [a, b] of d.lines) P.line(T(a), T(b));
+          const m = T(d.mid), th = d.deg * Math.PI / 180;
+          P.text(m[0] - Math.sin(th) * d.h / N * 0.25, m[1] + Math.cos(th) * d.h / N * 0.25, d.str, d.h / N, { align: 'c', deg: d.deg });
+        }
+        if (o.net) {
+          const nl = IO.netLabelInfo(o);
+          if (nl) {
+            const m = T(nl.mid), th = nl.deg * Math.PI / 180, off = o.net.dn / N / 2 + nl.h / N * 0.25;
+            P.text(m[0] - Math.sin(th) * off, m[1] + Math.cos(th) * off, nl.str, Math.max(nl.h / N, 2), { align: 'c', deg: nl.deg });
+          }
+        }
+      }
+    }
+    return { P, scaleLabel: N === 1 ? '1:1' : `1:${N}` };
+  }
+
+  /* --- Pages de nomenclature --- */
+  function bomPages(sheet, name, PW, PH) {
+    const b = BOM.compute();
+    if (!b.nets.length && !b.others.length) return [];
+    const aw = PW - 2 * (MARGIN + 5);
+    const specs = {
+      net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
+      other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
+    };
+    const items = [];
+    if (b.nets.length) {
+      items.push({ t: 'title', text: 'Nomenclature : réseaux' }, { t: 'head', s: specs.net });
+      b.nets.forEach((r) => items.push({ t: 'row', s: specs.net, cells: BOM.netRow(r) }));
+      const t = BOM.totals(b);
+      items.push({ t: 'row', s: specs.net, bold: true, cells: ['Total', '', '', '', String(t.netSegments), BOM.f2(t.netLength)] });
+    }
+    if (b.others.length) {
+      items.push({ t: 'title', text: 'Nomenclature : autres éléments par calque' }, { t: 'head', s: specs.other });
+      b.others.forEach((r) => items.push({ t: 'row', s: specs.other, cells: BOM.otherRow(r) }));
+    }
+    const RH = 6.2, top = PH - MARGIN - 12, bottom = MARGIN + STRIP + 4;
+    const perPage = Math.floor((top - bottom) / RH);
+    const pages = [];
+    let cur = null, used = 0, lastHead = null;
+    const fresh = () => { cur = page(PW, PH); cur.cap(false); used = 0; pages.push(cur); };
+    const colX = (s) => { let x = MARGIN + 5; return s.frac.map((f) => { const r = [x, f * aw]; x += f * aw; return r; }); };
+    for (const it of items) {
+      if (it.t === 'title' && cur && used > 0) used += 1;            /* ligne vide avant une nouvelle table */
+      const need = it.t === 'title' ? 2 : 1;
+      if (!cur || used + need > perPage) { fresh(); if (it.t === 'row' && lastHead) { used = emit({ t: 'head', s: lastHead }, used); } }
+      used = emit(it, used);
+    }
+    function emit(it, u) {
+      const y = top - (u + 1) * RH + 1.6;
+      if (it.t === 'title') { cur.color('#071B55'); cur.text(MARGIN + 5, y, it.text, 4.6, { bold: true }); return u + 2; }
+      const cx = colX(it.s);
+      if (it.t === 'head') {
+        lastHead = it.s;
+        cur.color('#4B5563'); cur.width(0.3); cur.line([MARGIN + 5, y - 1.6], [MARGIN + 5 + aw, y - 1.6]);
+        it.s.head.forEach((h, i) => { const num = it.s.num.includes(i); cur.text(num ? cx[i][0] + cx[i][1] - 1.5 : cx[i][0] + 1.5, y, h, 2.8, { bold: true, align: num ? 'r' : 'l' }); });
+        return u + 1;
+      }
+      cur.color('#111827'); cur.width(0.12); cur.line([MARGIN + 5, y - 1.6], [MARGIN + 5 + aw, y - 1.6]);
+      it.cells.forEach((c, i) => { const num = it.s.num.includes(i); cur.text(num ? cx[i][0] + cx[i][1] - 1.5 : cx[i][0] + 1.5, y, c, 3.2, { bold: !!it.bold, align: num ? 'r' : 'l' }); });
+      return u + 1;
+    }
+    return pages;
+  }
+
+  /* --- Assemblage du fichier --- */
+  function assemble(pages, title) {
+    let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+    const offs = [];
+    const obj = (n, body) => { offs[n] = out.length; out += `${n} 0 obj\n${body}\nendobj\n`; };
+    const nObj = 6 + pages.length * 2;
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, `<< /Type /Pages /Count ${pages.length} /Kids [${pages.map((_, i) => `${7 + 2 * i} 0 R`).join(' ')}] >>`);
+    obj(3, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+    obj(4, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+    obj(5, '<< /GS0 << /Type /ExtGState /CA 1 /ca 1 >> /GS1 << /Type /ExtGState /CA 0.26 /ca 0.26 >> >>');
+    obj(6, `<< /Title (${esc(title)}) /Producer (ARCHIINDUS Studio Prism) >>`);
+    pages.forEach((P, i) => {
+      const content = P.ops.join('\n');
+      obj(7 + 2 * i, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(P.w * MM)} ${num(P.h * MM)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /ExtGState 5 0 R >> /Contents ${8 + 2 * i} 0 R >>`);
+      obj(8 + 2 * i, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    });
+    const xref = out.length;
+    out += `xref\n0 ${nObj + 1}\n0000000000 65535 f \n`;
+    for (let n = 1; n <= nObj; n++) out += String(offs[n]).padStart(10, '0') + ' 00000 n \n';
+    out += `trailer\n<< /Size ${nObj + 1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const bytes = new Uint8Array(out.length);
+    for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 255;
+    return bytes;
+  }
+
+  function build() {
+    const d = Doc.get();
+    const sheet = cleanSheet(d.sheet);
+    const [PW, PH] = SHEET_FORMATS[sheet.format];
+    const dp = drawingPage(sheet, d.name, PW, PH);
+    if (!dp) return null;
+    const bp = bomPages(sheet, d.name, PW, PH);
+    const total = 1 + bp.length;
+    frame(dp.P, sheet, d.name, 1, total, dp.scaleLabel);
+    bp.forEach((P, i) => frame(P, sheet, d.name, i + 2, total, '—'));
+    return { bytes: assemble([dp.P, ...bp], d.name), pages: total, scale: dp.scaleLabel };
+  }
+
+  function exportPDF() {
+    const r = build();
+    if (!r) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    IO.download(`${IO.safeName(Doc.get().name)}.pdf`, r.bytes, 'application/pdf');
+    Status.msg(`PDF envoyé vers vos téléchargements (${r.pages} feuille${r.pages > 1 ? 's' : ''}, échelle ${r.scale}).`);
+  }
+
+  /* Boîte de dialogue : format et cartouche, puis export. */
+  function dialog() {
+    const s = cleanSheet(Doc.get().sheet);
+    const fld = (label, key, max) => {
+      const i = el('input', { class: 'fld', type: 'text', maxlength: max, value: s[key], 'aria-label': label });
+      return [el('label', { class: 'lbl' }, label, i), i];
+    };
+    const fmtSel = el('select', { 'aria-label': 'Format de feuille' }, ...Object.keys(SHEET_FORMATS).map((k) => el('option', { value: k, selected: k === s.format }, `${k} paysage`)));
+    const [l1, client] = fld('Client', 'client', 60), [l2, author] = fld('Dessiné par', 'author', 60), [l3, ref] = fld('Référence', 'ref', 40), [l4, rev] = fld('Indice', 'rev', 10);
+    const body = el('div', {}, el('p', { class: 'mut small' }, 'Le dessin est mis à l\'échelle normalisée la plus grande qui tient sur la feuille. Les calques masqués ne sont pas imprimés. Vérifiez le PDF dans un lecteur avant diffusion.'),
+      el('div', { class: 'frm' }, el('label', { class: 'lbl' }, 'Format', fmtSel), l4, l1, l2, l3));
+    Dlg.open('Export PDF', body, [{
+      label: 'Exporter le PDF', primary: true,
+      run: () => {
+        const v = cleanSheet({ format: fmtSel.value, client: client.value, author: author.value, ref: ref.value, rev: rev.value });
+        Doc.mutate((dd) => { dd.sheet = v; });
+        exportPDF();
+      },
+    }]);
+  }
+
+  return { build, exportPDF, dialog, SCALES };
+})();
+
+/* ==== 77-bom.js ==== */
+/* Nomenclature : quantités calculées à partir des objets des calques VISIBLES (comme les exports SVG, DXF et PDF).
+   - Réseaux (objets avec attribut net) : regroupés par calque, matériau et DN ; longueurs en mètres, tronçons = segments.
+   - Autres éléments : par calque, lignes et polylignes (nombre et longueur), cercles, surface des contours fermés.
+   Les cotes et les textes ne sont pas comptés. */
+const BOM = (() => {
+  const GROUP_ORDER = { humide: 0, sec: 1, structure: 2, equipement: 3, divers: 4 };
+  const GROUP_NAME = { humide: 'Réseau humide', sec: 'Réseau sec', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
+
+  function compute() {
+    const d = Doc.get();
+    const nets = new Map(), others = new Map();
+    for (const o of d.objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      if (o.net) {
+        const key = `${l.id}|${o.net.mat}|${o.net.dn}`;
+        let r = nets.get(key);
+        if (!r) { r = { layer: l.name, group: l.group, mat: o.net.mat, dn: o.net.dn, objects: 0, segments: 0, length: 0, tags: new Set() }; nets.set(key, r); }
+        r.objects++;
+        r.segments += Geo.segments(o).length;
+        r.length += (Geo.length(o) || 0) / 1000;
+        if (o.net.tag) r.tags.add(o.net.tag);
+      } else if (o.type === 'line' || o.type === 'poly' || o.type === 'circle') {
+        let r = others.get(l.id);
+        if (!r) { r = { layer: l.name, group: l.group, lines: 0, circles: 0, length: 0, area: 0 }; others.set(l.id, r); }
+        if (o.type === 'circle') r.circles++; else r.lines++;
+        r.length += (Geo.length(o) || 0) / 1000;
+        r.area += Geo.area(o) || 0;
+      }
+    }
+    const byGroup = (a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.layer.localeCompare(b.layer, 'fr');
+    return {
+      nets: [...nets.values()].sort((a, b) => byGroup(a, b) || b.dn - a.dn || a.mat.localeCompare(b.mat, 'fr')).map((r) => ({ ...r, tags: [...r.tags].sort() })),
+      others: [...others.values()].sort(byGroup),
+    };
+  }
+
+  const f2 = (v) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  function netRow(r) { return [r.layer, r.mat || '—', String(r.dn), r.tags.join(', ') || '—', String(r.segments), f2(r.length)]; }
+  function otherRow(r) { return [r.layer, GROUP_NAME[r.group] || r.group, String(r.lines), String(r.circles), f2(r.length), f2(r.area)]; }
+  const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
+  const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
+  const NET_NUM = [2, 4, 5], OTHER_NUM = [2, 3, 4, 5];
+
+  function totals(b) {
+    return { netLength: b.nets.reduce((s, r) => s + r.length, 0), netSegments: b.nets.reduce((s, r) => s + r.segments, 0) };
+  }
+
+  function table(caption, head, rows, numCols, foot) {
+    const t = el('table', { class: 'tbl' }, el('caption', {}, caption));
+    t.append(el('thead', {}, el('tr', {}, ...head.map((h, i) => el('th', { class: numCols.includes(i) ? 'n' : '', scope: 'col' }, h)))));
+    t.append(el('tbody', {}, ...rows.map((r) => el('tr', {}, ...r.map((c, i) => el('td', { class: numCols.includes(i) ? 'n' : '' }, c))))));
+    if (foot) t.append(el('tfoot', {}, el('tr', {}, ...foot.map((c, i) => el('td', { class: numCols.includes(i) ? 'n' : '' }, c)))));
+    return t;
+  }
+
+  function show() {
+    const b = compute();
+    const body = el('div');
+    if (!b.nets.length && !b.others.length) {
+      body.append(el('p', { class: 'mut' }, 'Rien à compter : le dessin est vide ou tous les calques sont masqués.'));
+    } else {
+      body.append(el('p', { class: 'mut small' }, 'Calques visibles uniquement. Les cotes et les textes ne sont pas comptés. Longueurs mesurées sur le dessin (mm → m), sans coefficient de coupe ni raccords.'));
+      if (b.nets.length) {
+        const t = totals(b);
+        body.append(table('Réseaux', NET_HEAD, b.nets.map(netRow), NET_NUM, ['Total', '', '', '', String(t.netSegments), f2(t.netLength)]));
+      } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
+      if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
+    }
+    Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { exportCSV(); return false; } }]);
+  }
+
+  /* CSV pour Excel en français : séparateur « ; », virgule décimale, UTF-8 avec BOM. */
+  function exportCSV() {
+    const b = compute();
+    if (!b.nets.length && !b.others.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+    const lines = [];
+    if (b.nets.length) {
+      lines.push(q('Réseaux'), NET_HEAD.map(q).join(';'));
+      for (const r of b.nets) lines.push(netRow(r).map(q).join(';'));
+      const t = totals(b);
+      lines.push(['Total', '', '', '', t.netSegments, f2(t.netLength)].map(q).join(';'), '');
+    }
+    if (b.others.length) {
+      lines.push(q('Autres éléments par calque'), OTHER_HEAD.map(q).join(';'));
+      for (const r of b.others) lines.push(otherRow(r).map(q).join(';'));
+    }
+    IO.download(`${IO.safeName(Doc.get().name)}-nomenclature.csv`, '\ufeff' + lines.join('\r\n') + '\r\n', 'text/csv;charset=utf-8');
+    Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
+  }
+
+  return { compute, show, exportCSV, netRow, otherRow, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
 })();
 
 /* ==== 78-ui.js ==== */
@@ -1580,6 +2097,49 @@ const UI = (() => {
     });
   }
 
+  /* --- Réseau : attributs DN / matériau / repère de la sélection (lignes et polylignes) --- */
+  function netForm(objs) {
+    const ids = new Set(objs.map((o) => o.id));
+    const common = (k) => (objs.every((o) => o.net && o.net[k] === objs[0].net?.[k]) ? objs[0].net[k] : '');
+    const dn = el('input', { class: 'fld', type: 'number', min: 1, max: NET_DN_MAX, step: 'any', 'aria-label': 'Diamètre nominal en millimètres', value: common('dn') });
+    const mat = el('input', { class: 'fld', type: 'text', list: 'netMats', maxlength: 30, 'aria-label': 'Matériau', value: common('mat') });
+    const tag = el('input', { class: 'fld', type: 'text', maxlength: 30, 'aria-label': 'Repère', value: objs.length === 1 ? (objs[0].net?.tag || '') : '', disabled: objs.length > 1, placeholder: objs.length > 1 ? '(un seul objet)' : 'ex. EU-01' });
+    const apply = el('button', { type: 'button', class: 'btn wide' }, 'Appliquer comme réseau');
+    apply.addEventListener('click', () => {
+      const v = Number(dn.value);
+      if (!Number.isFinite(v) || v <= 0 || v > NET_DN_MAX) { Status.msg(`Diamètre invalide : entrez un DN entre 1 et ${NET_DN_MAX} mm.`, 6000); return; }
+      Doc.mutate((d) => {
+        for (const o of d.objects) {
+          if (!ids.has(o.id)) continue;
+          o.net = cleanNet({ dn: v, mat: mat.value, tag: objs.length === 1 ? tag.value : (o.net?.tag || '') });
+        }
+      });
+    });
+    const box = el('div', { class: 'netbox' }, el('b', {}, 'Réseau'),
+      el('label', { class: 'lbl' }, 'DN (mm)', dn), el('label', { class: 'lbl' }, 'Matériau', mat), el('label', { class: 'lbl' }, 'Repère', tag), apply);
+    if (objs.some((o) => o.net)) {
+      const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer le réseau');
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.net; }));
+      box.append(rm);
+    }
+    return box;
+  }
+
+  function bindNetDefaults() {
+    const dl = $('#netMats');
+    for (const m of NET_MATERIALS) dl.append(el('option', { value: m }));
+    const on = $('#netOn'), dn = $('#netDn'), mat = $('#netMat');
+    const sync = () => {
+      const v = Number(dn.value);
+      state.net.on = on.checked;
+      state.net.dn = Number.isFinite(v) && v > 0 && v <= NET_DN_MAX ? v : state.net.dn;
+      state.net.mat = mat.value.trim().slice(0, 30);
+    };
+    on.addEventListener('change', () => { sync(); Status.msg(on.checked ? `Tracé en réseau : DN${state.net.dn}.` : 'Tracé en réseau désactivé.'); });
+    dn.addEventListener('change', sync);
+    mat.addEventListener('change', sync);
+  }
+
   /* --- Propriétés de la sélection --- */
   function renderProps() {
     const box = $('#props');
@@ -1597,10 +2157,12 @@ const UI = (() => {
       const ar = Geo.area(o);
       if (ar !== null) dl.append(...kv('Surface', ar.toFixed(3) + ' m²'));
       if (o.type === 'text') dl.append(...kv('Texte', o.text));
+      if (o.net) dl.append(...kv('Réseau', `DN${o.net.dn}${o.net.mat ? ' · ' + o.net.mat : ''}${o.net.tag ? ' · ' + o.net.tag : ''}`));
     } else {
       dl.append(...kv('Objets', String(objs.length)));
     }
     box.append(dl);
+    if (objs.every((o) => o.type === 'line' || o.type === 'poly')) box.append(netForm(objs));
     const sel = el('select', { 'aria-label': 'Calque des objets sélectionnés' });
     const same = objs.every((o) => o.layer === objs[0].layer);
     if (!same) sel.append(el('option', { value: '' }, '— plusieurs calques —'));
@@ -1649,6 +2211,7 @@ const UI = (() => {
 
   function init() {
     bindCmd();
+    bindNetDefaults();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
     $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
     $('#undo').addEventListener('click', () => Doc.undo());
@@ -1659,6 +2222,11 @@ const UI = (() => {
     $('#save').addEventListener('click', () => IO.saveJSON());
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());
+    $('#pdf').addEventListener('click', () => PDF.dialog());
+    $('#acct').addEventListener('click', () => Account.open());
+    $('#cloud').addEventListener('click', () => Cloud.show());
+    Account.on(() => { const m = Account.me(); $('#acct').textContent = m ? (m.firstName || 'Compte') : 'Compte'; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
+    $('#bom').addEventListener('click', () => BOM.show());
     $('#addLayer').addEventListener('click', addLayer);
     $('#snapBtn').addEventListener('click', () => Tools.toggleSnap());
     $('#orthoBtn').addEventListener('click', () => Tools.toggleOrtho());
@@ -1681,6 +2249,428 @@ const UI = (() => {
   return { init, focusCmd };
 })();
 
+/* ==== 79-account.js ==== */
+/* Compte Studio Prism, licence ArchiIndus et projets cloud (interface). Reprend les mécanismes d'ArchiPlan (src/js/auth.js, cloud.js) :
+   même projet Firebase COMMUN (AI_FIREBASE.common), mêmes collections users/{uid} et licenses/{uid}_{produit}, SDK « compat » chargé à la demande.
+   Rien n'est chargé depuis le réseau tant que l'utilisateur n'ouvre pas le compte, sauf s'il s'est déjà connecté sur cet appareil.
+   NON repris pour l'instant : code PIN et verrouillage, fiche client, Face ID, accès par lien. Aucune fonction n'est bloquée par la licence :
+   elle est seulement affichée (les règles d'accès à ArchiIndus restent à définir).
+   Les écritures cloud échouent tant que le bloc de règles ai* n'est pas publié (voir firebase/firestore.ai.rules.proposed). */
+const Account = (() => {
+  const BASE = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  const PRODUCT = 'archiindus';
+  const SITE_URL = 'https://groupestudioprism.github.io/Studio-Prism/';
+  const FLAG = 'ai.acct';
+  const QUOTA = { free: 10e6, licensed: 50e6, admin: 1e9 };            /* mêmes valeurs que aiQuota() dans le bloc de règles proposé */
+  const LIC_LABEL = { free: 'Gratuite', pro: 'Pro', pro_entreprise: 'Pro Entreprise', trial: 'Essai', demo: 'Démo', education: 'Éducation', standard: 'Standard' };
+  const licLabel = (t) => LIC_LABEL[t] || String(t || '—').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  const ERR = {
+    'auth/invalid-credential': 'Email ou mot de passe incorrect.', 'auth/wrong-password': 'Email ou mot de passe incorrect.', 'auth/user-not-found': 'Email ou mot de passe incorrect.',
+    'auth/invalid-email': 'Cette adresse email n\'est pas valide.',
+    'auth/email-already-in-use': 'Un compte Studio Prism existe déjà avec cet email. Connectez-vous, ou utilisez « Mot de passe oublié ».',
+    'auth/weak-password': 'Mot de passe trop faible : 8 caractères minimum, avec une lettre et un chiffre.',
+    'auth/too-many-requests': 'Trop de tentatives. Patientez quelques minutes, puis réessayez.',
+    'auth/network-request-failed': 'Connexion impossible. Vérifiez votre réseau, puis réessayez.',
+    'app/suspended': 'Ce compte Studio Prism est désactivé. Contactez Studio Prism pour le faire réactiver.',
+    'app/profile-missing': 'Le profil Studio Prism n\'a pas pu être lu ou créé. Réessayez dans un instant.',
+    'app/profile-invalid': 'Votre profil Studio Prism est incomplet. Contactez Studio Prism.',
+  };
+  const errMsg = (e) => ERR[e && e.code] || CloudStore.explain(e);
+
+  let fa = null, db = null, me = null, access = null, booting = null;
+  const subs = [];
+  const notify = () => subs.forEach((f) => f());
+  const flag = (on) => { try { if (on) localStorage.setItem(FLAG, '1'); else localStorage.removeItem(FLAG); } catch (e) { /* stockage indisponible */ } };
+
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = () => rej({ code: 'auth/network-request-failed' });
+      document.head.appendChild(s);
+    });
+  }
+
+  function boot() {
+    if (booting) return booting;
+    booting = (async () => {
+      await loadScript(BASE + 'firebase-app-compat.js');
+      await Promise.all([loadScript(BASE + 'firebase-auth-compat.js'), loadScript(BASE + 'firebase-firestore-compat.js')]);
+      firebase.initializeApp(AI_FIREBASE.common);
+      fa = firebase.auth(); fa.languageCode = 'fr';
+      fa.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+      db = firebase.firestore();
+      try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) { /* réglage non critique */ }
+    })();
+    booting.catch(() => { booting = null; });
+    return booting;
+  }
+
+  const ts = () => firebase.firestore.FieldValue.serverTimestamp();
+  const userRef = (uid) => db.collection('users').doc(uid);
+
+  /* Profil par défaut identique à celui du site et d'ArchiPlan : particulier / gratuit / utilisateur / actif. */
+  function defaultProfile(u, extra = {}) {
+    const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+    let words = (u.displayName || '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) words = (u.email || '').split('@')[0].split(/[._+-]+/).filter(Boolean).map(cap);
+    return {
+      firstName: (extra.firstName || words[0] || 'Utilisateur').slice(0, 80), lastName: (extra.lastName ?? words.slice(1).join(' ')).slice(0, 80),
+      email: u.email, accountKind: 'individual', subscription: 'free', role: 'user', status: 'active',
+      createdAt: ts(), updatedAt: ts(), lastLogin: ts(), ...(extra.terms ? { termsAcceptedAt: ts() } : {}),
+    };
+  }
+
+  async function readProfile(u) {
+    const ref = userRef(u.uid);
+    let snap = await ref.get();
+    if (!snap.exists) { try { await ref.set(defaultProfile(u)); } catch (e) { /* lecture ci-dessous */ } snap = await ref.get(); if (!snap.exists) throw { code: 'app/profile-missing' }; }
+    const d = snap.data();
+    if (d.status === 'suspended') { await fa.signOut(); throw { code: 'app/suspended' }; }
+    if (d.status !== 'active') throw { code: 'app/profile-invalid' };
+    return d;
+  }
+
+  /* Droits : administrateur actif → tout ; sinon licence licenses/{uid}_archiindus active et non expirée. */
+  async function readAccess(u, p) {
+    let lic = null;
+    try { const s = await db.collection('licenses').doc(`${u.uid}_${PRODUCT}`).get(); lic = s.exists ? s.data() : null; }
+    catch (e) { if (!e || e.code !== 'permission-denied') throw e; }   /* absence de licence : les règles refusent la lecture d'un document absent */
+    const exp = lic && lic.expiresAt && lic.expiresAt.toDate ? lic.expiresAt.toDate() : null;
+    const license = lic ? { type: lic.licenseType, status: lic.status, expiresAt: exp ? exp.getTime() : null, expired: !!exp && exp <= new Date() } : null;
+    if (p.role === 'admin' && p.status === 'active') return { level: 'admin', license };
+    return { level: license && license.status === 'active' && !license.expired ? 'licensed' : 'free', license };
+  }
+
+  async function after(user) {
+    const p = await readProfile(user);
+    userRef(user.uid).update({ lastLogin: ts() }).catch(() => {});
+    const [f, ...l] = (user.displayName || '').split(' ');
+    me = { uid: user.uid, email: user.email, firstName: p.firstName || f || '', lastName: p.lastName ?? l.join(' ') };
+    access = await readAccess(user, p);
+    CloudStore.bind(db, user.uid);
+    flag(true);
+    notify();
+    return me;
+  }
+
+  const strongPw = (p) => p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);
+
+  const api = {
+    me: () => me,
+    access: () => access,
+    on: (f) => { subs.push(f); },
+    licLabel, errMsg, QUOTA,
+    licenseText() {
+      if (!access) return '—';
+      if (access.level === 'admin') return 'Administrateur';
+      const l = access.license;
+      if (access.level === 'licensed') return licLabel(l.type) + (l.expiresAt ? ' · jusqu\'au ' + new Date(l.expiresAt).toLocaleDateString('fr-FR') : '');
+      return l && l.expired ? 'Expirée (' + licLabel(l.type) + ')' : 'Gratuite (aucune licence ArchiIndus)';
+    },
+    quota: () => (access ? QUOTA[access.level === 'licensed' ? 'licensed' : access.level] : QUOTA.free),
+
+    /* Au démarrage : ne charge Firebase que si une session a déjà été ouverte sur cet appareil. */
+    async restore() {
+      let on = false;
+      try { on = localStorage.getItem(FLAG) === '1'; } catch (e) { /* stockage indisponible */ }
+      if (!on) return;
+      try {
+        await boot();
+        const u = await new Promise((res) => { const un = fa.onAuthStateChanged((x) => { un(); res(x); }); });
+        if (u) await after(u); else flag(false);
+      } catch (e) { /* hors ligne : l'application reste utilisable sans compte */ }
+    },
+
+    async signIn(email, password) {
+      await boot();
+      const c = await fa.signInWithEmailAndPassword(String(email).trim(), password);
+      try { return await after(c.user); } catch (e) { if (!e || e.code !== 'app/suspended') await fa.signOut().catch(() => {}); throw e; }
+    },
+
+    async signUp({ firstName, lastName, email, password }) {
+      if (!strongPw(password)) throw { code: 'auth/weak-password' };
+      await boot();
+      const c = await fa.createUserWithEmailAndPassword(String(email).trim(), password);
+      try { await userRef(c.user.uid).set(defaultProfile(c.user, { firstName, lastName, terms: true })); }
+      catch (e) { await c.user.delete().catch(() => fa.signOut().catch(() => {})); throw e; }   /* pas de compte à moitié créé */
+      c.user.updateProfile({ displayName: `${firstName} ${lastName}`.trim() }).catch(() => {});
+      c.user.sendEmailVerification().catch(() => {});
+      return after(c.user);
+    },
+
+    async sendReset(email) {
+      await boot();
+      try { await fa.sendPasswordResetEmail(String(email).trim()); } catch (e) { if (!e || e.code !== 'auth/user-not-found') throw e; }   /* même réponse, compte existant ou non */
+    },
+
+    async signOut() {
+      if (fa) await fa.signOut().catch(() => {});
+      me = null; access = null; CloudStore.unbind(); Cloud.forget(); flag(false); notify();
+    },
+
+    /* --- Interface --- */
+    open() { return me ? accountDialog() : loginDialog(); },
+  };
+
+  function field(label, attrs) {
+    const input = el('input', { class: 'fld', ...attrs, 'aria-label': label });
+    return [el('label', { class: 'lbl' }, label, input), input];
+  }
+
+  function loginDialog(mode = 'in') {
+    const body = el('div');
+    const dlg = Dlg.open('Compte Studio Prism', body);
+    const render = (m) => {
+      body.textContent = '';
+      const err = el('p', { class: 'err', role: 'alert' });
+      const info = el('p', { class: 'mut small' });
+      const [lE, email] = field('Email', { type: 'email', autocomplete: 'email', maxlength: 160 });
+      const [lP, pw] = field('Mot de passe', { type: 'password', autocomplete: m === 'up' ? 'new-password' : 'current-password', maxlength: 200 });
+      const go = el('button', { type: 'submit', class: 'btn pri wide' }, m === 'in' ? 'Se connecter' : m === 'up' ? 'Créer mon compte' : 'Envoyer le lien');
+      const form = el('form', { novalidate: true });
+      let fn = null, ln = null, terms = null;
+      if (m === 'up') {
+        const [lF, f1] = field('Prénom', { type: 'text', autocomplete: 'given-name', maxlength: 80 });
+        const [lL, l1] = field('Nom', { type: 'text', autocomplete: 'family-name', maxlength: 80 });
+        fn = f1; ln = l1;
+        form.append(el('div', { class: 'frm' }, lF, lL));
+      }
+      form.append(lE);
+      if (m !== 'reset') form.append(lP);
+      if (m === 'up') {
+        terms = el('input', { type: 'checkbox' });
+        form.append(el('p', { class: 'mut small' }, 'Mot de passe : 8 caractères minimum, avec une lettre et un chiffre.'),
+          el('label', { class: 'chk' }, terms, 'J\'accepte les conditions d\'utilisation de Studio Prism.'));
+      }
+      form.append(err, info, go);
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        err.textContent = ''; info.textContent = '';
+        go.disabled = true;
+        try {
+          if (m === 'in') { await api.signIn(email.value, pw.value); }
+          else if (m === 'up') {
+            if (!fn.value.trim() || !terms.checked) throw { code: 'app/form', message: 'Renseignez votre prénom et acceptez les conditions.' };
+            await api.signUp({ firstName: fn.value.trim().slice(0, 80), lastName: ln.value.trim().slice(0, 80), email: email.value, password: pw.value });
+          } else {
+            await api.sendReset(email.value);
+            info.textContent = 'Si un compte existe pour cet email, un lien de réinitialisation vient d\'être envoyé.';
+            go.disabled = false; return;
+          }
+          dlg.close(); Status.msg(`Connecté : ${me.email}`);
+        } catch (e) { err.textContent = e && e.code === 'app/form' ? e.message : errMsg(e); go.disabled = false; }
+      });
+      const link = (txt, to) => { const b = el('button', { type: 'button', class: 'lnk' }, txt); b.addEventListener('click', () => render(to)); return b; };
+      body.append(el('p', { class: 'mut small' }, 'Un seul compte Studio Prism pour ArchiPlan, ArchiVision, ArchiIndus et le site.'), form,
+        el('div', { class: 'lnks' }, ...(m === 'in' ? [link('Créer un compte', 'up'), link('Mot de passe oublié', 'reset')] : [link('J\'ai déjà un compte', 'in')])));
+    };
+    render(mode);
+    return dlg;
+  }
+
+  function accountDialog() {
+    const body = el('div');
+    const used = el('dd', {}, '…');
+    const kv = (k, v) => [el('dt', {}, k), typeof v === 'string' ? el('dd', {}, v) : v];
+    body.append(el('dl', { class: 'kv' }, ...kv('Nom', `${me.firstName} ${me.lastName}`.trim() || '—'), ...kv('Email', me.email), ...kv('Licence ArchiIndus', api.licenseText()),
+      ...kv('Stockage cloud', used)));
+    const quotaTxt = ` / ${(api.quota() / 1e6).toLocaleString('fr-FR')} Mo`;
+    CloudStore.usageBytes().then((b) => { used.textContent = (b / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + quotaTxt; })
+      .catch(() => { used.textContent = 'indisponible'; });
+    body.append(el('p', { class: 'mut small' }, 'Les licences se gèrent sur le site Studio Prism : l\'attribution d\'une licence ArchiIndus est faite par un administrateur.'),
+      el('p', {}, el('a', { href: SITE_URL + '#/compte', target: '_blank', rel: 'noopener' }, 'Ouvrir mon compte sur le site Studio Prism')));
+    return Dlg.open('Mon compte', body, [
+      { label: 'Projets cloud', run: () => { Cloud.show(); } },
+      { label: 'Se déconnecter', run: () => { api.signOut().then(() => Status.msg('Déconnecté.')); } },
+    ]);
+  }
+
+  return api;
+})();
+
+/* Projets cloud : enregistrer le projet courant, rouvrir, supprimer. Le lien « projet courant ↔ projet cloud » n'est gardé qu'en mémoire. */
+const Cloud = (() => {
+  let cur = null;                         /* { id, size } du projet cloud lié au document affiché */
+  const fmtSize = (n) => (n >= 1e6 ? (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Mo' : Math.max(1, Math.round(n / 1000)) + ' Ko');
+  const fmtDate = (t) => (t ? new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+
+  function show() {
+    if (!Account.me()) { Account.open(); return; }
+    const body = el('div');
+    const list = el('div');
+    body.append(el('p', { class: 'mut small' }, 'Projets enregistrés sur votre compte Studio Prism (950 Ko maximum par projet). Ctrl+Z annule l\'ouverture d\'un projet.'), list);
+    const dlg = Dlg.open('Projets cloud', body, [{ label: cur ? 'Mettre à jour le projet cloud' : 'Enregistrer ce projet dans le cloud', primary: true, run: () => { save(); return false; } }]);
+
+    async function refresh() {
+      const pb = dlg.querySelector('.dlg-f .btn.pri'); if (pb) pb.textContent = cur ? 'Mettre à jour le projet cloud' : 'Enregistrer ce projet dans le cloud';
+      list.textContent = '';
+      list.append(el('p', { class: 'mut' }, 'Chargement…'));
+      let items;
+      try { items = await CloudStore.list(); } catch (e) { list.textContent = ''; list.append(el('p', { class: 'err' }, Account.errMsg(e))); return; }
+      list.textContent = '';
+      if (!items.length) { list.append(el('p', { class: 'mut' }, 'Aucun projet dans le cloud.')); return; }
+      const t = el('table', { class: 'tbl' }, el('thead', {}, el('tr', {}, el('th', {}, 'Nom'), el('th', { class: 'n' }, 'Taille'), el('th', {}, 'Modifié'), el('th', {}, ''))));
+      const tb = el('tbody');
+      for (const p of items) {
+        const open = el('button', { type: 'button', class: 'btn' }, 'Ouvrir');
+        const del = el('button', { type: 'button', class: 'btn danger' }, 'Supprimer');
+        open.addEventListener('click', () => openProject(p.id, dlg));
+        let armed = 0;
+        del.addEventListener('click', async () => {
+          if (!armed) { armed = setTimeout(() => { armed = 0; del.textContent = 'Supprimer'; }, 4000); del.textContent = 'Confirmer ?'; return; }
+          clearTimeout(armed); del.disabled = true;
+          try { await CloudStore.remove(p.id); if (cur && cur.id === p.id) cur = null; Status.msg(`« ${p.name} » supprimé du cloud.`); } catch (e) { Status.msg(Account.errMsg(e), 8000); }
+          refresh();
+        });
+        tb.append(el('tr', {}, el('td', {}, p.name), el('td', { class: 'n' }, fmtSize(p.size)), el('td', {}, fmtDate(p.updatedAt)), el('td', {}, el('div', { class: 'grp' }, open, del))));
+      }
+      t.append(tb); list.append(t);
+    }
+
+    async function save() {
+      const d = Doc.get(), data = JSON.stringify(d);
+      try {
+        if (cur) { await CloudStore.save(cur.id, d.name, data, cur.size); cur.size = CloudStore.byteLen(data); }
+        else { const id = await CloudStore.create(d.name, data); cur = { id, size: CloudStore.byteLen(data) }; }
+        Status.msg(`« ${d.name} » enregistré dans le cloud.`);
+      } catch (e) { Status.msg(Account.errMsg(e), 9000); }
+      refresh();
+    }
+    refresh();
+    return dlg;
+  }
+
+  async function openProject(id, dlg) {
+    try {
+      const r = await CloudStore.open(id);
+      const data = Doc.sanitize(JSON.parse(r.data));
+      Doc.replace(data); Tools.selection.clear(); Canvas2D.zoomExtents();
+      cur = { id, size: r.meta.size };
+      dlg.close();
+      Status.msg(`Projet « ${data.name} » ouvert depuis le cloud (${data.objects.length} objets).`);
+    } catch (e) { Status.msg(e instanceof SyntaxError ? 'Projet cloud illisible.' : e && e.message && !e.code ? 'Projet cloud invalide : ' + e.message : Account.errMsg(e), 9000); }
+  }
+
+  return { show, forget() { cur = null; } };
+})();
+
+/* ==== 79-cloudstore.js ==== */
+/* Couche de données du cloud ArchiIndus (Firestore, SDK « compat »), sans interface : voir firebase/firestore.ai.rules.proposed.
+   Schéma, sur le modèle d'ArchiPlan (préfixe ai au lieu de ap) :
+     aiProjects/{id}               {ownerUid, name, size, createdAt, updatedAt}
+     aiProjects/{id}/content/main  {data (JSON du projet, en chaîne), updatedAt}
+     aiUsage/{uid}                 {bytes, lastPid, updatedAt} : octets utilisés, mis à jour dans le MÊME LOT que la fiche.
+   Les règles Firestore imposent droits et quota côté serveur. Tant que le bloc ai* n'est pas publié dans le projet commun
+   (archivision-studioprism), toute écriture est refusée : l'application l'indique (voir CloudStore.explain).
+   Ce fichier ne dépend ni du DOM ni de Doc : il peut être chargé tel quel dans le test des règles (tests/rules/). */
+const CloudStore = (() => {
+  const MAX_DATA = 950000;                 /* octets (UTF-8) : plafond du contenu d'un projet ; les règles acceptent 1 000 000 */
+  const byteLen = (s) => new TextEncoder().encode(s || '').length;
+  let db = null, uid = '';
+
+  const FV = () => firebase.firestore.FieldValue;
+  const ts = () => FV().serverTimestamp();
+  const P = (pid) => db.collection('aiProjects').doc(pid);
+  const C = (pid) => P(pid).collection('content').doc('main');
+  const U = (u) => db.collection('aiUsage').doc(u);
+  const ms = (t) => (t && t.toMillis ? t.toMillis() : 0);
+  const meta = (d) => { const x = d.data(); return { id: d.id, name: x.name, size: x.size || 0, createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; };
+  const need = () => { if (!db || !uid) throw { code: 'app/not-signed-in' }; };
+  /* Le refus d'une écriture peut venir des droits, du quota, ou de règles non publiées : on ne sait pas lequel. */
+  /* Lire un projet absent est refusé par les règles (resource nul) : même résultat que « introuvable ou pas à vous ». */
+  const missing = (e) => { if (e && e.code === 'permission-denied') return { exists: false }; throw e; };
+  const wrap = (e) => { throw e && e.code === 'permission-denied' ? { code: 'app/quota-or-denied' } : e; };
+
+  return {
+    MAX_DATA, byteLen,
+    bind(firestore, userId) { db = firestore; uid = userId || ''; },
+    unbind() { db = null; uid = ''; },
+
+    /* Compteur de l'utilisateur ; s'il n'existe pas, il est créé (somme des projets existants), comme ArchiPlan. */
+    async usage(projects) {
+      need();
+      const s = await U(uid).get();
+      if (s.exists) return { bytes: s.data().bytes || 0 };
+      const bytes = (projects || []).reduce((a, p) => a + (p.size || 0), 0);
+      try { await U(uid).set({ bytes, lastPid: '', updatedAt: ts() }); } catch (e) { wrap(e); }
+      return { bytes };
+    },
+
+    /* Lecture seule du compteur (0 s'il n'existe pas encore) : n'écrit jamais. */
+    async usageBytes() {
+      need();
+      const s = await U(uid).get();
+      return s.exists ? (s.data().bytes || 0) : 0;
+    },
+
+    async list() {
+      need();
+      const s = await db.collection('aiProjects').where('ownerUid', '==', uid).get();
+      return s.docs.map(meta).sort((a, b) => b.updatedAt - a.updatedAt);
+    },
+
+    async open(pid) {
+      need();
+      const p = await P(pid).get().catch(missing);
+      if (!p.exists) throw { code: 'app/not-found' };
+      const c = await C(pid).get().catch(missing);
+      if (!c.exists) throw { code: 'app/not-found' };
+      return { meta: meta(p), data: c.data().data };
+    },
+
+    async create(name, data) {
+      need();
+      const size = byteLen(data);
+      if (size > MAX_DATA) throw { code: 'app/too-big' };
+      await this.usage();
+      const ref = db.collection('aiProjects').doc();
+      const b = db.batch();
+      b.set(ref, { ownerUid: uid, name: String(name).slice(0, 120) || 'Projet', size, createdAt: ts(), updatedAt: ts() });
+      b.set(C(ref.id), { data, updatedAt: ts() });
+      b.set(U(uid), { bytes: FV().increment(size), lastPid: ref.id, updatedAt: ts() }, { merge: true });
+      try { await b.commit(); } catch (e) { wrap(e); }
+      return ref.id;
+    },
+
+    /* prevSize : taille enregistrée sur la fiche avant cette sauvegarde. */
+    async save(pid, name, data, prevSize) {
+      need();
+      const size = byteLen(data);
+      if (size > MAX_DATA) throw { code: 'app/too-big' };
+      const delta = size - (prevSize || 0);
+      const b = db.batch();
+      b.set(C(pid), { data, updatedAt: ts() });
+      b.update(P(pid), { name: String(name).slice(0, 120) || 'Projet', size, updatedAt: ts() });
+      if (delta !== 0) b.set(U(uid), { bytes: FV().increment(delta), lastPid: pid, updatedAt: ts() }, { merge: true });
+      try { await b.commit(); } catch (e) { wrap(e); }
+    },
+
+    async remove(pid) {
+      need();
+      const pd = await P(pid).get().catch(missing);
+      if (!pd.exists) return;
+      const size = pd.data().size || 0;
+      const us = await U(uid).get().catch(() => null);
+      const b = db.batch();
+      b.delete(C(pid));
+      b.delete(P(pid));
+      if (us && us.exists && size > 0 && (us.data().bytes || 0) >= size) b.update(U(uid), { bytes: FV().increment(-size), lastPid: pid, updatedAt: ts() });
+      try { await b.commit(); } catch (e) { wrap(e); }
+    },
+
+    /* Message en français pour une erreur du cloud. */
+    explain(e) {
+      const c = e && e.code;
+      return c === 'app/not-signed-in' ? 'Connectez-vous à votre compte Studio Prism pour utiliser le cloud.'
+        : c === 'app/too-big' ? 'Projet trop volumineux pour le cloud (950 Ko maximum). Utilisez « Enregistrer » pour garder un fichier.'
+        : c === 'app/not-found' ? 'Projet introuvable ou inaccessible avec ce compte.'
+        : c === 'app/quota-or-denied' || c === 'permission-denied' ? 'Enregistrement cloud refusé : espace plein, droits insuffisants, ou le service cloud ArchiIndus n\'est pas encore activé sur le serveur.'
+        : c === 'unavailable' || c === 'auth/network-request-failed' ? 'Connexion impossible. Vérifiez votre réseau, puis réessayez.'
+        : 'Erreur du cloud : ' + (e && e.message ? e.message : String(c || e));
+    },
+  };
+})();
+
 /* ==== 80-main.js ==== */
 /* Point d'entrée. */
 document.addEventListener('DOMContentLoaded', () => {
@@ -1689,6 +2679,7 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.init();
   Canvas2D.init();
   if (Doc.get().objects.length) Canvas2D.zoomExtents();
+  Account.restore();
 });
 
 </script>

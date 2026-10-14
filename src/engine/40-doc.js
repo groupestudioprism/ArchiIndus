@@ -13,6 +13,26 @@ const LAYER_DEFAULTS = [
 ];
 const LAYER_GROUPS = ['humide', 'sec', 'structure', 'equipement', 'divers'];
 
+/* Réseau : attribut optionnel `net` des lignes et polylignes ouvertes ou fermées : {dn (mm), mat, tag}. */
+const NET_MATERIALS = ['PVC', 'PEHD', 'Fonte ductile', 'Acier', 'Acier galvanisé', 'Inox', 'Béton', 'Grès', 'Cuivre', 'Câble'];
+const NET_DN_MAX = 5000;
+function cleanNet(n) {
+  if (!n || typeof n !== 'object') return null;
+  const dn = Number(n.dn);
+  if (!Number.isFinite(dn) || dn <= 0 || dn > NET_DN_MAX) return null;
+  const s = (v) => (typeof v === 'string' ? v.trim().slice(0, 30) : '');
+  return { dn: Math.round(dn * 10) / 10, mat: s(n.mat), tag: s(n.tag) };
+}
+
+/* Cartouche et format de feuille (export PDF). */
+const SHEET_FORMATS = { A4: [297, 210], A3: [420, 297] };
+const SHEET_DEFAULT = { format: 'A3', client: '', author: '', ref: '', rev: 'A' };
+function cleanSheet(s) {
+  const t = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+  s = s && typeof s === 'object' ? s : {};
+  return { format: SHEET_FORMATS[s.format] ? s.format : 'A3', client: t(s.client, 60), author: t(s.author, 60), ref: t(s.ref, 40), rev: t(s.rev, 10) || 'A' };
+}
+
 const Doc = (() => {
   const KEY = 'ai.doc.v1';
   const MAX_HISTORY = 100;
@@ -27,7 +47,7 @@ const Doc = (() => {
 
   function fresh() {
     const layers = LAYER_DEFAULTS.map((l, i) => ({ id: i + 1, name: l.name, color: l.color, group: l.group, visible: true, locked: false }));
-    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1 };
+    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT } };
   }
 
   function emit(reason) { for (const f of subs) f(reason); }
@@ -85,12 +105,13 @@ const Doc = (() => {
       if (!o || typeof o !== 'object') bad(where + '.');
       const out = { type: o.type };
       switch (o.type) {
-        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); break;
+        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); { const nt = cleanNet(o.net); if (nt) out.net = nt; } break;
         case 'poly':
           if (!Array.isArray(o.pts) || o.pts.length < 2 || o.pts.length > 100000) bad(where + ' (polyligne).');
           out.pts = o.pts.map(pt);
           if (out.pts.some((p) => !p)) bad(where + ' (polyligne).');
           out.closed = o.closed === true;
+          { const nt = cleanNet(o.net); if (nt) out.net = nt; }
           break;
         case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
         case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
@@ -117,6 +138,7 @@ const Doc = (() => {
       nextId: maxO + 1,
       nextLayerId: maxL + 1,
       active: layerIds.has(raw.active) ? raw.active : layers[0].id,
+      sheet: cleanSheet(raw.sheet),
     };
   }
 
@@ -134,7 +156,15 @@ const Doc = (() => {
     mutate(fn) { checkpoint(); fn(data); changed(); },
 
     /* À appeler dans mutate : ajoute un objet sur le calque actif. */
-    add(o) { o.id = data.nextId++; o.layer = data.active; data.objects.push(o); return o; },
+    add(o) {
+      o.id = data.nextId++; o.layer = data.active;
+      if (state.net.on && (o.type === 'line' || (o.type === 'poly' && !o.closed))) {
+        const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' });
+        if (nt) o.net = nt;
+      }
+      data.objects.push(o);
+      return o;
+    },
 
     setActive(id) { if (data.active !== id && Doc.layer(id)) { data.active = id; changed(); } },
 

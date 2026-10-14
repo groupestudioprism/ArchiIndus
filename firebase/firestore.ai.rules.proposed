@@ -1,11 +1,12 @@
 // ============================================================================================================
-// BROUILLON NON PUBLIÉ, NON TESTÉ : bloc de règles Firestore « ai* » pour ARCHIINDUS.
+// BROUILLON NON PUBLIÉ : bloc de règles Firestore « ai* » pour ARCHIINDUS.
 // ============================================================================================================
 // - Ce fichier n'est PAS le fichier de règles du projet. Le fichier réel est commun au site et à ArchiPlan
 //   (dépôts Studio-Prism et ArchiPlan, firebase/firestore.rules) et se termine par une règle « tout refusé ».
 // - Pour l'activer, il faudrait coller ce bloc AVANT la dernière règle « match /{document=**} » de ce fichier commun,
 //   puis publier : modification d'un service partagé, à faire seulement après relecture et validation explicite.
-// - Aucun test (émulateur Firestore) n'a été exécuté. Ne pas publier en l'état.
+// - Testé à l'émulateur Firestore le 14/10/2026 contre le fichier de règles publié (voir tests/rules/) : cela ne remplace pas la relecture ni
+//   un test sur copie avant publication. Ne PAS publier sans accord explicite (service partagé avec le site et ArchiPlan).
 // - Il s'appuie sur les utilitaires déjà définis dans le fichier commun : isSignedIn(), isActiveUser(), isAdmin(),
 //   isActiveAdminProfile(), isString().
 //
@@ -15,7 +16,7 @@
 // aiProjects/{id}            fiche du projet (propriétaire, nom, taille). Contenu : aiProjects/{id}/content/main (JSON en chaîne).
 // aiUsage/{uid}              octets utilisés ; mis à jour DANS LE MÊME LOT que la fiche (lastPid), cohérence vérifiée.
 // Licence : licenses/{uid}_archiindus (écrite par un administrateur). Quota : 10 Mo sans licence, 50 Mo avec licence active,
-//   1 Go administrateur. Valeurs à confirmer.
+//   1 Go administrateur (mêmes valeurs qu'ArchiPlan, à confirmer pour ArchiIndus).
 // ============================================================================================================
 
     function aiP(pid) {
@@ -81,20 +82,33 @@
 
     match /aiUsage/{uid} {
       allow get: if isSignedIn() && request.auth.uid == uid;
-      // Première création : compteur à 0 avec lastPid vide. Ensuite : la variation doit égaler celle de la fiche lastPid écrite dans le lot.
-      allow create, update: if isSignedIn() && isActiveUser() && request.auth.uid == uid
+      // Logique reprise de apUsage (règles publiées, ArchiPlan) : création initiale par le titulaire (lastPid vide), puis chaque variation
+      // correspond exactement à la taille du projet lastPid écrit dans le même lot, y compris à sa suppression ; jamais au-delà du quota
+      // (une baisse reste permise).
+      allow create, update: if isSignedIn() && isActiveUser()
                             && request.resource.data.keys().hasOnly(['bytes', 'lastPid', 'updatedAt'])
                             && request.resource.data.bytes is int && request.resource.data.bytes >= 0
                             && isString(request.resource.data.lastPid, 0, 40)
                             && request.resource.data.updatedAt == request.time
-                            && (request.resource.data.bytes <= (resource == null ? 0 : resource.data.bytes)
+                            && ((resource == null && request.resource.data.lastPid == '')
+                                || request.resource.data.bytes <= (resource == null ? 0 : resource.data.bytes)
                                 || request.resource.data.bytes <= aiQuota(uid))
-                            && ((resource == null && request.resource.data.lastPid == '' && request.resource.data.bytes == 0)
-                                || (request.resource.data.lastPid != ''
-                                    && existsAfter(aiP(request.resource.data.lastPid))
-                                    && getAfter(aiP(request.resource.data.lastPid)).data.ownerUid == uid
-                                    && request.resource.data.bytes - (resource == null ? 0 : resource.data.bytes)
-                                       == getAfter(aiP(request.resource.data.lastPid)).data.get('size', 0)
-                                          - (exists(aiP(request.resource.data.lastPid)) ? get(aiP(request.resource.data.lastPid)).data.get('size', 0) : 0)));
-      allow delete: if isSignedIn() && (request.auth.uid == uid && resource.data.bytes == 0 || isAdmin());
+                            && (
+                              (resource == null && request.auth.uid == uid && request.resource.data.lastPid == '')
+                              || (request.resource.data.lastPid != ''
+                                  && (existsAfter(aiP(request.resource.data.lastPid))
+                                      ? (getAfter(aiP(request.resource.data.lastPid)).data.ownerUid == uid
+                                         && request.resource.data.bytes - (resource == null ? 0 : resource.data.bytes)
+                                            == getAfter(aiP(request.resource.data.lastPid)).data.get('size', 0)
+                                               - (exists(aiP(request.resource.data.lastPid)) ? get(aiP(request.resource.data.lastPid)).data.get('size', 0) : 0))
+                                      : (exists(aiP(request.resource.data.lastPid))
+                                         && get(aiP(request.resource.data.lastPid)).data.ownerUid == uid
+                                         && request.auth.uid == uid
+                                         && request.resource.data.bytes - (resource == null ? 0 : resource.data.bytes)
+                                            == -get(aiP(request.resource.data.lastPid)).data.get('size', 0))))
+                            );
+      // supprimé seulement vide, ou avec le profil du compte (suppression du compte, même lot)
+      allow delete: if (isSignedIn() && request.auth.uid == uid
+                    && (resource.data.bytes == 0 || !existsAfter(/databases/$(database)/documents/users/$(uid))))
+                    || isAdmin();
     }

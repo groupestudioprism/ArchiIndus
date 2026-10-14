@@ -16,6 +16,29 @@ function el(tag, attrs = {}, ...kids) {
   return n;
 }
 
+/* Boîte de dialogue modale (élément <dialog>). `body` est un nœud ; `actions` : [{ label, run }] — run() retourne false pour garder la boîte ouverte. */
+const Dlg = {
+  open(title, body, actions = []) {
+    const dlg = el('dialog', { class: 'dlg', 'aria-label': title });
+    const close = el('button', { type: 'button', class: 'ib', 'aria-label': 'Fermer' }, '✕');
+    const foot = el('div', { class: 'dlg-f' });
+    for (const a of actions) {
+      const b = el('button', { type: 'button', class: 'btn' + (a.primary ? ' pri' : '') }, a.label);
+      b.addEventListener('click', () => { if (a.run() !== false) dlg.close(); });
+      foot.append(b);
+    }
+    const done = el('button', { type: 'button', class: 'btn' }, 'Fermer');
+    foot.append(done);
+    close.addEventListener('click', () => dlg.close());
+    done.addEventListener('click', () => dlg.close());
+    dlg.append(el('div', { class: 'dlg-h' }, el('b', {}, title), close), el('div', { class: 'dlg-b' }, body), foot);
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg);
+    dlg.showModal();
+    return dlg;
+  },
+};
+
 const Status = {
   t: 0,
   msg(text, ms = 4500) {

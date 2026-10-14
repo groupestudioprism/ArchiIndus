@@ -54,6 +54,16 @@ const IO = (() => {
     return { lines, mid: G.mid(g.p1, g.p2), deg, str: fmt(g.L), h: o.h || 150 };
   }
 
+  /* Étiquette d'un réseau : milieu du plus long tronçon, angle lisible, texte « repère · DN ». */
+  function netLabelInfo(o) {
+    let best = null, bl = 0;
+    for (const [a, b] of Geo.segments(o)) { const l = G.dist(a, b); if (l > bl) { bl = l; best = [a, b]; } }
+    if (!best) return null;
+    let deg = Math.atan2(best[1][1] - best[0][1], best[1][0] - best[0][0]) * 180 / Math.PI;
+    if (deg > 90 || deg < -90) deg += 180;
+    return { mid: G.mid(best[0], best[1]), deg, str: (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn, h: 120 };
+  }
+
   const xmlEsc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function exportSVG() {
@@ -70,6 +80,13 @@ const IO = (() => {
       if (!l.visible || !items.length) continue;
       const g = [`<g data-layer="${xmlEsc(l.name)}" fill="none" stroke="${l.color}" stroke-width="1.5" font-family="Arial, Helvetica, sans-serif">`];
       for (const o of items) {
+        if ((o.type === 'line' || o.type === 'poly') && o.net) {
+          /* bande à la largeur réelle du diamètre (mm), puis axe et étiquette */
+          const pts = (o.type === 'line' ? [o.a, o.b] : o.pts).map((p) => X(p[0]) + ',' + Y(p[1])).join(' ');
+          g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${pts}" stroke-width="${o.net.dn}" stroke-opacity="0.26" stroke-linecap="round" stroke-linejoin="round" style="vector-effect:none" data-dn="${o.net.dn}"/>`);
+          const nl = netLabelInfo(o);
+          if (nl) g.push(`<text transform="translate(${X(nl.mid[0])},${Y(nl.mid[1])}) rotate(${+(-nl.deg).toFixed(3)})" text-anchor="middle" y="${-(o.net.dn / 2 + nl.h * 0.25)}" font-size="${nl.h}" fill="${l.color}" stroke="none">${xmlEsc(nl.str)}</text>`);
+        }
         if (o.type === 'line') g.push(line(o.a, o.b));
         else if (o.type === 'poly') g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${o.pts.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>`);
         else if (o.type === 'circle') g.push(`<circle cx="${X(o.c[0])}" cy="${Y(o.c[1])}" r="${X(o.r)}"/>`);
@@ -132,12 +149,23 @@ const IO = (() => {
     const text = (ly, p, h, str, rot) => { w(0, 'TEXT'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); w(40, nf(h)); w(1, ascii(str)); w(50, nf(rot)); };
     for (const o of objs) {
       const ly = names.get(o.layer);
-      if (o.type === 'line') line(ly, o.a, o.b);
+      if (o.type === 'line' && !o.net) line(ly, o.a, o.b);
       else if (o.type === 'circle') { w(0, 'CIRCLE'); w(8, ly); w(10, nf(o.c[0])); w(20, nf(o.c[1])); w(30, nf(0)); w(40, nf(o.r)); }
-      else if (o.type === 'poly') {
+      else if (o.type === 'poly' || (o.type === 'line' && o.net)) {
+        /* un réseau devient une POLYLINE de largeur constante égale au DN (mm) ; son repère est ajouté en texte */
+        const pts = o.type === 'line' ? [o.a, o.b] : o.pts;
         w(0, 'POLYLINE'); w(8, ly); w(66, 1); w(10, nf(0)); w(20, nf(0)); w(30, nf(0)); w(70, o.closed ? 1 : 0);
-        for (const p of o.pts) { w(0, 'VERTEX'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); }
+        if (o.net) { w(40, nf(o.net.dn)); w(41, nf(o.net.dn)); }
+        for (const p of pts) { w(0, 'VERTEX'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); }
         w(0, 'SEQEND'); w(8, ly);
+        const nl = o.net && netLabelInfo(o);
+        if (nl) {
+          const th = nl.deg * Math.PI / 180;
+          const u = [Math.cos(th), Math.sin(th)], up = [-Math.sin(th), Math.cos(th)];
+          const str = nl.str.replace(' · ', ' - ');
+          const wd = str.length * nl.h * 0.6, off = o.net.dn / 2 + nl.h * 0.25;
+          text(ly, [nl.mid[0] - u[0] * wd / 2 + up[0] * off, nl.mid[1] - u[1] * wd / 2 + up[1] * off], nl.h, str, nl.deg);
+        }
       } else if (o.type === 'text') text(ly, o.p, o.h, o.text, 0);
       else if (o.type === 'dim') {
         const d = dimExplode(o);
@@ -153,5 +181,5 @@ const IO = (() => {
     Status.msg('Export DXF envoyé vers vos téléchargements (unité : mm, cotes éclatées).');
   }
 
-  return { saveJSON, openFile, exportSVG, exportDXF };
+  return { saveJSON, openFile, exportSVG, exportDXF, download, safeName, visibleObjects, dimExplode, netLabelInfo };
 })();

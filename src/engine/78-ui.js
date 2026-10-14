@@ -66,6 +66,49 @@ const UI = (() => {
     });
   }
 
+  /* --- Réseau : attributs DN / matériau / repère de la sélection (lignes et polylignes) --- */
+  function netForm(objs) {
+    const ids = new Set(objs.map((o) => o.id));
+    const common = (k) => (objs.every((o) => o.net && o.net[k] === objs[0].net?.[k]) ? objs[0].net[k] : '');
+    const dn = el('input', { class: 'fld', type: 'number', min: 1, max: NET_DN_MAX, step: 'any', 'aria-label': 'Diamètre nominal en millimètres', value: common('dn') });
+    const mat = el('input', { class: 'fld', type: 'text', list: 'netMats', maxlength: 30, 'aria-label': 'Matériau', value: common('mat') });
+    const tag = el('input', { class: 'fld', type: 'text', maxlength: 30, 'aria-label': 'Repère', value: objs.length === 1 ? (objs[0].net?.tag || '') : '', disabled: objs.length > 1, placeholder: objs.length > 1 ? '(un seul objet)' : 'ex. EU-01' });
+    const apply = el('button', { type: 'button', class: 'btn wide' }, 'Appliquer comme réseau');
+    apply.addEventListener('click', () => {
+      const v = Number(dn.value);
+      if (!Number.isFinite(v) || v <= 0 || v > NET_DN_MAX) { Status.msg(`Diamètre invalide : entrez un DN entre 1 et ${NET_DN_MAX} mm.`, 6000); return; }
+      Doc.mutate((d) => {
+        for (const o of d.objects) {
+          if (!ids.has(o.id)) continue;
+          o.net = cleanNet({ dn: v, mat: mat.value, tag: objs.length === 1 ? tag.value : (o.net?.tag || '') });
+        }
+      });
+    });
+    const box = el('div', { class: 'netbox' }, el('b', {}, 'Réseau'),
+      el('label', { class: 'lbl' }, 'DN (mm)', dn), el('label', { class: 'lbl' }, 'Matériau', mat), el('label', { class: 'lbl' }, 'Repère', tag), apply);
+    if (objs.some((o) => o.net)) {
+      const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer le réseau');
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.net; }));
+      box.append(rm);
+    }
+    return box;
+  }
+
+  function bindNetDefaults() {
+    const dl = $('#netMats');
+    for (const m of NET_MATERIALS) dl.append(el('option', { value: m }));
+    const on = $('#netOn'), dn = $('#netDn'), mat = $('#netMat');
+    const sync = () => {
+      const v = Number(dn.value);
+      state.net.on = on.checked;
+      state.net.dn = Number.isFinite(v) && v > 0 && v <= NET_DN_MAX ? v : state.net.dn;
+      state.net.mat = mat.value.trim().slice(0, 30);
+    };
+    on.addEventListener('change', () => { sync(); Status.msg(on.checked ? `Tracé en réseau : DN${state.net.dn}.` : 'Tracé en réseau désactivé.'); });
+    dn.addEventListener('change', sync);
+    mat.addEventListener('change', sync);
+  }
+
   /* --- Propriétés de la sélection --- */
   function renderProps() {
     const box = $('#props');
@@ -83,10 +126,12 @@ const UI = (() => {
       const ar = Geo.area(o);
       if (ar !== null) dl.append(...kv('Surface', ar.toFixed(3) + ' m²'));
       if (o.type === 'text') dl.append(...kv('Texte', o.text));
+      if (o.net) dl.append(...kv('Réseau', `DN${o.net.dn}${o.net.mat ? ' · ' + o.net.mat : ''}${o.net.tag ? ' · ' + o.net.tag : ''}`));
     } else {
       dl.append(...kv('Objets', String(objs.length)));
     }
     box.append(dl);
+    if (objs.every((o) => o.type === 'line' || o.type === 'poly')) box.append(netForm(objs));
     const sel = el('select', { 'aria-label': 'Calque des objets sélectionnés' });
     const same = objs.every((o) => o.layer === objs[0].layer);
     if (!same) sel.append(el('option', { value: '' }, '— plusieurs calques —'));
@@ -135,6 +180,7 @@ const UI = (() => {
 
   function init() {
     bindCmd();
+    bindNetDefaults();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
     $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
     $('#undo').addEventListener('click', () => Doc.undo());
@@ -145,6 +191,11 @@ const UI = (() => {
     $('#save').addEventListener('click', () => IO.saveJSON());
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());
+    $('#pdf').addEventListener('click', () => PDF.dialog());
+    $('#acct').addEventListener('click', () => Account.open());
+    $('#cloud').addEventListener('click', () => Cloud.show());
+    Account.on(() => { const m = Account.me(); $('#acct').textContent = m ? (m.firstName || 'Compte') : 'Compte'; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
+    $('#bom').addEventListener('click', () => BOM.show());
     $('#addLayer').addEventListener('click', addLayer);
     $('#snapBtn').addEventListener('click', () => Tools.toggleSnap());
     $('#orthoBtn').addEventListener('click', () => Tools.toggleOrtho());

@@ -1,0 +1,14 @@
+{
+  "name": "archiindus-rules-test",
+  "private": true,
+  "description": "Test des règles Firestore ai* (bloc proposé) fusionnées avec les règles publiées, dans l'émulateur Firestore.",
+  "scripts": {
+    "build": "node build-rules.js",
+    "test": "node build-rules.js && firebase emulators:exec --only firestore --project demo-archiindus \"node test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "10.12.2",
+    "firebase-tools": "^13.35.1"
+  }
+}
