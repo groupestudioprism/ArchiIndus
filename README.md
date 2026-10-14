@@ -2,7 +2,7 @@
 
 Application de conception de plans industriels et de réseaux techniques (réseaux humides, réseaux secs, structures industrielles, génie civil), de la suite **Studio Prism**. Elle reprend l'identité graphique d'ArchiPlan et vise la compatibilité avec les autres applications de l'écosystème.
 
-> **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le cloud ne fonctionne qu'une fois le bloc de règles `ai*` publié dans le projet commun (non fait, à valider). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
+> **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le bloc de règles `ai*` a été publié le 14/10/2026 dans le projet commun (relecture en ligne identique au fichier testé). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
 
 ## Ce qui fonctionne (testé dans Chromium sans interface, `tests/e2e.py`)
 
@@ -65,7 +65,7 @@ Réalisé dans le code : comptes et licence. Reste à faire :
 | Commun Studio Prism | `archivision-studioprism` | Comptes (`users`), PIN, licences, futures données `ai*`. Partagé avec le site et ArchiPlan. |
 | Propre à ArchiIndus | `archiindus-studioprism` | Créé le 14/10/2026 : application web enregistrée, rien d'autre activé (ni Auth, ni Firestore, ni Hosting déployé). |
 
-Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Les règles publiées dans le projet commun (relues le 14/10/2026) contiennent les blocs `ap*` et aucun bloc `ai*`.
+Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Le 14/10/2026, le bloc `ai*` a été ajouté aux règles publiées du projet commun (les blocs existants sont inchangés ; relecture en ligne identique au fichier fusionné testé à l'émulateur).
 
 La configuration publique des deux projets est dans `src/engine/01-firebase-config.js` (clés d'application web, non secrètes ; chargée à la demande par le module Compte (SDK compat 10.12.2)). `.firebaserc` déclare les deux projets. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
 
