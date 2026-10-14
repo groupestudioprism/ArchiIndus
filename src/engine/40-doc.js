@@ -11,7 +11,7 @@ const LAYER_DEFAULTS = [
   { name: 'Équipements',    color: '#B3261E', group: 'equipement' },
   { name: 'Cotations',      color: '#4B5563', group: 'divers' },
 ];
-const LAYER_GROUPS = ['humide', 'sec', 'structure', 'equipement', 'divers'];
+const LAYER_GROUPS = ['humide', 'sec', 'cvc', 'metal', 'gc', 'structure', 'equipement', 'divers'];
 
 /* Réseau : attribut optionnel `net` des lignes et polylignes ouvertes ou fermées : {dn (mm), mat, tag}. */
 const NET_MATERIALS = ['PVC', 'PEHD', 'Fonte ductile', 'Acier', 'Acier galvanisé', 'Inox', 'Béton', 'Grès', 'Cuivre', 'Câble'];

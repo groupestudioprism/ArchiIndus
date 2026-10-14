@@ -184,3 +184,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .v3d{display:block;width:100%;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;touch-action:none;cursor:grab}
 .v3d-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .ib.user.on{background:var(--accent-soft);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+
+#hud{position:absolute;top:12px;left:12px;display:flex;gap:6px;z-index:2}
+.pill{display:inline-flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;height:34px;padding:0 9px;font-size:12px;color:var(--mut);box-shadow:var(--shadow-s)}
+.pill select{border:0;background:transparent;font-size:12.5px;font-weight:600;color:var(--ink);max-width:260px;outline:none;cursor:pointer}
+#hint{top:56px}
+.ly-h{display:flex;align-items:center;justify-content:space-between;margin:10px 0 3px;font:700 10.5px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.ly-h:first-child{margin-top:0}
+.ly-h em{font-style:normal;font-family:var(--f-mono);font-weight:500}
+.ly-other{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
+.ly-other summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--mut);padding:4px 0}
+.seg{display:flex}.seg button{flex:1}

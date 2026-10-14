@@ -1,7 +1,7 @@
 /* Interface : rail d'outils, panneau des calques, propriétés de la sélection, boutons d'en-tête, barre d'état, saisie de longueur. */
 const UI = (() => {
   const TYPE_LABEL = { line: 'Ligne', poly: 'Polyligne', circle: 'Cercle', dim: 'Cote', text: 'Texte', sym: 'Équipement' };
-  const GROUP_LABEL = { humide: 'Réseau humide', sec: 'Réseau sec', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
+  const GROUP_LABEL = { humide: 'Réseau humide', sec: 'Réseau sec', cvc: 'CVC et fluides', metal: 'Construction métallique', gc: 'Génie civil', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
   const cmd = $('#cmd');
 
   /* --- Saisie de longueur --- */
@@ -44,14 +44,7 @@ const UI = (() => {
     return b;
   }
 
-  function renderLayers() {
-    const box = $('#layers');
-    box.textContent = '';
-    const d = Doc.get();
-    const counts = new Map();
-    d.objects.forEach((o) => counts.set(o.layer, (counts.get(o.layer) || 0) + 1));
-    $('#layerCount').textContent = String(d.layers.length);
-    for (const l of d.layers) {
+  function layerRow(l, d, counts) {
       const id = l.id, act = id === d.active, n = counts.get(id) || 0;
       const row = el('div', { class: 'ly' + (act ? ' on' : '') + (l.visible ? '' : ' off'), role: 'group', 'aria-label': `Calque ${l.name}` });
       const pick = el('button', { type: 'button', class: 'ly-pick', 'aria-pressed': String(act), 'aria-label': `Calque actif : ${l.name}`, title: act ? 'Calque actif' : 'Définir comme calque actif (les nouveaux objets y sont dessinés)' });
@@ -75,8 +68,66 @@ const UI = (() => {
         if (dd.active === id) dd.active = dd.layers[0].id;
       }));
       row.append(pick, col, name, cnt, vis, lock, del);
-      box.append(row);
+      return row;
+  }
+
+  function renderLayers() {
+    const box = $('#layers');
+    box.textContent = '';
+    const d = Doc.get();
+    const counts = new Map();
+    d.objects.forEach((o) => counts.set(o.layer, (counts.get(o.layer) || 0) + 1));
+    $('#layerCount').textContent = String(d.layers.length);
+    const tr = Trades.current();
+    /* Calques rangés par métier : Général d'abord, puis chaque métier. Avec un métier choisi, les autres métiers sont repliés. */
+    const order = ['', ...Object.keys(TRADES)];
+    const buckets = new Map(order.map((k) => [k, []]));
+    for (const l of d.layers) buckets.get(Trades.ofGroup(l.group))?.push(l);
+    const title = (k) => (k ? TRADES[k].short : 'Général');
+    const others = [];
+    for (const k of order) {
+      const list = buckets.get(k);
+      if (!list.length) continue;
+      const mine = tr === 'all' || !k || k === tr || list.some((l) => Trades.layerIn(l, tr) && TRADES[tr] && TRADES[tr].groups.includes(l.group));
+      if (!mine) { others.push([k, list]); continue; }
+      if (tr === 'all' ? buckets.size > 1 : true) box.append(el('p', { class: 'ly-h' }, title(k), el('em', {}, String(list.length))));
+      for (const l of list) box.append(layerRow(l, d, counts));
     }
+    if (others.length) {
+      const det = el('details', { class: 'ly-other' }, el('summary', {}, `Autres métiers (${others.reduce((n, [, l]) => n + l.length, 0)})`));
+      for (const [k, list] of others) { det.append(el('p', { class: 'ly-h' }, title(k), el('em', {}, String(list.length)))); for (const l of list) det.append(layerRow(l, d, counts)); }
+      if (others.some(([, list]) => list.some((l) => l.id === d.active))) det.open = true;
+      box.append(det);
+    }
+    const miss = TRADES[tr] ? Trades.missingLayers(tr, d.layers) : [];
+    const add = $('#addTradeLayers');
+    add.hidden = !miss.length;
+    add.textContent = miss.length ? `+ Calques ${TRADES[tr].short.toLowerCase()} (${miss.length})` : '';
+  }
+
+  /* --- Métier : sélecteur, filtres de la bibliothèque, des modes de tracé et des calques --- */
+  function applyTrade() {
+    const tr = Trades.current();
+    const sel = $('#tradeSel'); if (sel.value !== tr) sel.value = tr;
+    document.querySelectorAll('#panel .seg [data-mode]').forEach((b) => { b.hidden = !Trades.modeAllowed(b.dataset.mode, tr); });
+    if (!Trades.modeAllowed(state.mode, tr)) setMode(TRADES[tr].mode);
+    const mats = TRADES[tr] && TRADES[tr].mats ? TRADES[tr].mats : NET_MATERIALS;
+    const dl = $('#netMats'); dl.textContent = ''; for (const m of mats) dl.append(el('option', { value: m }));
+    const d = Doc.get(), act = Doc.layer(d.active);
+    if (TRADES[tr] && act && !Trades.layerIn(act, tr)) { const first = d.layers.find((l) => TRADES[tr].groups.includes(l.group)); if (first) Doc.setActive(first.id); }
+    renderLayers(); renderLib();
+  }
+  function bindTrade() {
+    const sel = $('#tradeSel');
+    sel.append(el('option', { value: 'all' }, 'Tous les métiers'));
+    for (const [id, t] of Object.entries(TRADES)) sel.append(el('option', { value: id }, t.label));
+    sel.append(el('optgroup', { label: 'À venir (pas encore d\'outils)' }, ...TRADES_SOON.map((n) => el('option', { value: '', disabled: true }, n))));
+    sel.value = Trades.current();
+    sel.addEventListener('change', () => { if (Trades.set(sel.value)) { applyTrade(); Status.msg(sel.value === 'all' ? 'Tous les métiers affichés.' : `Métier : ${TRADES[sel.value].label}.`); } });
+    $('#addTradeLayers').addEventListener('click', () => {
+      const tr = Trades.current();
+      Doc.mutate((dd) => { for (const [n, c] of Trades.missingLayers(tr, dd.layers)) { const id = dd.nextLayerId++; dd.layers.push({ id, name: n, color: c, group: TRADES[tr].groups[0], visible: true, locked: false }); } });
+    });
   }
 
   function addLayer() {
@@ -189,23 +240,24 @@ const UI = (() => {
 
   function renderLib() {
     const grid = $('#symGrid');
-    if (!grid.childNodes.length) {
-      for (const [gid, gname] of Object.entries(SYM_GROUPS)) {
-        grid.append(el('p', { class: 'sym-g' }, gname));
-        const list = el('div', { class: 'sym-list' });
-        for (const [k, def] of Object.entries(SYMBOLS)) {
-          if (def.group !== gid) continue;
-          const b = el('button', { type: 'button', class: 'sym-btn', 'data-k': k, title: `${def.label} (${def.size} mm)`, 'aria-label': def.label, 'aria-pressed': 'false' });
-          b.append(thumb(k), el('span', {}, def.label));
-          b.addEventListener('click', () => {
-            state.sym.k = k; state.sym.s = def.size; state.sym.tag = '';
-            Tools.setTool('sym'); renderLib();
-          });
-          list.append(b);
-        }
-        grid.append(list);
+    const tr = Trades.current();
+    grid.textContent = '';
+    const add = (title, keys) => {
+      if (!keys.length) return;
+      grid.append(el('p', { class: 'sym-g' }, title));
+      const list = el('div', { class: 'sym-list' });
+      for (const k of keys) {
+        const def = SYMBOLS[k];
+        const b = el('button', { type: 'button', class: 'sym-btn', 'data-k': k, title: `${def.label} (${def.size} mm)`, 'aria-label': def.label, 'aria-pressed': 'false' });
+        b.append(thumb(k), el('span', {}, def.label));
+        b.addEventListener('click', () => { state.sym.k = k; state.sym.s = def.size; state.sym.tag = ''; Tools.setTool('sym'); renderLib(); });
+        list.append(b);
       }
-    }
+      grid.append(list);
+    };
+    const keys = Object.keys(SYMBOLS).filter((k) => Trades.symbolIn(k, tr));
+    if (tr === 'all') for (const [gid, gname] of Object.entries(SYM_GROUPS)) add(gname, keys.filter((k) => SYMBOLS[k].group === gid));
+    else add(TRADES[tr].short, keys);
     grid.querySelectorAll('.sym-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === state.sym.k && Tools.current() === 'sym')));
     const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
     set('#symS', state.sym.s); set('#symRot', state.sym.rot); set('#symTag', state.sym.tag);
@@ -437,6 +489,8 @@ const UI = (() => {
     bindSections();
     bindModeFields();
     bindLib();
+    bindTrade();
+    applyTrade();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
     $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
     $('#undo').addEventListener('click', () => Doc.undo());

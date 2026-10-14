@@ -51,6 +51,7 @@
 
   <main id="stage">
     <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
+    <div id="hud"><label class="pill"><span>Métier</span><select id="tradeSel" aria-label="Corps de métier"></select></label></div>
     <div id="live" hidden></div>
     <input id="tbox" type="text" maxlength="500" placeholder="Texte" aria-label="Texte à placer" hidden>
     <input id="cmd" type="text" autocomplete="off" spellcheck="false" placeholder="Longueur en mm, ou longueur&lt;angle" aria-label="Saisie de longueur" hidden>
@@ -62,6 +63,7 @@
       <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-layers"><span class="pn-t">Calques</span><span class="pn-n" id="layerCount"></span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
       <div class="pn-b" id="pn-layers">
         <div id="layers"></div>
+        <button id="addTradeLayers" class="btn wide" type="button" hidden></button>
         <button id="addLayer" class="btn wide" type="button">+ Calque</button>
       </div>
     </section>

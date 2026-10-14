@@ -5,8 +5,8 @@
    - Autres éléments : par calque, lignes et polylignes (nombre et longueur), cercles, surface des contours fermés.
    Les cotes et les textes ne sont pas comptés. */
 const BOM = (() => {
-  const GROUP_ORDER = { humide: 0, sec: 1, structure: 2, equipement: 3, divers: 4 };
-  const GROUP_NAME = { humide: 'Réseau humide', sec: 'Réseau sec', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
+  const GROUP_ORDER = { humide: 0, sec: 1, cvc: 2, metal: 3, gc: 4, structure: 5, equipement: 6, divers: 7 };
+  const GROUP_NAME = { humide: 'Réseau humide', sec: 'Réseau sec', cvc: 'CVC et fluides', metal: 'Construction métallique', gc: 'Génie civil', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
 
   function compute() {
     const d = Doc.get();
