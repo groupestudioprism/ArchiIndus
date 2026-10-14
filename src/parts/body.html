@@ -1,30 +1,62 @@
 <div id="app">
   <header id="top">
     <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
-    <div class="proj" title="Projet courant">Projet sans titre <em>· non enregistré</em></div>
+    <input id="pname" class="pname" type="text" maxlength="80" aria-label="Nom du projet" value="Projet sans titre">
+    <span id="saved" class="saved">enregistré dans ce navigateur</span>
+    <div class="grp">
+      <button id="undo" class="btn" type="button" title="Annuler (Ctrl+Z)" disabled>Annuler</button>
+      <button id="redo" class="btn" type="button" title="Rétablir (Ctrl+Y)" disabled>Rétablir</button>
+    </div>
+    <div class="grp">
+      <button id="new" class="btn" type="button" title="Nouveau projet">Nouveau</button>
+      <button id="open" class="btn" type="button" title="Ouvrir un projet .archiindus.json">Ouvrir</button>
+      <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
+      <button id="svg" class="btn" type="button" title="Exporter en SVG">SVG</button>
+      <button id="dxf" class="btn" type="button" title="Exporter en DXF">DXF</button>
+    </div>
     <button id="theme" class="btn" type="button" aria-label="Basculer le thème clair / sombre">Thème</button>
+    <input id="file" type="file" accept=".json,application/json" hidden>
   </header>
 
   <nav id="rail" aria-label="Outils">
-    <button class="tool" type="button" disabled title="Sélection : pas encore disponible">Sél.</button>
-    <button class="tool" type="button" disabled title="Ligne : pas encore disponible">Ligne</button>
-    <button class="tool" type="button" disabled title="Cote : pas encore disponible">Cote</button>
+    <button class="tool" type="button" data-tool="select" title="Sélection (V)">Sél.</button>
+    <button class="tool" type="button" data-tool="line" title="Ligne (L)">Ligne</button>
+    <button class="tool" type="button" data-tool="poly" title="Polyligne (P)">Poly.</button>
+    <button class="tool" type="button" data-tool="rect" title="Rectangle (R)">Rect.</button>
+    <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
+    <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
+    <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
+    <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
+    <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
+    <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
   </nav>
 
   <main id="stage">
     <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
-    <div id="hint">Glisser pour déplacer · molette pour zoomer</div>
+    <div id="live" hidden></div>
+    <input id="tbox" type="text" maxlength="500" placeholder="Texte" aria-label="Texte à placer" hidden>
+    <input id="cmd" type="text" autocomplete="off" spellcheck="false" placeholder="Longueur en mm, ou longueur&lt;angle" aria-label="Saisie de longueur" hidden>
+    <div id="hint"></div>
   </main>
 
   <aside id="panel" aria-label="Panneau">
     <h2>Calques</h2>
-    <p class="mut">Aucun calque pour l'instant. La gestion des calques n'est pas encore développée.</p>
-    <h2>État du projet</h2>
-    <p class="mut">Socle technique : coquille, charte, canevas 2D de base. Aucune fonction de conception n'est encore opérationnelle.</p>
+    <p class="mut small">Rond = calque actif · 1re case = visible · 2e case = verrouillé</p>
+    <div id="layers"></div>
+    <button id="addLayer" class="btn wide" type="button">+ Calque</button>
+    <h2>Sélection</h2>
+    <div id="props"></div>
+    <h2>Raccourcis</h2>
+    <p class="mut small">V L P R C D T M K H : outils · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
+    <p class="mut small">Version de démarrage : enregistrement local dans ce navigateur, pas de compte ni de cloud.</p>
   </aside>
 
   <footer id="status">
     <span id="coords">x : 0 mm · y : 0 mm</span>
+    <button id="snapBtn" class="chip" type="button" aria-pressed="true">Accroches : oui</button>
+    <button id="orthoBtn" class="chip" type="button" aria-pressed="false">Ortho : non</button>
+    <button id="fitBtn" class="chip" type="button">Tout voir</button>
+    <span id="msg" role="status" aria-live="polite"></span>
     <span id="zoom">1 m = 100 px</span>
   </footer>
 </div>

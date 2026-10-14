@@ -34,79 +34,175 @@ html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;overflow:hidden;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px)}
 [hidden]{display:none!important}
 
-#app{height:100%;display:grid;grid-template-columns:64px minmax(0,1fr) 300px;grid-template-rows:52px minmax(0,1fr) 28px;
+#app{height:100%;display:grid;grid-template-columns:64px minmax(0,1fr) 300px;grid-template-rows:52px minmax(0,1fr) 30px;
   grid-template-areas:"top top top" "rail stage panel" "status status status"}
 
-#top{grid-area:top;display:flex;align-items:center;gap:16px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
-.brand{display:flex;flex-direction:column;line-height:1}
+/* Barre haute */
+#top{grid-area:top;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.brand{display:flex;flex-direction:column;line-height:1;flex:0 0 auto}
 .brand b{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:.02em;color:var(--nuit)}
 :root[data-theme="dark"] .brand b{color:var(--ink)}
 .brand b span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 :root[data-theme="dark"] .brand b span{background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text}
 .brand small{font-size:10px;color:var(--mut);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
-.proj{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
-.proj em{font-style:normal;font-weight:400;color:var(--mut)}
+.pname{flex:1 1 150px;min-width:110px;max-width:300px;height:34px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink);font:600 14px var(--f-body);padding:0 8px}
+.pname:hover,.pname:focus{border-color:var(--line);background:var(--bg);outline:none}
+.saved{flex:0 0 auto;font-size:11.5px;color:var(--mut);white-space:nowrap}
+.saved.err{color:var(--danger);font-weight:600}
+.grp{display:flex;gap:6px;flex:0 0 auto}
 
-.btn{font:inherit;font-weight:600;height:34px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s}
-.btn:hover{background:var(--accent-soft);border-color:var(--accent)}
-.btn:focus-visible,.tool:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:inherit;font-weight:600;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
+.btn:hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{width:100%;margin-top:6px}
+.btn.danger{color:var(--danger);margin-top:8px}
+.btn:focus-visible,.tool:focus-visible,.chip:focus-visible,.ib:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-#rail{grid-area:rail;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border-right:1px solid var(--line)}
-.tool{height:44px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);font:600 11px var(--f-body);cursor:pointer}
-.tool:disabled{opacity:.45;cursor:not-allowed}
+/* Outils */
+#rail{grid-area:rail;display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto}
+.tool{flex:0 0 40px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);font:600 11px var(--f-body);cursor:pointer;padding:0}
+.tool:hover{border-color:var(--accent)}
+.tool.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 
-#stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:var(--vp)}
-#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-#cv.drag{cursor:grabbing}
-#hint{position:absolute;left:12px;bottom:12px;font-size:11px;color:var(--mut);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:7px;padding:4px 9px;pointer-events:none}
+/* Zone de dessin */
+#stage{grid-area:stage;position:relative;min-width:0;min-height:0;background:var(--vp);overflow:hidden}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#cv.drag{cursor:grabbing!important}
+#hint{position:absolute;left:12px;top:12px;right:12px;font-size:11.5px;line-height:1.4;color:var(--mut);background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:7px;padding:5px 10px;pointer-events:none;max-width:720px}
+#live{position:absolute;pointer-events:none;font:500 12px var(--f-mono);background:#2A2E35;color:#fff;padding:3px 8px;border-radius:6px;white-space:nowrap;z-index:2;box-shadow:var(--shadow-s)}
+#tbox,#cmd{position:absolute;z-index:3;height:32px;border:1px solid var(--accent);border-radius:8px;padding:0 10px;font:500 13px var(--f-mono);background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+#tbox{width:240px}
+#cmd{left:12px;bottom:12px;width:280px}
+#tbox:focus,#cmd:focus{outline:2px solid var(--accent-soft)}
 
-#panel{grid-area:panel;overflow:auto;padding:16px;background:var(--panel);border-left:1px solid var(--line)}
+/* Panneau */
+#panel{grid-area:panel;overflow:auto;padding:14px 16px;background:var(--panel);border-left:1px solid var(--line)}
 #panel h2{font-family:var(--f-display);font-weight:700;font-size:15px;margin:0 0 6px}
-#panel h2:not(:first-child){margin-top:20px}
-.mut{color:var(--mut);margin:0;line-height:1.5}
+#panel h2:not(:first-child){margin-top:18px}
+.mut{color:var(--mut);margin:0 0 6px;line-height:1.5}
+.small{font-size:12px}
 
-#status{grid-area:status;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line);font:500 11.5px var(--f-mono);color:var(--mut);font-variant-numeric:tabular-nums}
+.ly{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:8px}
+.ly.on{background:var(--accent-soft)}
+.ly input[type=text]{flex:1;min-width:0;height:28px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:500 13px var(--f-body);padding:0 6px}
+.ly input[type=text]:hover,.ly input[type=text]:focus{border-color:var(--line);background:var(--panel);outline:none}
+.ly input[type=color]{width:24px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;flex:0 0 auto;cursor:pointer}
+.ly input[type=checkbox],.ly input[type=radio]{margin:0;flex:0 0 auto;accent-color:var(--accent)}
+.ly input.lk{accent-color:var(--danger)}
+.ib{flex:0 0 auto;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--mut);cursor:pointer;padding:0;font-size:12px}
+.ib:hover:not(:disabled){background:var(--chip);color:var(--danger)}
+.ib:disabled{opacity:.3;cursor:not-allowed}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 8px}
+.kv dt{color:var(--mut)}
+.kv dd{margin:0;text-align:right;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.lbl{display:block;color:var(--mut);margin-top:6px}
+.lbl select{display:block;width:100%;height:32px;margin-top:4px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;padding:0 8px}
+
+/* Barre d'état */
+#status{grid-area:status;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line);font:500 11.5px var(--f-mono);color:var(--mut);font-variant-numeric:tabular-nums;overflow:hidden;white-space:nowrap}
+#msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-body);color:var(--ink)}
+.chip{font:600 11px var(--f-body);height:22px;padding:0 9px;border:1px solid var(--line);border-radius:11px;background:var(--chip);color:var(--ink);cursor:pointer;flex:0 0 auto}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 
 @media (max-width:900px){
   #app{grid-template-columns:56px minmax(0,1fr);grid-template-areas:"top top" "rail stage" "status status"}
   #panel{display:none}
+  #hint{display:none}
 }
 </style>
 <div id="app">
   <header id="top">
     <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
-    <div class="proj" title="Projet courant">Projet sans titre <em>· non enregistré</em></div>
+    <input id="pname" class="pname" type="text" maxlength="80" aria-label="Nom du projet" value="Projet sans titre">
+    <span id="saved" class="saved">enregistré dans ce navigateur</span>
+    <div class="grp">
+      <button id="undo" class="btn" type="button" title="Annuler (Ctrl+Z)" disabled>Annuler</button>
+      <button id="redo" class="btn" type="button" title="Rétablir (Ctrl+Y)" disabled>Rétablir</button>
+    </div>
+    <div class="grp">
+      <button id="new" class="btn" type="button" title="Nouveau projet">Nouveau</button>
+      <button id="open" class="btn" type="button" title="Ouvrir un projet .archiindus.json">Ouvrir</button>
+      <button id="save" class="btn" type="button" title="Télécharger le projet (.archiindus.json)">Enregistrer</button>
+      <button id="svg" class="btn" type="button" title="Exporter en SVG">SVG</button>
+      <button id="dxf" class="btn" type="button" title="Exporter en DXF">DXF</button>
+    </div>
     <button id="theme" class="btn" type="button" aria-label="Basculer le thème clair / sombre">Thème</button>
+    <input id="file" type="file" accept=".json,application/json" hidden>
   </header>
 
   <nav id="rail" aria-label="Outils">
-    <button class="tool" type="button" disabled title="Sélection : pas encore disponible">Sél.</button>
-    <button class="tool" type="button" disabled title="Ligne : pas encore disponible">Ligne</button>
-    <button class="tool" type="button" disabled title="Cote : pas encore disponible">Cote</button>
+    <button class="tool" type="button" data-tool="select" title="Sélection (V)">Sél.</button>
+    <button class="tool" type="button" data-tool="line" title="Ligne (L)">Ligne</button>
+    <button class="tool" type="button" data-tool="poly" title="Polyligne (P)">Poly.</button>
+    <button class="tool" type="button" data-tool="rect" title="Rectangle (R)">Rect.</button>
+    <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
+    <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
+    <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
+    <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
+    <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
+    <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
   </nav>
 
   <main id="stage">
     <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
-    <div id="hint">Glisser pour déplacer · molette pour zoomer</div>
+    <div id="live" hidden></div>
+    <input id="tbox" type="text" maxlength="500" placeholder="Texte" aria-label="Texte à placer" hidden>
+    <input id="cmd" type="text" autocomplete="off" spellcheck="false" placeholder="Longueur en mm, ou longueur&lt;angle" aria-label="Saisie de longueur" hidden>
+    <div id="hint"></div>
   </main>
 
   <aside id="panel" aria-label="Panneau">
     <h2>Calques</h2>
-    <p class="mut">Aucun calque pour l'instant. La gestion des calques n'est pas encore développée.</p>
-    <h2>État du projet</h2>
-    <p class="mut">Socle technique : coquille, charte, canevas 2D de base. Aucune fonction de conception n'est encore opérationnelle.</p>
+    <p class="mut small">Rond = calque actif · 1re case = visible · 2e case = verrouillé</p>
+    <div id="layers"></div>
+    <button id="addLayer" class="btn wide" type="button">+ Calque</button>
+    <h2>Sélection</h2>
+    <div id="props"></div>
+    <h2>Raccourcis</h2>
+    <p class="mut small">V L P R C D T M K H : outils · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
+    <p class="mut small">Version de démarrage : enregistrement local dans ce navigateur, pas de compte ni de cloud.</p>
   </aside>
 
   <footer id="status">
     <span id="coords">x : 0 mm · y : 0 mm</span>
+    <button id="snapBtn" class="chip" type="button" aria-pressed="true">Accroches : oui</button>
+    <button id="orthoBtn" class="chip" type="button" aria-pressed="false">Ortho : non</button>
+    <button id="fitBtn" class="chip" type="button">Tout voir</button>
+    <span id="msg" role="status" aria-live="polite"></span>
     <span id="zoom">1 m = 100 px</span>
   </footer>
 </div>
 <script>
 /* ==== 00-util.js ==== */
 'use strict';
-/* Outils communs : sélection d'éléments, thème clair / sombre. */
+/* Outils communs : sélection d'éléments, création de nœuds, messages d'état, thème clair / sombre. */
 const $ = (sel, root = document) => root.querySelector(sel);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fmt = (v) => String(Math.round(v));
+
+/* Crée un nœud DOM. Les textes passent par textContent / value : jamais d'HTML construit à partir de données utilisateur. */
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === false || v == null) continue;
+    if (k === 'value') n.value = v;
+    else n.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const k of kids) n.append(k);
+  return n;
+}
+
+const Status = {
+  t: 0,
+  msg(text, ms = 4500) {
+    const m = $('#msg');
+    if (!m) return;
+    m.textContent = text;
+    clearTimeout(this.t);
+    this.t = setTimeout(() => { m.textContent = ''; }, ms);
+  },
+};
 
 const Theme = {
   KEY: 'ai.theme',
@@ -119,34 +215,41 @@ const Theme = {
 };
 
 /* ==== 10-state.js ==== */
-/* État de l'application. Unités du dessin : millimètres. Axe Y vers le haut (convention des plans).
+/* État de l'affichage. Unités du dessin : millimètres. Axe Y vers le haut (convention des plans).
    view.x / view.y : position à l'écran (en pixels CSS) de l'origine du dessin ; view.scale : pixels par millimètre. */
 const state = {
   units: 'mm',
   view: { x: 0, y: 0, scale: 0.1, placed: false },
+  snap: { on: true, ortho: false },
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };
 
 /* ==== 20-canvas.js ==== */
-/* Canevas 2D de base : grille adaptative, axes, déplacement (glisser) et zoom (molette) centré sur le curseur.
-   Aucun objet de dessin n'existe encore : seule la zone de travail est en place. */
+/* Canevas 2D : grille adaptative, axes, déplacement (molette enfoncée, barre d'espace ou outil Main), zoom à la molette
+   centré sur le curseur. Les clics gauches sont confiés aux outils (Tools). Le dessin des objets est confié à Render. */
 const Canvas2D = (() => {
   const cv = $('#cv');
   const ctx = cv.getContext('2d');
   const coordsEl = $('#coords');
   const zoomEl = $('#zoom');
   let dpr = 1;
-  let drag = null;
+  let pan = null;
+  let space = false;
+  let raf = 0;
 
   const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const size = () => ({ w: cv.width / dpr, h: cv.height / dpr });
+  const toWorld = (sx, sy) => [(sx - state.view.x) / state.view.scale, (state.view.y - sy) / state.view.scale];
+  const toScreen = (p) => [p[0] * state.view.scale + state.view.x, state.view.y - p[1] * state.view.scale];
+  const local = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
 
-  /* écran (pixels CSS dans le canevas) -> dessin (mm) */
-  const toWorld = (sx, sy) => ({
-    x: (sx - state.view.x) / state.view.scale,
-    y: (state.view.y - sy) / state.view.scale,
-  });
+  /* Pas de la grille fine (mm) : 10 mm, multiplié par 10 tant qu'il serait inférieur à 10 pixels. */
+  function gridStep() {
+    let step = 10;
+    while (step * state.view.scale < 10) step *= 10;
+    return step;
+  }
 
   function resize() {
     const r = cv.getBoundingClientRect();
@@ -185,79 +288,1377 @@ const Canvas2D = (() => {
     const { w, h } = size();
     const { x: vx, y: vy, scale: s } = state.view;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setLineDash([]);
     ctx.fillStyle = css('--vp');
     ctx.fillRect(0, 0, w, h);
 
-    let step = 10; /* mm : pas de la grille fine, multiplié par 10 tant qu'il serait trop serré */
-    while (step * s < 10) step *= 10;
+    const step = gridStep();
     gridLines(step, css('--grid-minor'), w, h);
     gridLines(step * 10, css('--grid-major'), w, h);
 
     ctx.strokeStyle = css('--accent');
+    ctx.globalAlpha = 0.55;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(0, Math.round(vy) + 0.5); ctx.lineTo(w, Math.round(vy) + 0.5);
     ctx.moveTo(Math.round(vx) + 0.5, 0); ctx.lineTo(Math.round(vx) + 0.5, h);
     ctx.stroke();
+    ctx.globalAlpha = 1;
 
+    Render.scene(ctx, w, h);
     zoomEl.textContent = `1 m = ${Math.round(1000 * s)} px`;
   }
 
+  function requestDraw() {
+    if (raf) return;
+    raf = requestAnimationFrame(() => { raf = 0; draw(); });
+  }
+
+  /* Ajuste la vue à tous les objets visibles (ou à une vue par défaut si le dessin est vide). */
+  function zoomExtents() {
+    const { w, h } = size();
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      const b = Geo.bbox(o);
+      x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]);
+    }
+    if (!Number.isFinite(x0)) { x0 = 0; y0 = 0; x1 = 10000; y1 = 6000; }
+    const bw = Math.max(x1 - x0, 100), bh = Math.max(y1 - y0, 100);
+    const s = clamp(Math.min((w - 120) / bw, (h - 120) / bh), VIEW_LIMITS.min, VIEW_LIMITS.max);
+    state.view.scale = s;
+    state.view.x = (w - bw * s) / 2 - x0 * s;
+    state.view.y = (h + bh * s) / 2 + y0 * s;
+    draw();
+  }
+
   function onDown(e) {
-    drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, vx: state.view.x, vy: state.view.y };
-    cv.setPointerCapture(e.pointerId);
-    cv.classList.add('drag');
+    const [sx, sy] = local(e);
+    if (e.button === 1 || (e.button === 0 && (space || Tools.current() === 'pan'))) {
+      pan = { id: e.pointerId, sx: e.clientX, sy: e.clientY, vx: state.view.x, vy: state.view.y };
+      cv.setPointerCapture(e.pointerId);
+      cv.classList.add('drag');
+      e.preventDefault();
+      return;
+    }
+    if (e.button === 0) {
+      cv.setPointerCapture(e.pointerId);
+      Tools.down(toWorld(sx, sy), e);
+    } else if (e.button === 2) {
+      Tools.rightClick();
+    }
   }
 
   function onMove(e) {
-    const r = cv.getBoundingClientRect();
-    const p = toWorld(e.clientX - r.left, e.clientY - r.top);
-    coordsEl.textContent = `x : ${Math.round(p.x)} mm · y : ${Math.round(p.y)} mm`;
-    if (drag && drag.id === e.pointerId) {
-      state.view.x = drag.vx + (e.clientX - drag.sx);
-      state.view.y = drag.vy + (e.clientY - drag.sy);
-      draw();
+    const [sx, sy] = local(e);
+    const w = toWorld(sx, sy);
+    coordsEl.textContent = `x : ${Math.round(w[0])} mm · y : ${Math.round(w[1])} mm`;
+    if (pan && pan.id === e.pointerId) {
+      state.view.x = pan.vx + (e.clientX - pan.sx);
+      state.view.y = pan.vy + (e.clientY - pan.sy);
+      requestDraw();
+      return;
     }
+    Tools.move(w, e, [sx, sy]);
   }
 
   function onUp(e) {
-    if (drag && drag.id === e.pointerId) {
-      drag = null;
+    if (pan && pan.id === e.pointerId) {
+      pan = null;
       cv.classList.remove('drag');
+      return;
     }
+    if (e.button === 0) Tools.up(toWorld(...local(e)), e);
+  }
+
+  function onCancel(e) {
+    if (pan && pan.id === e.pointerId) { pan = null; cv.classList.remove('drag'); }
+    Tools.cancelDrag();
   }
 
   function onWheel(e) {
     e.preventDefault();
-    const r = cv.getBoundingClientRect();
-    const sx = e.clientX - r.left;
-    const sy = e.clientY - r.top;
+    const [sx, sy] = local(e);
     const before = toWorld(sx, sy);
     const f = Math.exp(-e.deltaY * 0.0015);
-    state.view.scale = Math.min(VIEW_LIMITS.max, Math.max(VIEW_LIMITS.min, state.view.scale * f));
-    state.view.x = sx - before.x * state.view.scale;
-    state.view.y = sy + before.y * state.view.scale;
-    draw();
+    state.view.scale = clamp(state.view.scale * f, VIEW_LIMITS.min, VIEW_LIMITS.max);
+    state.view.x = sx - before[0] * state.view.scale;
+    state.view.y = sy + before[1] * state.view.scale;
+    requestDraw();
   }
 
   function init() {
+    /* Sans cela, le clic du navigateur reprend le focus et annule aussitôt la saisie de texte ou de longueur. */
+    cv.addEventListener('mousedown', (e) => e.preventDefault());
     cv.addEventListener('pointerdown', onDown);
     cv.addEventListener('pointermove', onMove);
     cv.addEventListener('pointerup', onUp);
-    cv.addEventListener('pointercancel', onUp);
+    cv.addEventListener('pointercancel', onCancel);
     cv.addEventListener('wheel', onWheel, { passive: false });
+    cv.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('resize', resize);
     resize();
   }
 
-  return { init, draw, toWorld };
+  return {
+    init, draw, requestDraw, toWorld, toScreen, gridStep, zoomExtents, size, css,
+    setSpace(v) { space = v; cv.style.cursor = v ? 'grab' : ''; },
+  };
+})();
+
+/* ==== 30-geometry.js ==== */
+/* Géométrie 2D. Un point est [x, y] en millimètres.
+   Objets : line {a,b} · poly {pts,closed} · circle {c,r} · dim {a,b,off,h} · text {p,text,h}. */
+const G = {
+  dist: (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]),
+  mid: (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
+  distPtSeg(p, a, b) {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const l2 = dx * dx + dy * dy;
+    let t = l2 ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+  },
+  /* Intersection de deux segments [a,b] et [c,d] ; null si parallèles ou disjoints. */
+  segInter(a, b, c, d) {
+    const r = [b[0] - a[0], b[1] - a[1]], s = [d[0] - c[0], d[1] - c[1]];
+    const den = r[0] * s[1] - r[1] * s[0];
+    if (Math.abs(den) < 1e-9) return null;
+    const t = ((c[0] - a[0]) * s[1] - (c[1] - a[1]) * s[0]) / den;
+    const u = ((c[0] - a[0]) * r[1] - (c[1] - a[1]) * r[0]) / den;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+    return [a[0] + t * r[0], a[1] + t * r[1]];
+  },
+};
+
+const Geo = {
+  clone: (o) => JSON.parse(JSON.stringify(o)),
+
+  /* Segments d'un objet (pour les accroches et la distance). */
+  segments(o) {
+    if (o.type === 'line') return [[o.a, o.b]];
+    if (o.type === 'poly') {
+      const s = [];
+      for (let i = 0; i + 1 < o.pts.length; i++) s.push([o.pts[i], o.pts[i + 1]]);
+      if (o.closed && o.pts.length > 2) s.push([o.pts[o.pts.length - 1], o.pts[0]]);
+      return s;
+    }
+    return [];
+  },
+
+  /* Géométrie d'une cote alignée : droite de cote décalée de `off` (positif = à gauche de a→b). */
+  dimGeom(o) {
+    const L = G.dist(o.a, o.b);
+    const dir = L > 1e-9 ? [(o.b[0] - o.a[0]) / L, (o.b[1] - o.a[1]) / L] : [1, 0];
+    const n = [-dir[1], dir[0]];
+    return {
+      L, dir, n,
+      p1: [o.a[0] + n[0] * o.off, o.a[1] + n[1] * o.off],
+      p2: [o.b[0] + n[0] * o.off, o.b[1] + n[1] * o.off],
+    };
+  },
+
+  textWidth: (o) => o.text.length * o.h * 0.6,
+
+  bbox(o) {
+    let pts;
+    if (o.type === 'line') pts = [o.a, o.b];
+    else if (o.type === 'poly') pts = o.pts;
+    else if (o.type === 'circle') pts = [[o.c[0] - o.r, o.c[1] - o.r], [o.c[0] + o.r, o.c[1] + o.r]];
+    else if (o.type === 'dim') { const g = Geo.dimGeom(o); pts = [o.a, o.b, g.p1, g.p2]; }
+    else pts = [o.p, [o.p[0] + Geo.textWidth(o), o.p[1] + o.h]];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+    return [x0, y0, x1, y1];
+  },
+
+  /* Distance d'un point à un objet (mm). */
+  dist(o, p) {
+    switch (o.type) {
+      case 'line': case 'poly': {
+        let d = Infinity;
+        for (const [a, b] of Geo.segments(o)) d = Math.min(d, G.distPtSeg(p, a, b));
+        if (o.type === 'poly' && o.pts.length === 1) d = G.dist(p, o.pts[0]);
+        return d;
+      }
+      case 'circle': return Math.abs(G.dist(p, o.c) - o.r);
+      case 'dim': {
+        const g = Geo.dimGeom(o);
+        return Math.min(G.distPtSeg(p, g.p1, g.p2), G.distPtSeg(p, o.a, g.p1), G.distPtSeg(p, o.b, g.p2));
+      }
+      case 'text': {
+        const [x0, y0, x1, y1] = Geo.bbox(o);
+        const dx = Math.max(x0 - p[0], 0, p[0] - x1), dy = Math.max(y0 - p[1], 0, p[1] - y1);
+        return Math.hypot(dx, dy);
+      }
+    }
+    return Infinity;
+  },
+
+  translate(o, dx, dy) {
+    const mv = (p) => { p[0] += dx; p[1] += dy; };
+    if (o.type === 'line' || o.type === 'dim') { mv(o.a); mv(o.b); }
+    else if (o.type === 'poly') o.pts.forEach(mv);
+    else if (o.type === 'circle') mv(o.c);
+    else if (o.type === 'text') mv(o.p);
+    return o;
+  },
+
+  /* Longueur (ou périmètre) en mm ; null si non applicable. */
+  length(o) {
+    if (o.type === 'line') return G.dist(o.a, o.b);
+    if (o.type === 'poly') return Geo.segments(o).reduce((s, [a, b]) => s + G.dist(a, b), 0);
+    if (o.type === 'circle') return 2 * Math.PI * o.r;
+    if (o.type === 'dim') return G.dist(o.a, o.b);
+    return null;
+  },
+
+  /* Surface en m² pour un contour fermé ou un cercle ; null sinon. */
+  area(o) {
+    if (o.type === 'circle') return Math.PI * o.r * o.r / 1e6;
+    if (o.type === 'poly' && o.closed && o.pts.length > 2) {
+      let s = 0;
+      for (let i = 0; i < o.pts.length; i++) {
+        const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length];
+        s += a[0] * b[1] - b[0] * a[1];
+      }
+      return Math.abs(s) / 2 / 1e6;
+    }
+    return null;
+  },
+};
+
+/* ==== 40-doc.js ==== */
+/* Document du projet : calques, objets, historique (annuler / rétablir), enregistrement local, import validé.
+   Format : JSON versionné (schemaVersion 1). Toute modification passe par Doc.mutate (point de retour + notification). */
+const LAYER_DEFAULTS = [
+  { name: 'Fond de plan',   color: '#6B7280', group: 'divers' },
+  { name: 'Eau potable',    color: '#0877B9', group: 'humide' },
+  { name: 'Eaux usées',     color: '#8B5E34', group: 'humide' },
+  { name: 'Eaux pluviales', color: '#169999', group: 'humide' },
+  { name: 'Électricité',    color: '#E2861B', group: 'sec' },
+  { name: 'Télécoms',       color: '#7C3AED', group: 'sec' },
+  { name: 'Structures',     color: '#1B2433', group: 'structure' },
+  { name: 'Équipements',    color: '#B3261E', group: 'equipement' },
+  { name: 'Cotations',      color: '#4B5563', group: 'divers' },
+];
+const LAYER_GROUPS = ['humide', 'sec', 'structure', 'equipement', 'divers'];
+
+const Doc = (() => {
+  const KEY = 'ai.doc.v1';
+  const MAX_HISTORY = 100;
+  const MAX_OBJECTS = 100000;
+  let data = fresh();
+  let past = [], future = [];
+  let timer = 0;
+  let saveState = 'saved'; /* saved | pending | error */
+  const subs = [];
+
+  const snap = () => JSON.stringify(data);
+
+  function fresh() {
+    const layers = LAYER_DEFAULTS.map((l, i) => ({ id: i + 1, name: l.name, color: l.color, group: l.group, visible: true, locked: false }));
+    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1 };
+  }
+
+  function emit(reason) { for (const f of subs) f(reason); }
+
+  function schedule() {
+    saveState = 'pending';
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      try { localStorage.setItem(KEY, snap()); saveState = 'saved'; } catch (e) { saveState = 'error'; }
+      emit('save');
+    }, 500);
+  }
+
+  function changed() { schedule(); emit('change'); }
+
+  function checkpoint() {
+    past.push(snap());
+    if (past.length > MAX_HISTORY) past.shift();
+    future = [];
+  }
+
+  /* Validation stricte d'un projet (import de fichier ou lecture du stockage local). Lève une Error en français. */
+  function sanitize(raw) {
+    const bad = (m) => { throw new Error(m); };
+    if (!raw || typeof raw !== 'object' || raw.schemaVersion !== 1) bad('Fichier non reconnu : projet ArchiIndus (schemaVersion 1) attendu.');
+    const num = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e9;
+    const pt = (p) => (Array.isArray(p) && p.length === 2 && num(p[0]) && num(p[1]) ? [p[0], p[1]] : null);
+    if (!Array.isArray(raw.layers) || !raw.layers.length || raw.layers.length > 200) bad('Liste de calques invalide.');
+    if (!Array.isArray(raw.objects) || raw.objects.length > MAX_OBJECTS) bad('Liste d\'objets invalide ou trop volumineuse.');
+
+    const layers = [];
+    const seenL = new Set();
+    let maxL = 0;
+    for (const l of raw.layers) {
+      if (!l || typeof l !== 'object') bad('Calque invalide.');
+      const id = Number.isInteger(l.id) && l.id > 0 && !seenL.has(l.id) ? l.id : 0;
+      if (id) { seenL.add(id); maxL = Math.max(maxL, id); }
+      layers.push({
+        id,
+        name: (typeof l.name === 'string' ? l.name.trim().slice(0, 60) : '') || 'Calque',
+        color: typeof l.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(l.color) ? l.color : '#6B7280',
+        group: LAYER_GROUPS.includes(l.group) ? l.group : 'divers',
+        visible: l.visible !== false,
+        locked: l.locked === true,
+      });
+    }
+    for (const l of layers) if (!l.id) l.id = ++maxL;
+    const layerIds = new Set(layers.map((l) => l.id));
+
+    const objects = [];
+    const seenO = new Set();
+    let maxO = 0;
+    raw.objects.forEach((o, i) => {
+      const where = `Objet n°${i + 1} invalide`;
+      if (!o || typeof o !== 'object') bad(where + '.');
+      const out = { type: o.type };
+      switch (o.type) {
+        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); break;
+        case 'poly':
+          if (!Array.isArray(o.pts) || o.pts.length < 2 || o.pts.length > 100000) bad(where + ' (polyligne).');
+          out.pts = o.pts.map(pt);
+          if (out.pts.some((p) => !p)) bad(where + ' (polyligne).');
+          out.closed = o.closed === true;
+          break;
+        case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
+        case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
+        case 'text':
+          out.p = pt(o.p); out.text = typeof o.text === 'string' ? o.text.slice(0, 500) : '';
+          out.h = num(o.h) && o.h > 0 ? o.h : 200;
+          if (!out.p || !out.text) bad(where + ' (texte).');
+          break;
+        default: bad(where + ` (type « ${String(o.type).slice(0, 20)} » inconnu).`);
+      }
+      out.layer = layerIds.has(o.layer) ? o.layer : layers[0].id;
+      let id = Number.isInteger(o.id) && o.id > 0 && !seenO.has(o.id) ? o.id : 0;
+      if (id) { seenO.add(id); maxO = Math.max(maxO, id); }
+      out.id = id;
+      objects.push(out);
+    });
+    for (const o of objects) if (!o.id) o.id = ++maxO;
+
+    return {
+      schemaVersion: 1,
+      name: (typeof raw.name === 'string' ? raw.name.trim().slice(0, 80) : '') || 'Projet sans titre',
+      units: 'mm',
+      layers, objects,
+      nextId: maxO + 1,
+      nextLayerId: maxL + 1,
+      active: layerIds.has(raw.active) ? raw.active : layers[0].id,
+    };
+  }
+
+  return {
+    get: () => data,
+    on: (f) => { subs.push(f); },
+    layer: (id) => data.layers.find((l) => l.id === id),
+    activeLayer: () => data.layers.find((l) => l.id === data.active),
+    saveState: () => saveState,
+    canUndo: () => past.length > 0,
+    canRedo: () => future.length > 0,
+    sanitize,
+
+    /* Modifie le document : point de retour, puis fn(data), puis notification et enregistrement différé. */
+    mutate(fn) { checkpoint(); fn(data); changed(); },
+
+    /* À appeler dans mutate : ajoute un objet sur le calque actif. */
+    add(o) { o.id = data.nextId++; o.layer = data.active; data.objects.push(o); return o; },
+
+    setActive(id) { if (data.active !== id && Doc.layer(id)) { data.active = id; changed(); } },
+
+    undo() { if (!past.length) return false; future.push(snap()); data = JSON.parse(past.pop()); changed(); return true; },
+    redo() { if (!future.length) return false; past.push(snap()); data = JSON.parse(future.pop()); changed(); return true; },
+
+    /* Remplace tout le projet (nouveau / ouvrir) ; annulable. */
+    replace(newData) { checkpoint(); data = newData; changed(); },
+    reset() { Doc.replace(fresh()); },
+
+    /* Lecture du stockage local au démarrage ; retourne true si un projet a été restauré. */
+    loadStored() {
+      try {
+        const s = localStorage.getItem(KEY);
+        if (!s) return false;
+        data = sanitize(JSON.parse(s));
+        saveState = 'saved';
+        emit('load');
+        return true;
+      } catch (e) { return false; }
+    },
+  };
+})();
+
+/* ==== 50-snap.js ==== */
+/* Accroches aux objets : extrémité, centre, milieu, intersection, puis grille. Mode orthogonal (horizontal / vertical).
+   Priorité : extrémité > centre > milieu > intersection > grille. Tolérance : 10 pixels. */
+const Snap = {
+  KINDS: { end: 'Extrémité', center: 'Centre', mid: 'Milieu', inter: 'Intersection', grid: 'Grille', ortho: 'Orthogonal', free: 'Libre', typed: 'Saisie' },
+
+  /* raw : point libre [x, y] ; base : point précédent (pour l'ortho) ou null. Retourne {p, kind}. */
+  find(raw, base) {
+    if (state.snap.ortho && base) {
+      const horiz = Math.abs(raw[0] - base[0]) >= Math.abs(raw[1] - base[1]);
+      const step = Canvas2D.gridStep();
+      const r = (v) => (state.snap.on ? Math.round(v / step) * step : v);
+      return { p: horiz ? [r(raw[0]), base[1]] : [base[0], r(raw[1])], kind: 'ortho' };
+    }
+    if (!state.snap.on) return { p: [raw[0], raw[1]], kind: 'free' };
+
+    const tl = 10 / state.view.scale;
+    const ends = [], mids = [], centers = [], segs = [];
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      if (o.type === 'line') { ends.push(o.a, o.b); mids.push(G.mid(o.a, o.b)); segs.push([o.a, o.b]); }
+      else if (o.type === 'poly') {
+        ends.push(...o.pts);
+        for (const [a, b] of Geo.segments(o)) { mids.push(G.mid(a, b)); segs.push([a, b]); }
+      } else if (o.type === 'circle') centers.push(o.c);
+    }
+    const nearest = (list) => {
+      let best = null, bd = tl;
+      for (const p of list) { const d = G.dist(p, raw); if (d <= bd) { bd = d; best = p; } }
+      return best;
+    };
+    let p = nearest(ends);
+    if (p) return { p: [p[0], p[1]], kind: 'end' };
+    p = nearest(centers);
+    if (p) return { p: [p[0], p[1]], kind: 'center' };
+    p = nearest(mids);
+    if (p) return { p: [p[0], p[1]], kind: 'mid' };
+    if (segs.length <= 300) {
+      const inters = [];
+      for (let i = 0; i < segs.length; i++) {
+        for (let j = i + 1; j < segs.length; j++) {
+          const x = G.segInter(segs[i][0], segs[i][1], segs[j][0], segs[j][1]);
+          if (x) inters.push(x);
+        }
+      }
+      p = nearest(inters);
+      if (p) return { p: [p[0], p[1]], kind: 'inter' };
+    }
+    const step = Canvas2D.gridStep();
+    const g = [Math.round(raw[0] / step) * step, Math.round(raw[1] / step) * step];
+    if (G.dist(g, raw) <= tl) return { p: g, kind: 'grid' };
+    return { p: [raw[0], raw[1]], kind: 'free' };
+  },
+};
+
+/* ==== 60-render.js ==== */
+/* Dessin des objets, de la sélection, des aperçus et des repères d'accroche. */
+const Render = (() => {
+  const css = (n) => Canvas2D.css(n);
+
+  /* En thème sombre, les couleurs de calque trop foncées sont éclaircies pour rester lisibles. */
+  function shade(hex) {
+    if (!Theme.isDark()) return hex;
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    if ((0.299 * r + 0.587 * g + 0.114 * b) / 255 >= 0.45) return hex;
+    const k = 0.65;
+    r = Math.round(r + (255 - r) * k); g = Math.round(g + (255 - g) * k); b = Math.round(b + (255 - b) * k);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function strokePath(ctx, pts, closed) {
+    const S = Canvas2D.toScreen;
+    ctx.beginPath();
+    pts.forEach((p, i) => { const s = S(p); if (i) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]); });
+    if (closed) ctx.closePath();
+    ctx.stroke();
+  }
+
+  function drawDim(ctx, o, col, lw) {
+    const S = Canvas2D.toScreen;
+    const sc = state.view.scale;
+    const g = Geo.dimGeom(o);
+    if (g.L < 1e-9) return;
+    const sgn = Math.sign(o.off) || 1;
+    const nS = [g.n[0], -g.n[1]];                 /* normale en repère écran */
+    const dS = [g.dir[0], -g.dir[1]];             /* direction en repère écran */
+    const ext = 80 * sc;                          /* dépassement des traits de repère : 80 mm */
+    const a = S(o.a), b = S(o.b), p1 = S(g.p1), p2 = S(g.p2);
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]); ctx.lineTo(p1[0] + nS[0] * sgn * ext, p1[1] + nS[1] * sgn * ext);
+    ctx.moveTo(b[0], b[1]); ctx.lineTo(p2[0] + nS[0] * sgn * ext, p2[1] + nS[1] * sgn * ext);
+    ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]);
+    const t = [dS[0] + nS[0], dS[1] + nS[1]];
+    const tl = Math.hypot(t[0], t[1]) || 1;
+    const tk = [t[0] / tl * 6, t[1] / tl * 6];    /* traits obliques de 6 px */
+    for (const p of [p1, p2]) { ctx.moveTo(p[0] - tk[0], p[1] - tk[1]); ctx.lineTo(p[0] + tk[0], p[1] + tk[1]); }
+    ctx.stroke();
+    let ang = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
+    if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+    const px = clamp((o.h || 150) * sc, 9, 48);
+    ctx.save();
+    ctx.translate((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2);
+    ctx.rotate(ang);
+    ctx.font = `600 ${px}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(fmt(g.L), 0, -3);
+    ctx.restore();
+  }
+
+  function drawObject(ctx, o, col, lw) {
+    const S = Canvas2D.toScreen;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    switch (o.type) {
+      case 'line': strokePath(ctx, [o.a, o.b], false); break;
+      case 'poly': strokePath(ctx, o.pts, o.closed); break;
+      case 'circle': {
+        const c = S(o.c);
+        ctx.beginPath(); ctx.arc(c[0], c[1], Math.max(o.r * state.view.scale, 0.5), 0, Math.PI * 2); ctx.stroke();
+        break;
+      }
+      case 'dim': drawDim(ctx, o, col, Math.max(1, lw - 0.4)); break;
+      case 'text': {
+        const p = S(o.p);
+        ctx.font = `500 ${clamp(o.h * state.view.scale, 9, 400)}px Inter, system-ui, sans-serif`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText(o.text, p[0], p[1]);
+        break;
+      }
+    }
+  }
+
+  function marker(ctx, c) {
+    if (!c || ['free', 'grid', 'ortho', 'typed'].includes(c.kind)) return;
+    const s = Canvas2D.toScreen(c.p);
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = css('--sel'); ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (c.kind === 'end') ctx.rect(s[0] - 5, s[1] - 5, 10, 10);
+    else if (c.kind === 'center') ctx.arc(s[0], s[1], 5.5, 0, Math.PI * 2);
+    else if (c.kind === 'mid') { ctx.moveTo(s[0], s[1] - 6); ctx.lineTo(s[0] + 6, s[1] + 5); ctx.lineTo(s[0] - 6, s[1] + 5); ctx.closePath(); }
+    else { ctx.moveTo(s[0] - 5, s[1] - 5); ctx.lineTo(s[0] + 5, s[1] + 5); ctx.moveTo(s[0] + 5, s[1] - 5); ctx.lineTo(s[0] - 5, s[1] + 5); }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function scene(ctx) {
+    const d = Doc.get();
+    const byLayer = new Map();
+    for (const o of d.objects) {
+      if (!byLayer.has(o.layer)) byLayer.set(o.layer, []);
+      byLayer.get(o.layer).push(o);
+    }
+    for (const l of d.layers) {
+      if (!l.visible) continue;
+      const col = shade(l.color);
+      for (const o of byLayer.get(l.id) || []) drawObject(ctx, o, col, 1.6);
+    }
+    const selCol = css('--sel');
+    for (const o of d.objects) {
+      if (Tools.selection.has(o.id)) drawObject(ctx, o, selCol, 2.6);
+    }
+    const h = Tools.hover();
+    if (h && !Tools.selection.has(h.id)) drawObject(ctx, h, css('--accent'), 2.4);
+    Tools.preview(ctx);
+    marker(ctx, Tools.snapState());
+  }
+
+  return { scene, drawObject };
+})();
+
+/* ==== 70-tools.js ==== */
+/* Outils de dessin et de sélection : machine à états des clics, saisie de longueur au clavier, raccourcis, aperçus.
+   Les objets créés vont sur le calque actif. Les calques masqués ou verrouillés ne sont ni modifiables ni sélectionnables. */
+const Tools = (() => {
+  const selection = new Set();
+  const listeners = [];
+  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', move: 'Déplacer', copy: 'Copier', pan: 'Main' };
+  const HINTS = {
+    select: 'Cliquer un objet, ou glisser pour une fenêtre (gauche → droite : objets entiers ; droite → gauche : objets touchés). Maj : ajouter.',
+    line: 'Cliquer le point de départ, puis les points suivants. Clic droit ou Échap pour terminer. Taper une longueur (ex. 1500 ou 1500<45) puis Entrée.',
+    poly: 'Cliquer les sommets. Entrée ou clic droit pour terminer, C pour fermer.',
+    rect: 'Cliquer deux coins opposés.',
+    circle: 'Cliquer le centre, puis un point du cercle (ou taper le rayon).',
+    dim: 'Cliquer les deux points à coter, puis la position de la ligne de cote.',
+    text: 'Cliquer l\'emplacement du texte, taper, Entrée pour valider.',
+    move: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis le point d\'arrivée.',
+    copy: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis chaque point d\'arrivée. Échap pour finir.',
+    pan: 'Glisser pour déplacer la vue (aussi : barre d\'espace ou molette enfoncée).',
+  };
+  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', m: 'move', k: 'copy', h: 'pan' };
+  const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy'];
+
+  let tool = 'select';
+  let pts = [];
+  let cur = null;       /* {p, kind} : point courant après accroche */
+  let hoverObj = null;
+  let box = null;       /* fenêtre de sélection {a, b} */
+  let rawLast = [0, 0];
+  let scrLast = [0, 0];
+  let textBusy = false;
+
+  const css = (n) => Canvas2D.css(n);
+  const R6 = (p) => [+p[0].toFixed(6), +p[1].toFixed(6)];
+  const notify = (reason) => { for (const f of listeners) f(reason); Canvas2D.requestDraw(); };
+  const selectable = (o) => { const l = Doc.layer(o.layer); return !!l && l.visible && !l.locked; };
+
+  function pick(p) {
+    let best = null, bd = 8 / state.view.scale;
+    for (const o of Doc.get().objects) {
+      if (!selectable(o)) continue;
+      const d = Geo.dist(o, p);
+      if (d <= bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+
+  function canCreate() {
+    const l = Doc.activeLayer();
+    if (!l) { Status.msg('Aucun calque actif.'); return false; }
+    if (!l.visible || l.locked) { Status.msg(`Le calque « ${l.name} » est masqué ou verrouillé : choisissez un autre calque actif.`); return false; }
+    return true;
+  }
+
+  const addObj = (o) => Doc.mutate(() => { Doc.add(o); });
+
+  function snapPt(raw) {
+    const orthoOk = ['line', 'poly', 'move', 'copy'].includes(tool) || (tool === 'dim' && pts.length === 1);
+    const base = orthoOk && pts.length ? pts[pts.length - 1] : null;
+    return Snap.find(raw, base);
+  }
+
+  function setTool(t) {
+    if (!NAMES[t]) return;
+    tool = t; pts = []; box = null; cur = null; hoverObj = null;
+    Status.msg(NAMES[t] + ' : ' + HINTS[t], 9000);
+    updateLive();
+    notify('tool');
+  }
+
+  function finishPoly(close) {
+    if (tool === 'poly' && pts.length >= (close ? 3 : 2)) addObj({ type: 'poly', pts: pts.map(R6), closed: !!close });
+    pts = [];
+    updateLive();
+  }
+
+  function click(c) {
+    const p = R6(c.p);
+    switch (tool) {
+      case 'line':
+        if (!canCreate()) return;
+        if (!pts.length) { pts = [p]; return; }
+        if (G.dist(pts[0], p) < 1e-6) return;
+        addObj({ type: 'line', a: pts[0], b: p });
+        pts = [p];
+        break;
+      case 'poly':
+        if (!canCreate()) return;
+        if (pts.length && G.dist(pts[pts.length - 1], p) < 1e-6) return;
+        pts.push(p);
+        break;
+      case 'rect': {
+        if (!canCreate()) return;
+        if (!pts.length) { pts = [p]; return; }
+        const a = pts[0];
+        if (Math.abs(p[0] - a[0]) < 1e-6 || Math.abs(p[1] - a[1]) < 1e-6) return;
+        addObj({ type: 'poly', pts: [a, [p[0], a[1]], p, [a[0], p[1]]], closed: true });
+        pts = [];
+        break;
+      }
+      case 'circle': {
+        if (!canCreate()) return;
+        if (!pts.length) { pts = [p]; return; }
+        const r = G.dist(pts[0], p);
+        if (r < 1e-6) return;
+        addObj({ type: 'circle', c: pts[0], r: +r.toFixed(6) });
+        pts = [];
+        break;
+      }
+      case 'dim': {
+        if (!canCreate()) return;
+        if (pts.length < 2) {
+          if (pts.length && G.dist(pts[0], p) < 1e-6) return;
+          pts.push(p);
+          return;
+        }
+        const [a, b] = pts;
+        const L = G.dist(a, b);
+        const n = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L];
+        const off = (p[0] - a[0]) * n[0] + (p[1] - a[1]) * n[1];
+        addObj({ type: 'dim', a, b, off: +off.toFixed(6), h: 150 });
+        pts = [];
+        break;
+      }
+      case 'text':
+        if (!canCreate()) return;
+        askText(p);
+        break;
+      case 'move': case 'copy': {
+        if (!selection.size) { Status.msg('Sélectionnez d\'abord des objets avec l\'outil Sélection (V).'); return; }
+        if (!pts.length) { pts = [p]; return; }
+        const dx = p[0] - pts[0][0], dy = p[1] - pts[0][1];
+        if (Math.hypot(dx, dy) < 1e-9) return;
+        const ids = new Set(selection);
+        if (tool === 'move') {
+          Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) Geo.translate(o, dx, dy); });
+          pts = [];
+        } else {
+          Doc.mutate((d) => {
+            const copies = [];
+            for (const o of d.objects) {
+              if (!ids.has(o.id)) continue;
+              const c2 = Geo.clone(o);
+              Geo.translate(c2, dx, dy);
+              c2.id = d.nextId++;
+              copies.push(c2);
+            }
+            d.objects.push(...copies);
+          });
+        }
+        break;
+      }
+    }
+    updateLive();
+  }
+
+  /* Saisie d'un texte : petit champ posé sur le dessin. */
+  function askText(p) {
+    const tb = $('#tbox');
+    const s = Canvas2D.toScreen(p);
+    tb.style.left = Math.max(4, s[0]) + 'px';
+    tb.style.top = Math.max(4, s[1] - 34) + 'px';
+    tb.value = '';
+    tb.hidden = false;
+    textBusy = true;
+    const done = (ok) => {
+      if (!textBusy) return;
+      textBusy = false;
+      const v = tb.value.trim();
+      tb.hidden = true;
+      tb.onkeydown = null; tb.onblur = null;
+      if (ok && v) addObj({ type: 'text', p, text: v.slice(0, 500), h: 200 });
+    };
+    tb.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); done(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); done(false); }
+    };
+    tb.onblur = () => done(false);
+    tb.focus();
+  }
+
+  function down(raw, e) {
+    if (textBusy) return;
+    if (tool === 'select') {
+      const hit = pick(raw);
+      if (hit) {
+        if (e.shiftKey) { if (selection.has(hit.id)) selection.delete(hit.id); else selection.add(hit.id); }
+        else { selection.clear(); selection.add(hit.id); }
+        notify('selection');
+      } else {
+        box = { a: raw, b: raw };
+        if (!e.shiftKey && selection.size) { selection.clear(); notify('selection'); }
+      }
+      return;
+    }
+    cur = snapPt(raw);
+    click(cur);
+    Canvas2D.requestDraw();
+  }
+
+  function move(raw, e, scr) {
+    rawLast = raw; scrLast = scr;
+    if (tool === 'select') {
+      cur = null;
+      if (box) box.b = raw; else hoverObj = pick(raw);
+    } else if (tool === 'pan') {
+      cur = null;
+    } else {
+      cur = snapPt(raw);
+    }
+    updateLive();
+    Canvas2D.requestDraw();
+  }
+
+  function up(raw) {
+    if (!box) return;
+    const b = box;
+    box = null;
+    const sc = state.view.scale;
+    if (Math.abs(b.b[0] - b.a[0]) * sc > 3 || Math.abs(b.b[1] - b.a[1]) * sc > 3) {
+      const win = b.b[0] >= b.a[0];   /* gauche → droite : fenêtre (objets entiers) ; sinon capture (objets touchés) */
+      const x0 = Math.min(b.a[0], b.b[0]), x1 = Math.max(b.a[0], b.b[0]);
+      const y0 = Math.min(b.a[1], b.b[1]), y1 = Math.max(b.a[1], b.b[1]);
+      for (const o of Doc.get().objects) {
+        if (!selectable(o)) continue;
+        const bb = Geo.bbox(o);
+        const inside = bb[0] >= x0 && bb[2] <= x1 && bb[1] >= y0 && bb[3] <= y1;
+        const touch = !(bb[2] < x0 || bb[0] > x1 || bb[3] < y0 || bb[1] > y1);
+        if (win ? inside : touch) selection.add(o.id);
+      }
+      notify('selection');
+    } else {
+      Canvas2D.requestDraw();
+    }
+  }
+
+  function cancelDrag() { box = null; Canvas2D.requestDraw(); }
+
+  function rightClick() {
+    if (tool === 'poly') finishPoly(false);
+    else pts = [];
+    updateLive();
+    Canvas2D.requestDraw();
+  }
+
+  function escape() {
+    if (pts.length || box) { pts = []; box = null; }
+    else if (tool !== 'select') { setTool('select'); return; }
+    else if (selection.size) { selection.clear(); notify('selection'); }
+    updateLive();
+    Canvas2D.requestDraw();
+  }
+
+  function wantsTyping() {
+    return (TYPED_TOOLS.includes(tool) && pts.length >= 1) || (tool === 'dim' && pts.length === 1);
+  }
+
+  /* Saisie directe : « 1500 » (direction du curseur) ou « 1500<45 » (angle en degrés, sens trigonométrique). */
+  function typed(str) {
+    const m = /^\s*(\d+(?:[.,]\d+)?)\s*(?:[<;]\s*(-?\d+(?:[.,]\d+)?))?\s*$/.exec(str);
+    if (!m || !wantsTyping()) {
+      Status.msg('Saisie non reconnue : entrez une longueur en mm (ex. 1500) ou longueur<angle (ex. 1500<45).');
+      return false;
+    }
+    const len = parseFloat(m[1].replace(',', '.'));
+    if (!(len > 0)) { Status.msg('La longueur doit être supérieure à 0.'); return false; }
+    const base = pts[pts.length - 1];
+    let ang;
+    if (m[2] !== undefined) ang = parseFloat(m[2].replace(',', '.')) * Math.PI / 180;
+    else {
+      const c = cur ? cur.p : rawLast;
+      ang = (c[0] === base[0] && c[1] === base[1]) ? 0 : Math.atan2(c[1] - base[1], c[0] - base[0]);
+    }
+    const p = [base[0] + len * Math.cos(ang), base[1] + len * Math.sin(ang)];
+    cur = { p, kind: 'typed' };
+    click(cur);
+    Canvas2D.requestDraw();
+    return true;
+  }
+
+  function deleteSel() {
+    if (!selection.size) return;
+    const ids = new Set(selection);
+    selection.clear();
+    Doc.mutate((d) => { d.objects = d.objects.filter((o) => !ids.has(o.id)); });
+    notify('selection');
+  }
+
+  function selectAll() {
+    selection.clear();
+    for (const o of Doc.get().objects) if (selectable(o)) selection.add(o.id);
+    notify('selection');
+  }
+
+  function toggleOrtho() { state.snap.ortho = !state.snap.ortho; notify('mode'); }
+  function toggleSnap() { state.snap.on = !state.snap.on; notify('mode'); }
+
+  /* Retire de la sélection les objets supprimés ou devenus inaccessibles (calque masqué / verrouillé, annulation…). */
+  function prune() {
+    const objs = new Map(Doc.get().objects.map((o) => [o.id, o]));
+    let changed = false;
+    for (const id of [...selection]) {
+      const o = objs.get(id);
+      if (!o || !selectable(o)) { selection.delete(id); changed = true; }
+    }
+    if (changed) notify('selection');
+  }
+
+  /* --- Texte dynamique près du curseur --- */
+  function liveText() {
+    if (!cur || !pts.length) return '';
+    const last = pts[pts.length - 1];
+    const c = cur.p;
+    const len = G.dist(last, c);
+    switch (tool) {
+      case 'line': case 'poly': {
+        let ang = Math.atan2(c[1] - last[1], c[0] - last[0]) * 180 / Math.PI;
+        if (ang < 0) ang += 360;
+        return `L ${fmt(len)} mm · ${ang.toFixed(1)}°`;
+      }
+      case 'circle': return `R ${fmt(len)} mm`;
+      case 'rect': return `${fmt(Math.abs(c[0] - pts[0][0]))} × ${fmt(Math.abs(c[1] - pts[0][1]))} mm`;
+      case 'dim':
+        if (pts.length === 1) return `L ${fmt(len)} mm`;
+        return `Décalage ${fmt(Math.abs(dimOff(pts[0], pts[1], c)))} mm`;
+      case 'move': case 'copy': return `Δx ${fmt(c[0] - pts[0][0])} · Δy ${fmt(c[1] - pts[0][1])} mm`;
+    }
+    return '';
+  }
+
+  function updateLive() {
+    const live = $('#live');
+    if (!live) return;
+    const t = liveText();
+    if (!t) { live.hidden = true; return; }
+    live.textContent = t;
+    live.hidden = false;
+    live.style.left = (scrLast[0] + 16) + 'px';
+    live.style.top = (scrLast[1] + 16) + 'px';
+  }
+
+  function dimOff(a, b, p) {
+    const L = G.dist(a, b);
+    if (L < 1e-9) return 0;
+    return (p[0] - a[0]) * (-(b[1] - a[1]) / L) + (p[1] - a[1]) * ((b[0] - a[0]) / L);
+  }
+
+  /* --- Aperçus (fantômes) pendant la saisie --- */
+  function preview(ctx) {
+    const S = Canvas2D.toScreen;
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    if (box) {
+      const a = S(box.a), b = S(box.b);
+      const win = box.b[0] >= box.a[0];
+      ctx.strokeStyle = css('--accent');
+      ctx.fillStyle = css(win ? '--accent-soft' : '--sel');
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+      ctx.globalAlpha = 1;
+      if (!win) ctx.setLineDash([3, 3]);
+      ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+      ctx.restore();
+      return;
+    }
+    if (!cur || !pts.length) { ctx.restore(); return; }
+    const c = cur.p;
+    ctx.strokeStyle = css('--accent');
+    ctx.fillStyle = css('--accent');
+    switch (tool) {
+      case 'line': case 'poly': {
+        ctx.beginPath();
+        pts.forEach((q, i) => { const s = S(q); if (i) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]); });
+        const e = S(c);
+        ctx.lineTo(e[0], e[1]);
+        ctx.stroke();
+        break;
+      }
+      case 'rect': {
+        const a = S(pts[0]), b = S(c);
+        ctx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+        break;
+      }
+      case 'circle': {
+        const o = S(pts[0]);
+        ctx.beginPath();
+        ctx.arc(o[0], o[1], G.dist(pts[0], c) * state.view.scale, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      }
+      case 'dim':
+        if (pts.length === 1) {
+          const a = S(pts[0]), b = S(c);
+          ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+        } else {
+          ctx.setLineDash([]);
+          Render.drawObject(ctx, { type: 'dim', a: pts[0], b: pts[1], off: dimOff(pts[0], pts[1], c), h: 150 }, css('--accent'), 1.5);
+        }
+        break;
+      case 'move': case 'copy': {
+        const dx = c[0] - pts[0][0], dy = c[1] - pts[0][1];
+        const a = S(pts[0]), b = S(c);
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+        ctx.globalAlpha = 0.7;
+        for (const o of Doc.get().objects) {
+          if (selection.has(o.id)) Render.drawObject(ctx, Geo.translate(Geo.clone(o), dx, dy), css('--accent'), 1.6);
+        }
+        break;
+      }
+    }
+    ctx.restore();
+  }
+
+  /* --- Clavier --- */
+  function onKey(e) {
+    const t = e.target;
+    const k = e.key;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    if (t && t.tagName === 'BUTTON' && (k === ' ' || k === 'Enter')) return;
+    const mod = e.ctrlKey || e.metaKey;
+    const low = k.length === 1 ? k.toLowerCase() : k;
+    if (mod) {
+      if (low === 'z' && !e.shiftKey) { e.preventDefault(); Doc.undo(); }
+      else if (low === 'y' || (low === 'z' && e.shiftKey)) { e.preventDefault(); Doc.redo(); }
+      else if (low === 'a') { e.preventDefault(); selectAll(); }
+      return;
+    }
+    if (k === ' ') { e.preventDefault(); Canvas2D.setSpace(true); return; }
+    if (k === 'Escape') { escape(); return; }
+    if (k === 'Enter') { if (tool === 'poly') finishPoly(false); Canvas2D.requestDraw(); return; }
+    if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); deleteSel(); return; }
+    if (k === 'F8') { e.preventDefault(); toggleOrtho(); return; }
+    if (k === 'F3') { e.preventDefault(); toggleSnap(); return; }
+    if (low === 'c' && tool === 'poly' && pts.length >= 3) { finishPoly(true); Canvas2D.requestDraw(); return; }
+    if (low === 'z') { Canvas2D.zoomExtents(); return; }
+    if (KEYS[low]) { setTool(KEYS[low]); return; }
+    if (wantsTyping() && /^[0-9.,<;]$/.test(k)) { e.preventDefault(); UI.focusCmd(k); }
+  }
+
+  function init() {
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('keyup', (e) => { if (e.key === ' ') Canvas2D.setSpace(false); });
+    window.addEventListener('blur', () => Canvas2D.setSpace(false));
+    Doc.on(() => prune());
+  }
+
+  return {
+    init, selection, NAMES, HINTS,
+    onChange: (f) => { listeners.push(f); },
+    current: () => tool,
+    hover: () => hoverObj,
+    snapState: () => cur,
+    setTool, down, move, up, cancelDrag, rightClick, preview, typed, wantsTyping, deleteSel, selectAll, toggleOrtho, toggleSnap,
+  };
+})();
+
+/* ==== 75-io.js ==== */
+/* Fichiers : projet JSON (enregistrer / ouvrir), export SVG, export DXF (R12, ASCII).
+   Les cotes sont éclatées en lignes et texte dans les exports SVG et DXF. */
+const IO = (() => {
+  const safeName = (s) => String(s).replace(/[^\w\- .]/g, '_').trim().slice(0, 60) || 'projet';
+
+  function download(name, text, mime) {
+    const url = URL.createObjectURL(new Blob([text], { type: mime }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function saveJSON() {
+    const d = Doc.get();
+    download(`${safeName(d.name)}.archiindus.json`, JSON.stringify(d, null, 1), 'application/json');
+    Status.msg('Projet envoyé vers vos téléchargements (.archiindus.json).');
+  }
+
+  async function openFile(file) {
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { Status.msg('Fichier trop volumineux (20 Mo maximum).', 8000); return; }
+    try {
+      const data = Doc.sanitize(JSON.parse(await file.text()));
+      Doc.replace(data);
+      Tools.selection.clear();
+      Canvas2D.zoomExtents();
+      Status.msg(`Projet « ${data.name} » ouvert (${data.objects.length} objets).`);
+    } catch (e) {
+      Status.msg('Ouverture impossible : ' + (e instanceof SyntaxError ? 'ce fichier n\'est pas du JSON valide.' : e.message), 9000);
+    }
+  }
+
+  /* Objets visibles, avec leur calque. */
+  function visibleObjects() {
+    return Doc.get().objects.filter((o) => { const l = Doc.layer(o.layer); return l && l.visible; });
+  }
+
+  /* Cote éclatée : lignes (repère monde) + libellé lisible (angle en degrés, jamais à l'envers). */
+  function dimExplode(o) {
+    const g = Geo.dimGeom(o);
+    const sgn = Math.sign(o.off) || 1;
+    const e1 = [g.p1[0] + g.n[0] * sgn * 80, g.p1[1] + g.n[1] * sgn * 80];
+    const e2 = [g.p2[0] + g.n[0] * sgn * 80, g.p2[1] + g.n[1] * sgn * 80];
+    const t = [g.dir[0] + g.n[0], g.dir[1] + g.n[1]];
+    const tl = Math.hypot(t[0], t[1]) || 1;
+    const tk = [t[0] / tl * 60, t[1] / tl * 60];
+    const lines = [[o.a, e1], [o.b, e2], [g.p1, g.p2]];
+    for (const p of [g.p1, g.p2]) lines.push([[p[0] - tk[0], p[1] - tk[1]], [p[0] + tk[0], p[1] + tk[1]]]);
+    let deg = Math.atan2(g.dir[1], g.dir[0]) * 180 / Math.PI;
+    if (deg > 90 || deg < -90) deg += 180;
+    return { lines, mid: G.mid(g.p1, g.p2), deg, str: fmt(g.L), h: o.h || 150 };
+  }
+
+  const xmlEsc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function exportSVG() {
+    const objs = visibleObjects();
+    if (!objs.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const o of objs) { const b = Geo.bbox(o); x0 = Math.min(x0, b[0]); y0 = Math.min(y0, b[1]); x1 = Math.max(x1, b[2]); y1 = Math.max(y1, b[3]); }
+    const m = Math.max(x1 - x0, y1 - y0) * 0.05 + 200;
+    const X = (v) => +v.toFixed(3), Y = (v) => +(-v).toFixed(3);
+    const line = (a, b) => `<line x1="${X(a[0])}" y1="${Y(a[1])}" x2="${X(b[0])}" y2="${Y(b[1])}"/>`;
+    const out = [];
+    for (const l of Doc.get().layers) {
+      const items = objs.filter((o) => o.layer === l.id);
+      if (!l.visible || !items.length) continue;
+      const g = [`<g data-layer="${xmlEsc(l.name)}" fill="none" stroke="${l.color}" stroke-width="1.5" font-family="Arial, Helvetica, sans-serif">`];
+      for (const o of items) {
+        if (o.type === 'line') g.push(line(o.a, o.b));
+        else if (o.type === 'poly') g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${o.pts.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>`);
+        else if (o.type === 'circle') g.push(`<circle cx="${X(o.c[0])}" cy="${Y(o.c[1])}" r="${X(o.r)}"/>`);
+        else if (o.type === 'text') g.push(`<text x="${X(o.p[0])}" y="${Y(o.p[1])}" font-size="${o.h}" fill="${l.color}" stroke="none">${xmlEsc(o.text)}</text>`);
+        else if (o.type === 'dim') {
+          const d = dimExplode(o);
+          for (const [a, b] of d.lines) g.push(line(a, b));
+          g.push(`<text transform="translate(${X(d.mid[0])},${Y(d.mid[1])}) rotate(${+(-d.deg).toFixed(3)})" text-anchor="middle" y="${-d.h * 0.2}" font-size="${d.h}" fill="${l.color}" stroke="none">${d.str}</text>`);
+        }
+      }
+      g.push('</g>');
+      out.push(g.join('\n'));
+    }
+    const w = x1 - x0 + 2 * m, h = y1 - y0 + 2 * m;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>\n`
+      + `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${X(x0 - m)} ${Y(y1 + m)} ${X(w)} ${X(h)}" width="${X(w)}mm" height="${X(h)}mm">\n`
+      + `<title>${xmlEsc(Doc.get().name)}</title>\n`
+      + `<style>line,polyline,polygon,circle{vector-effect:non-scaling-stroke}</style>\n`
+      + `<rect x="${X(x0 - m)}" y="${Y(y1 + m)}" width="${X(w)}" height="${X(h)}" fill="#ffffff"/>\n`
+      + out.join('\n') + '\n</svg>\n';
+    download(`${safeName(Doc.get().name)}.svg`, svg, 'image/svg+xml');
+    Status.msg('Export SVG envoyé vers vos téléchargements (unité : mm).');
+  }
+
+  /* --- DXF R12 (ASCII). Non accentué : les noms et textes sont translittérés. Couleurs : indice AutoCAD le plus proche. --- */
+  const ACI = [[1, 255, 0, 0], [2, 255, 255, 0], [3, 0, 255, 0], [4, 0, 255, 255], [5, 0, 0, 255], [6, 255, 0, 255], [7, 0, 0, 0], [8, 128, 128, 128]];
+  const aciOf = (hex) => {
+    const n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    let best = 7, bd = Infinity;
+    for (const [i, cr, cg, cb] of ACI) { const d = (cr - r) ** 2 + (cg - g) ** 2 + (cb - b) ** 2; if (d < bd) { bd = d; best = i; } }
+    return best;
+  };
+  const ascii = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\x20-\x7E]/g, '?');
+
+  function exportDXF() {
+    const objs = visibleObjects();
+    if (!objs.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    const L = [];
+    const w = (code, v) => { L.push(String(code), String(v)); };
+    const nf = (v) => v.toFixed(6);
+    const names = new Map();
+    const used = new Set(['0']);
+    for (const l of Doc.get().layers) {
+      let n = ascii(l.name).toUpperCase().replace(/[^A-Z0-9_$-]/g, '_').slice(0, 28) || 'CALQUE';
+      while (used.has(n)) n += '_';
+      used.add(n);
+      names.set(l.id, n);
+    }
+    w(0, 'SECTION'); w(2, 'HEADER'); w(9, '$ACADVER'); w(1, 'AC1009'); w(0, 'ENDSEC');
+    w(0, 'SECTION'); w(2, 'TABLES');
+    w(0, 'TABLE'); w(2, 'LTYPE'); w(70, 1);
+    w(0, 'LTYPE'); w(2, 'CONTINUOUS'); w(70, 0); w(3, 'Solid line'); w(72, 65); w(73, 0); w(40, nf(0));
+    w(0, 'ENDTAB');
+    w(0, 'TABLE'); w(2, 'LAYER'); w(70, Doc.get().layers.length);
+    for (const l of Doc.get().layers) { w(0, 'LAYER'); w(2, names.get(l.id)); w(70, 0); w(62, aciOf(l.color)); w(6, 'CONTINUOUS'); }
+    w(0, 'ENDTAB');
+    w(0, 'ENDSEC');
+    w(0, 'SECTION'); w(2, 'ENTITIES');
+    const line = (ly, a, b) => { w(0, 'LINE'); w(8, ly); w(10, nf(a[0])); w(20, nf(a[1])); w(30, nf(0)); w(11, nf(b[0])); w(21, nf(b[1])); w(31, nf(0)); };
+    const text = (ly, p, h, str, rot) => { w(0, 'TEXT'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); w(40, nf(h)); w(1, ascii(str)); w(50, nf(rot)); };
+    for (const o of objs) {
+      const ly = names.get(o.layer);
+      if (o.type === 'line') line(ly, o.a, o.b);
+      else if (o.type === 'circle') { w(0, 'CIRCLE'); w(8, ly); w(10, nf(o.c[0])); w(20, nf(o.c[1])); w(30, nf(0)); w(40, nf(o.r)); }
+      else if (o.type === 'poly') {
+        w(0, 'POLYLINE'); w(8, ly); w(66, 1); w(10, nf(0)); w(20, nf(0)); w(30, nf(0)); w(70, o.closed ? 1 : 0);
+        for (const p of o.pts) { w(0, 'VERTEX'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); }
+        w(0, 'SEQEND'); w(8, ly);
+      } else if (o.type === 'text') text(ly, o.p, o.h, o.text, 0);
+      else if (o.type === 'dim') {
+        const d = dimExplode(o);
+        for (const [a, b] of d.lines) line(ly, a, b);
+        const th = d.deg * Math.PI / 180;
+        const u = [Math.cos(th), Math.sin(th)], up = [-Math.sin(th), Math.cos(th)];
+        const wd = d.str.length * d.h * 0.6;
+        text(ly, [d.mid[0] - u[0] * wd / 2 + up[0] * d.h * 0.25, d.mid[1] - u[1] * wd / 2 + up[1] * d.h * 0.25], d.h, d.str, d.deg);
+      }
+    }
+    w(0, 'ENDSEC'); w(0, 'EOF');
+    download(`${safeName(Doc.get().name)}.dxf`, L.join('\r\n') + '\r\n', 'application/dxf');
+    Status.msg('Export DXF envoyé vers vos téléchargements (unité : mm, cotes éclatées).');
+  }
+
+  return { saveJSON, openFile, exportSVG, exportDXF };
+})();
+
+/* ==== 78-ui.js ==== */
+/* Interface : rail d'outils, panneau des calques, propriétés de la sélection, boutons d'en-tête, barre d'état, saisie de longueur. */
+const UI = (() => {
+  const TYPE_LABEL = { line: 'Ligne', poly: 'Polyligne', circle: 'Cercle', dim: 'Cote', text: 'Texte' };
+  const GROUP_LABEL = { humide: 'Réseau humide', sec: 'Réseau sec', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
+  const cmd = $('#cmd');
+
+  /* --- Saisie de longueur --- */
+  function hideCmd() { cmd.hidden = true; cmd.blur(); }
+  function focusCmd(ch) { cmd.hidden = false; cmd.value = ch; cmd.focus(); }
+
+  function bindCmd() {
+    cmd.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (Tools.typed(cmd.value)) { cmd.value = ''; hideCmd(); }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cmd.value = '';
+        hideCmd();
+      }
+    });
+    cmd.addEventListener('blur', () => { if (!cmd.value) cmd.hidden = true; });
+  }
+
+  /* --- Calques --- */
+  function renderLayers() {
+    const box = $('#layers');
+    box.textContent = '';
+    const d = Doc.get();
+    const counts = new Map();
+    d.objects.forEach((o) => counts.set(o.layer, (counts.get(o.layer) || 0) + 1));
+    for (const l of d.layers) {
+      const id = l.id;
+      const row = el('div', { class: 'ly' + (id === d.active ? ' on' : '') });
+      const radio = el('input', { type: 'radio', name: 'activeLayer', 'aria-label': `Calque actif : ${l.name}`, title: 'Calque actif (les nouveaux objets y sont dessinés)', checked: id === d.active });
+      radio.addEventListener('change', () => Doc.setActive(id));
+      const vis = el('input', { type: 'checkbox', 'aria-label': `Visible : ${l.name}`, title: 'Visible', checked: l.visible });
+      vis.addEventListener('change', () => Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).visible = vis.checked; }));
+      const lock = el('input', { type: 'checkbox', class: 'lk', 'aria-label': `Verrouillé : ${l.name}`, title: 'Verrouillé (objets non modifiables)', checked: l.locked });
+      lock.addEventListener('change', () => Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).locked = lock.checked; }));
+      const col = el('input', { type: 'color', value: l.color, 'aria-label': `Couleur : ${l.name}`, title: GROUP_LABEL[l.group] || '' });
+      col.addEventListener('change', () => Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).color = col.value; }));
+      const name = el('input', { type: 'text', value: l.name, maxlength: 60, 'aria-label': 'Nom du calque' });
+      name.addEventListener('change', () => {
+        const v = name.value.trim().slice(0, 60);
+        if (!v) { name.value = l.name; return; }
+        Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).name = v; });
+      });
+      const n = counts.get(id) || 0;
+      const del = el('button', { type: 'button', class: 'ib', title: n ? 'Calque non vide : impossible à supprimer' : 'Supprimer le calque', 'aria-label': `Supprimer le calque ${l.name}`, disabled: n > 0 || d.layers.length <= 1 }, '✕');
+      del.addEventListener('click', () => Doc.mutate((dd) => {
+        dd.layers = dd.layers.filter((x) => x.id !== id);
+        if (dd.active === id) dd.active = dd.layers[0].id;
+      }));
+      row.append(radio, vis, lock, col, name, del);
+      box.append(row);
+    }
+  }
+
+  function addLayer() {
+    Doc.mutate((d) => {
+      const id = d.nextLayerId++;
+      d.layers.push({ id, name: `Calque ${id}`, color: '#0877B9', group: 'divers', visible: true, locked: false });
+      d.active = id;
+    });
+  }
+
+  /* --- Propriétés de la sélection --- */
+  function renderProps() {
+    const box = $('#props');
+    box.textContent = '';
+    const objs = Doc.get().objects.filter((o) => Tools.selection.has(o.id));
+    if (!objs.length) { box.append(el('p', { class: 'mut' }, 'Aucune sélection.')); return; }
+    const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
+    const dl = el('dl', { class: 'kv' });
+    if (objs.length === 1) {
+      const o = objs[0];
+      dl.append(...kv('Type', TYPE_LABEL[o.type] || o.type));
+      const len = Geo.length(o);
+      if (len !== null) dl.append(...kv(o.type === 'circle' || (o.type === 'poly' && o.closed) ? 'Périmètre' : 'Longueur', fmt(len) + ' mm'));
+      if (o.type === 'circle') dl.append(...kv('Rayon', fmt(o.r) + ' mm'));
+      const ar = Geo.area(o);
+      if (ar !== null) dl.append(...kv('Surface', ar.toFixed(3) + ' m²'));
+      if (o.type === 'text') dl.append(...kv('Texte', o.text));
+    } else {
+      dl.append(...kv('Objets', String(objs.length)));
+    }
+    box.append(dl);
+    const sel = el('select', { 'aria-label': 'Calque des objets sélectionnés' });
+    const same = objs.every((o) => o.layer === objs[0].layer);
+    if (!same) sel.append(el('option', { value: '' }, '— plusieurs calques —'));
+    for (const l of Doc.get().layers) sel.append(el('option', { value: l.id, selected: same && l.id === objs[0].layer }, l.name));
+    sel.addEventListener('change', () => {
+      const lid = Number(sel.value);
+      if (!lid) return;
+      const ids = new Set(objs.map((o) => o.id));
+      Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) o.layer = lid; });
+    });
+    box.append(el('label', { class: 'lbl' }, 'Calque', sel));
+    const del = el('button', { type: 'button', class: 'btn danger' }, 'Supprimer');
+    del.addEventListener('click', () => Tools.deleteSel());
+    box.append(del);
+  }
+
+  /* --- En-tête, rail, barre d'état --- */
+  function refreshChrome() {
+    $('#undo').disabled = !Doc.canUndo();
+    $('#redo').disabled = !Doc.canRedo();
+    const pn = $('#pname');
+    if (document.activeElement !== pn) pn.value = Doc.get().name;
+    const s = Doc.saveState();
+    $('#saved').textContent = s === 'saved' ? 'enregistré dans ce navigateur' : s === 'pending' ? 'enregistrement…' : 'enregistrement local impossible';
+    $('#saved').classList.toggle('err', s === 'error');
+    document.title = `${Doc.get().name} · ARCHIINDUS`;
+  }
+
+  function refreshTools() {
+    const t = Tools.current();
+    document.querySelectorAll('.tool').forEach((b) => {
+      const on = b.dataset.tool === t;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    $('#hint').textContent = `${Tools.NAMES[t]} : ${Tools.HINTS[t]}`;
+    $('#cv').style.cursor = t === 'pan' ? 'grab' : t === 'select' ? 'default' : 'crosshair';
+  }
+
+  function refreshModes() {
+    $('#snapBtn').textContent = 'Accroches : ' + (state.snap.on ? 'oui' : 'non');
+    $('#snapBtn').setAttribute('aria-pressed', String(state.snap.on));
+    $('#orthoBtn').textContent = 'Ortho : ' + (state.snap.ortho ? 'oui' : 'non');
+    $('#orthoBtn').setAttribute('aria-pressed', String(state.snap.ortho));
+  }
+
+  function init() {
+    bindCmd();
+    document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
+    $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
+    $('#undo').addEventListener('click', () => Doc.undo());
+    $('#redo').addEventListener('click', () => Doc.redo());
+    $('#new').addEventListener('click', () => { Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
+    $('#open').addEventListener('click', () => $('#file').click());
+    $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
+    $('#save').addEventListener('click', () => IO.saveJSON());
+    $('#svg').addEventListener('click', () => IO.exportSVG());
+    $('#dxf').addEventListener('click', () => IO.exportDXF());
+    $('#addLayer').addEventListener('click', addLayer);
+    $('#snapBtn').addEventListener('click', () => Tools.toggleSnap());
+    $('#orthoBtn').addEventListener('click', () => Tools.toggleOrtho());
+    $('#fitBtn').addEventListener('click', () => Canvas2D.zoomExtents());
+    $('#pname').addEventListener('change', (e) => {
+      const v = e.target.value.trim().slice(0, 80) || 'Projet sans titre';
+      Doc.mutate((d) => { d.name = v; });
+    });
+    $('#pname').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+
+    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); });
+    Tools.onChange((reason) => {
+      if (reason === 'selection') renderProps();
+      else if (reason === 'tool') refreshTools();
+      else if (reason === 'mode') refreshModes();
+    });
+    renderLayers(); renderProps(); refreshChrome(); refreshTools(); refreshModes();
+  }
+
+  return { init, focusCmd };
 })();
 
 /* ==== 80-main.js ==== */
 /* Point d'entrée. */
 document.addEventListener('DOMContentLoaded', () => {
-  $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
+  Tools.init();
+  Doc.loadStored();
+  UI.init();
   Canvas2D.init();
+  if (Doc.get().objects.length) Canvas2D.zoomExtents();
 });
 
 </script>
