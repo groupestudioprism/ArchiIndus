@@ -127,6 +127,25 @@ with sync_playwright() as p:
     ok('q' not in pg.evaluate("Doc.get().objects.find(o=>o.id===900).props"), 'champ vidé : propriété supprimée')
     bt = pg.evaluate("BOM.compute().techs"); ok(len(bt) == 1 and abs(bt[0]['length'] - 10) < 1e-9 and 'Altitude amont' in bt[0]['data'], f'nomenclature techs {bt}')
     pg.evaluate("Doc.mutate(d=>{d.objects=d.objects.filter(o=>o.id!==900)}); Tools.selection.clear()")
+    # --- bibliothèque complète : chaque symbole se développe et se dessine
+    nsym = pg.evaluate("Object.keys(SYMBOLS).length"); ok(nsym == 20 and pg.locator('.sym-btn').count() == nsym, f'bibliothèque de {nsym} symboles, une vignette chacun')
+    ok(pg.evaluate("Object.keys(SYMBOLS).every(k=>Sym.world({k,c:[0,0],s:100,rot:30}).length>0 && SYMBOLS[k].group in SYM_GROUPS)"), 'chaque symbole a des primitives et un groupe connu')
+    # --- aperçu 3D
+    pg.evaluate("""Doc.mutate(d=>{d.objects.push({id:901,type:'line',a:[0,0],b:[10000,0],layer:2,net:{dn:100,mat:'PVC',tag:''},props:{zi:2,zf:1}},{id:902,type:'line',a:[0,500],b:[4000,500],layer:2,net:{dn:100,mat:'PVC',tag:''},props:{depth:1.5}})})""")
+    m3 = pg.evaluate("View3D.model()")
+    za = [s for s in m3 if s['thick'] == 100 and s['a'][1] == 0 and s['b'][1] == 0] if False else [s for s in m3 if s.get('thick') == 100]
+    ok(any(abs(s['a'][2] - 2000) < 1e-6 and abs(s['b'][2] - 1000) < 1e-6 for s in za), 'réseau 3D : altitude interpolée amont 2 m → aval 1 m')
+    ok(any(abs(s['a'][2] + 1500) < 1e-6 for s in za), 'réseau 3D : profondeur 1,5 m → cote −1500 mm')
+    walls = [s for s in m3 if s['a'][2] != s['b'][2]]
+    ok(any(abs(s['b'][2] - s['a'][2] - 3000) < 1e-6 for s in walls), 'mur 3D extrudé de 3 m par défaut')
+    p0 = pg.evaluate("View3D.project([1000,0,0],0,0)"); p1 = pg.evaluate("View3D.project([0,0,1000],0,0)")
+    ok(abs(p0[0] - 1000) < 1e-6 and abs(p1[1] + 1000) < 1e-6, 'projection : X vers la droite, Z vers le haut')
+    pg.click('#v3d'); pg.wait_for_selector('dialog canvas.v3d')
+    ok(pg.locator('dialog canvas.v3d').count() == 1, 'fenêtre aperçu 3D ouverte')
+    cb = pg.locator('dialog canvas.v3d').bounding_box(); pg.mouse.move(cb['x'] + 200, cb['y'] + 200); pg.mouse.down(); pg.mouse.move(cb['x'] + 260, cb['y'] + 230); pg.mouse.up()
+    pg.screenshot(path=OUT + 'v3d.png')
+    pg.keyboard.press('Escape')
+    pg.evaluate("Doc.mutate(d=>{d.objects=d.objects.filter(o=>o.id<900)})")
     # --- panneau contextuel : résumé du projet, sélection multiple
     pg.evaluate('Tools.selection.clear()'); pg.wait_for_timeout(100)
     ok('Projet' in pg.inner_text('#props') and 'Ouvrir la nomenclature' in pg.inner_text('#props'), 'rien de sélectionné : résumé du projet')
@@ -140,6 +159,11 @@ with sync_playwright() as p:
     pg.click('#panelBtn'); pg.wait_for_timeout(300); ok(not pg.is_visible('#panel'), 'tablette : tiroir refermé')
     pg.set_viewport_size({'width': 1400, 'height': 820}); pg.wait_for_timeout(200)
     ok(pg.is_visible('#panel') and not pg.is_visible('#panelBtn'), 'ordinateur : panneau fixe, bouton Options masqué')
+    # --- paramètres du projet
+    pg.click('#settings'); pg.wait_for_selector('dialog[open]')
+    pg.fill('dialog input[aria-label="Client"]', 'ACME'); pg.fill('dialog input[aria-label="Nom du projet"]', 'Usine test')
+    pg.click('dialog .dlg-f .btn.pri'); pg.wait_for_timeout(150)
+    ok(pg.evaluate('Doc.get().sheet.client') == 'ACME' and pg.evaluate('Doc.get().name') == 'Usine test' and pg.input_value('#pname') == 'Usine test', 'paramètres du projet enregistrés (cartouche, nom)')
     # --- menu Exporter
     ok(pg.is_hidden('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'false', 'menu Exporter fermé au départ')
     pg.click('#exportBtn'); ok(pg.is_visible('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'true', 'menu Exporter ouvert')

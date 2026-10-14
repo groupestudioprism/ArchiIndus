@@ -140,5 +140,5 @@ const BOM = (() => {
     Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
   }
 
-  return { compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+  return { TECH_HEAD, TECH_NUM, techRow, compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
 })();

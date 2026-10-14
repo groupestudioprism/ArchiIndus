@@ -193,6 +193,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
   #panelBtn{display:inline-block}
   #hint{display:none}
 }
+
+.v3d{display:block;width:100%;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;touch-action:none;cursor:grab}
+.v3d-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 /* Page de connexion et accueil : reprend auth.css et home.css d'ArchiPlan (relevé le 2026-10-14), adapté aux jetons ArchiIndus. */
 /* ===== Compte Studio Prism : connexion, fiche client, code PIN — écran volontairement clair, comme le logo ===== */
 #auth[hidden]{display:none!important}
@@ -461,6 +464,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
       </div>
       <button id="bom" class="btn" type="button" title="Nomenclature : longueurs par diamètre et par calque">Nomenclature</button>
     </div>
+    <button id="v3d" class="btn" type="button" title="Aperçu 3D en fil de fer des calques visibles">3D</button>
+    <button id="settings" class="btn" type="button" title="Paramètres du projet : nom, cartouche, informations">Projet</button>
     <button id="cloud" class="btn" type="button" title="Projets enregistrés sur votre compte Studio Prism">Cloud</button>
     <button id="acct" class="btn" type="button" title="Compte Studio Prism">Compte</button>
     <button id="panelBtn" class="btn" type="button" aria-expanded="false" aria-controls="panel" title="Afficher ou masquer le panneau d'options">Options</button>
@@ -1243,11 +1248,18 @@ const SYMBOLS = {
   moteur:     { label: 'Moteur', group: 'equip', size: 500, tag: 'M', prims: [['C', 0, 0, 0.5], ['P', [-0.28, -0.2, -0.28, 0.2, 0, -0.05, 0.28, 0.2, 0.28, -0.2], false]] },
   ventilo:    { label: 'Ventilateur', group: 'equip', size: 500, tag: 'VT', prims: [['C', 0, 0, 0.5], ['L', -0.35, -0.35, 0.35, 0.35], ['L', -0.35, 0.35, 0.35, -0.35]] },
   echangeur:  { label: 'Échangeur', group: 'equip', size: 800, tag: 'EC', prims: [['P', [-0.5, -0.35, 0.5, -0.35, 0.5, 0.35, -0.5, 0.35], true], ['P', [-0.4, 0, -0.2, 0.25, 0, -0.25, 0.2, 0.25, 0.4, 0], false]] },
+  filtre:     { label: 'Filtre', group: 'equip', size: 300, tag: 'F', prims: [['L', -0.5, 0, 0.5, 0], ['P', [-0.3, -0.3, 0.3, -0.3, 0, 0.3], true], ['L', -0.15, -0.12, 0.15, -0.12]] },
+  ballon:     { label: 'Ballon / bouteille', group: 'equip', size: 1000, tag: 'BA', prims: [['P', [-0.3, -0.5, 0.3, -0.5, 0.3, 0.5, -0.3, 0.5], true], ['L', -0.3, 0.25, 0.3, 0.25], ['L', -0.3, -0.25, 0.3, -0.25]] },
+  hydrant:    { label: 'Poteau incendie', group: 'equip', size: 500, tag: 'PI', prims: [['C', 0, 0, 0.5], ['L', 0, -0.5, 0, 0.5], ['L', -0.5, 0, 0.5, 0], ['C', 0, 0, 0.15]] },
+  chambre:    { label: 'Chambre de tirage', group: 'sec', size: 800, tag: 'CT', prims: [['P', SQ, true], ['L', -0.5, 0, 0.5, 0], ['L', 0, -0.5, 0, 0.5]] },
+  chambreRac: { label: 'Chambre de raccordement', group: 'sec', size: 1000, tag: 'CR', prims: [['P', SQ, true], ['P', [-0.35, -0.35, 0.35, -0.35, 0.35, 0.35, -0.35, 0.35], true], ['C', 0, 0, 0.12]] },
+  candelabre: { label: 'Candélabre', group: 'sec', size: 400, tag: 'EP', prims: [['C', 0, 0, 0.2], ['L', -0.5, 0, -0.2, 0], ['L', 0.2, 0, 0.5, 0], ['L', 0, -0.5, 0, -0.2], ['L', 0, 0.2, 0, 0.5]] },
+  armoire:    { label: 'Armoire / borne', group: 'sec', size: 600, tag: 'AR', prims: [['P', [-0.5, -0.3, 0.5, -0.3, 0.5, 0.3, -0.5, 0.3], true], ['P', [-0.2, -0.1, 0.2, -0.1, 0.2, 0.1, -0.2, 0.1], true]] },
   poteau:     { label: 'Poteau carré', group: 'struct', size: 300, tag: 'PO', prims: [['P', SQ, true], ['L', -0.5, -0.5, 0.5, 0.5], ['L', -0.5, 0.5, 0.5, -0.5]] },
   poteauRond: { label: 'Poteau rond', group: 'struct', size: 300, tag: 'PO', prims: [['C', 0, 0, 0.5], ['L', -0.5, 0, 0.5, 0], ['L', 0, -0.5, 0, 0.5]] },
   semelle:    { label: 'Semelle', group: 'struct', size: 1200, tag: 'S', prims: [['P', SQ, true], ['P', [-0.3, -0.3, 0.3, -0.3, 0.3, 0.3, -0.3, 0.3], true]] },
 };
-const SYM_GROUPS = { equip: 'Équipements', struct: 'Structure' };
+const SYM_GROUPS = { equip: 'Équipements et fluides', sec: 'Réseaux secs', struct: 'Structure' };
 
 /* Structures linéaires : attribut `st` {kind, w (mm), prof, tag}. mur : w = épaisseur, prof = matériau ; poutre : w = largeur, prof = profilé. */
 const ST_KINDS = { mur: { label: 'Mur', wDef: 200, wLabel: 'Épaisseur (mm)', pLabel: 'Matériau', ex: ['Béton', 'Parpaing', 'Brique', 'Béton armé', 'Acier'] }, poutre: { label: 'Poutre', wDef: 150, wLabel: 'Largeur (mm)', pLabel: 'Profilé', ex: ['IPE 160', 'IPE 200', 'IPE 240', 'IPE 300', 'HEA 160', 'HEA 200', 'HEB 200', 'UPN 160', 'Béton 20x40'] } };
@@ -2430,6 +2442,7 @@ const PDF = (() => {
       net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
       other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
       sym: { head: BOM.SYM_HEAD, num: BOM.SYM_NUM, frac: [0.26, 0.26, 0.14, 0.22, 0.12] },
+      tech: { head: BOM.TECH_HEAD, num: BOM.TECH_NUM, frac: [0.13, 0.19, 0.08, 0.09, 0.08, 0.43] },
       st: { head: BOM.ST_HEAD, num: BOM.ST_NUM, frac: [0.20, 0.10, 0.22, 0.11, 0.17, 0.09, 0.11] },
     };
     const items = [];
@@ -2448,6 +2461,10 @@ const PDF = (() => {
       items.push({ t: 'title', text: 'Nomenclature : structures (murs et poutres)' }, { t: 'head', s: specs.st });
       b.structs.forEach((r) => items.push({ t: 'row', s: specs.st, cells: BOM.stRow(r) }));
       items.push({ t: 'row', s: specs.st, bold: true, cells: ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), BOM.f2(b.structs.reduce((a, r) => a + r.length, 0))] });
+    }
+    if (b.techs.length) {
+      items.push({ t: 'title', text: 'Nomenclature : propriétés techniques renseignées' }, { t: 'head', s: specs.tech });
+      b.techs.forEach((r) => items.push({ t: 'row', s: specs.tech, cells: BOM.techRow(r) }));
     }
     if (b.others.length) {
       items.push({ t: 'title', text: 'Nomenclature : autres éléments par calque' }, { t: 'head', s: specs.other });
@@ -2695,7 +2712,125 @@ const BOM = (() => {
     Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
   }
 
-  return { compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+  return { TECH_HEAD, TECH_NUM, techRow, compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+})();
+
+/* ==== 77-view3d.js ==== */
+/* Aperçu 3D en fil de fer, calculé à partir des objets des calques visibles (mêmes données que le plan, rien n'est dupliqué).
+   Altitudes lues dans les propriétés techniques (en m, converties en mm) :
+   - réseau : de l'altitude amont à l'altitude aval le long du tracé ; sinon −profondeur ; sinon 0.
+   - mur : bande extrudée de la cote z (0 par défaut) sur la hauteur h (3000 mm par défaut) ; poutre : bande à la cote z (3000 mm par défaut).
+   - équipement : symbole à la cote z (0) ; poteaux extrudés sur 3000 mm.
+   Limites : fil de fer orthographique, sans faces, sans masquage ni sections réelles des profilés. Ce n'est pas un modèle 3D éditable. */
+const View3D = (() => {
+  const DEF_WALL_H = 3000, DEF_BEAM_Z = 3000, COL_H = 3000;
+
+  function ring(pts, closed, z, out, col) {
+    const n = pts.length;
+    for (let i = 0; i < (closed ? n : n - 1); i++) { const a = pts[i], b = pts[(i + 1) % n]; out.push({ a: [a[0], a[1], z], b: [b[0], b[1], z], col }); }
+  }
+  /* Segments 3D d'un réseau : altitude interpolée selon la longueur cumulée. */
+  function netSegs(o, col, out) {
+    const pr = o.props || {}, pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
+    const segs = [];
+    for (let i = 0; i < (closed ? pts.length : pts.length - 1); i++) segs.push([pts[i], pts[(i + 1) % pts.length]]);
+    const tot = segs.reduce((s, [a, b]) => s + G.dist(a, b), 0) || 1;
+    const hasZ = typeof pr.zi === 'number' && typeof pr.zf === 'number';
+    const zAt = (t) => (hasZ ? (pr.zi + (pr.zf - pr.zi) * t) * 1000 : typeof pr.depth === 'number' ? -pr.depth * 1000 : 0);
+    let acc = 0;
+    for (const [a, b] of segs) { const l = G.dist(a, b), z0 = zAt(acc / tot); acc += l; out.push({ a: [a[0], a[1], z0], b: [b[0], b[1], zAt(acc / tot)], col, thick: o.net.dn }); }
+  }
+
+  function model() {
+    const out = [];
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      const col = l.color, pr = o.props || {};
+      if (o.net && (o.type === 'line' || o.type === 'poly')) { netSegs(o, col, out); continue; }
+      if (o.st && (o.type === 'line' || o.type === 'poly')) {
+        const pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
+        const z0 = (typeof pr.z === 'number' ? pr.z : o.st.kind === 'poutre' ? DEF_BEAM_Z / 1000 : 0) * 1000;
+        const h = o.st.kind === 'mur' ? (pr.h || DEF_WALL_H) : 0;
+        for (const b of Sym.band(pts, closed, o.st.w)) {
+          ring(b.pts, true, z0, out, col);
+          if (h) { ring(b.pts, true, z0 + h, out, col); for (const p of b.pts) out.push({ a: [p[0], p[1], z0], b: [p[0], p[1], z0 + h], col }); }
+        }
+        if (o.st.kind === 'poutre') ring(pts, closed, z0, out, col);
+        continue;
+      }
+      if (o.type === 'sym') {
+        const z0 = (typeof pr.z === 'number' ? pr.z : 0) * 1000, h = o.k === 'poteau' || o.k === 'poteauRond' ? COL_H : 0;
+        for (const e of Sym.world(o)) {
+          const pts = e.type === 'line' ? [e.a, e.b] : e.type === 'circle' ? Array.from({ length: 24 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 12), e.c[1] + e.r * Math.sin(i * Math.PI / 12)]) : e.pts;
+          const closed = e.type === 'circle' || (e.type === 'poly' && e.closed);
+          ring(pts, closed, z0, out, col);
+          if (h) { ring(pts, closed, z0 + h, out, col); if (e.type !== 'line') for (const p of pts.filter((_, i) => i % 6 === 0)) out.push({ a: [p[0], p[1], z0], b: [p[0], p[1], z0 + h], col }); }
+        }
+        continue;
+      }
+      for (const e of Sym.expand(o)) {
+        if (e.type === 'line') out.push({ a: [e.a[0], e.a[1], 0], b: [e.b[0], e.b[1], 0], col });
+        else if (e.type === 'poly') ring(e.pts, e.closed, 0, out, col);
+        else if (e.type === 'circle') ring(Array.from({ length: 36 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 18), e.c[1] + e.r * Math.sin(i * Math.PI / 18)]), true, 0, out, col);
+      }
+    }
+    return out;
+  }
+
+  /* Projection orthographique : lacet (autour de Z) puis tangage. Renvoie [x écran, y écran (vers le bas), profondeur]. */
+  function project(p, yaw, pitch) {
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const x1 = p[0] * cy - p[1] * sy, y1 = p[0] * sy + p[1] * cy;
+    return [x1, -(p[2] * cp + y1 * sp), y1 * cp - p[2] * sp];
+  }
+
+  function show() {
+    const segs = model();
+    if (!segs.length) { Status.msg('Rien à afficher : le dessin est vide ou tous les calques sont masqués.'); return; }
+    const cv = el('canvas', { class: 'v3d', 'aria-label': 'Aperçu 3D en fil de fer : glisser pour tourner, molette pour zoomer' });
+    cv.width = 900; cv.height = 560;
+    const st = { yaw: -0.6, pitch: 0.6, k: 1, ox: 0, oy: 0 };
+    const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+    for (const s of segs) for (const p of [s.a, s.b]) for (let i = 0; i < 3; i++) { mn[i] = Math.min(mn[i], p[i]); mx[i] = Math.max(mx[i], p[i]); }
+    const c = mn.map((v, i) => (v + mx[i]) / 2), R = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) || 1;
+    const dark = Theme.isDark();
+    function draw() {
+      const g = cv.getContext('2d'), W = cv.width, H = cv.height, sc = Math.min(W, H) * 0.8 / R * st.k;
+      g.fillStyle = dark ? '#16191E' : '#FFFFFF'; g.fillRect(0, 0, W, H);
+      g.lineCap = 'round';
+      const P = (p) => { const q = project([p[0] - c[0], p[1] - c[1], p[2] - c[2]], st.yaw, st.pitch); return [W / 2 + st.ox + q[0] * sc, H / 2 + st.oy + q[1] * sc]; };
+      /* repère : axes X (rouge), Y (vert), Z (bleu) au coin minimal */
+      for (const s of segs) {
+        const a = P(s.a), b = P(s.b);
+        g.strokeStyle = s.col; g.lineWidth = s.thick ? Math.min(6, Math.max(1.5, s.thick * sc * 0.6)) : 1.3; g.globalAlpha = s.thick ? 0.85 : 1;
+        g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+      }
+      g.globalAlpha = 1;
+      const o = [mn[0], mn[1], mn[2]], ax = [[[R / 6, 0, 0], '#C0392B', 'X'], [[0, R / 6, 0], '#1E8E5A', 'Y'], [[0, 0, R / 6], '#0877B9', 'Z']];
+      for (const [d, col, t] of ax) { const a = P(o), b = P([o[0] + d[0], o[1] + d[1], o[2] + d[2]]); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 2; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.font = '600 12px Inter, sans-serif'; g.fillText(t, b[0] + 4, b[1] - 4); }
+    }
+    let drag = null;
+    cv.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2 }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+      if (drag.pan) { st.ox += dx; st.oy += dy; } else { st.yaw += dx * 0.01; st.pitch = Math.max(-1.5, Math.min(1.5, st.pitch + dy * 0.01)); }
+      draw();
+    });
+    cv.addEventListener('pointerup', () => { drag = null; });
+    cv.addEventListener('contextmenu', (e) => e.preventDefault());
+    cv.addEventListener('wheel', (e) => { e.preventDefault(); st.k = Math.max(0.1, Math.min(20, st.k * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); draw(); }, { passive: false });
+    const views = el('div', { class: 'v3d-bar' },
+      ...[['Isométrique', -0.6, 0.6], ['Dessus', 0, 1.5], ['Face', 0, 0], ['Côté', -Math.PI / 2, 0]].map(([n, y, p]) => {
+        const b = el('button', { type: 'button', class: 'btn' }, n); b.addEventListener('click', () => { st.yaw = y; st.pitch = p; st.ox = st.oy = 0; st.k = 1; draw(); }); return b;
+      }));
+    const body = el('div', {}, views, cv, el('p', { class: 'mut small' }, `Aperçu 3D en fil de fer (${segs.length} segments), calques visibles. Glisser : tourner · Maj + glisser : déplacer · molette : zoom. Altitudes issues des propriétés techniques (m) ; sans altitude, réseaux à 0 ou à − profondeur, murs de 3 m, poutres à 3 m, poteaux de 3 m. Pas de faces ni de sections réelles : ce n'est pas un modèle 3D éditable.`));
+    Dlg.open('Aperçu 3D', body);
+    draw();
+  }
+
+  return { model, project, show };
 })();
 
 /* ==== 78-ui.js ==== */
@@ -3094,6 +3229,24 @@ const UI = (() => {
     $('#orthoBtn').setAttribute('aria-pressed', String(state.snap.ortho));
   }
 
+  /* Paramètres du projet : nom, format de feuille et cartouche (communs avec l'export PDF), informations de contenu. */
+  function projectDialog() {
+    const d = Doc.get(), sh = cleanSheet(d.sheet);
+    const name = el('input', { class: 'fld', type: 'text', maxlength: 80, value: d.name, 'aria-label': 'Nom du projet' });
+    const fmtSel = el('select', { 'aria-label': 'Format de feuille' }, ...Object.keys(SHEET_FORMATS).map((k) => el('option', { value: k, selected: k === sh.format }, `${k} paysage`)));
+    const f = (label, key, max) => { const i = el('input', { class: 'fld', type: 'text', maxlength: max, value: sh[key], 'aria-label': label }); return [el('label', { class: 'lbl' }, label, i), i]; };
+    const [l1, client] = f('Client', 'client', 60), [l2, author] = f('Dessiné par', 'author', 60), [l3, ref] = f('Référence', 'ref', 40), [l4, rev] = f('Indice', 'rev', 10);
+    const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
+    const info = el('dl', { class: 'kv' }, ...kv('Unité', 'millimètres'), ...kv('Objets', String(d.objects.length)), ...kv('Calques', String(d.layers.length)), ...kv('Format du fichier', 'schemaVersion 1'));
+    const body = el('div', {}, el('div', { class: 'frm' }, el('label', { class: 'lbl' }, 'Nom du projet', name), el('label', { class: 'lbl' }, 'Format de feuille', fmtSel), l1, l2, l3, l4), el('h3', { class: 'pn-t', style: 'margin:14px 0 6px' }, 'Informations'), info,
+      el('p', { class: 'mut small' }, 'Le cartouche est repris dans l\'export PDF.'));
+    Dlg.open('Paramètres du projet', body, [{ label: 'Enregistrer', primary: true, run: () => {
+      const v = cleanSheet({ format: fmtSel.value, client: client.value, author: author.value, ref: ref.value, rev: rev.value });
+      const n = name.value.trim().slice(0, 80) || 'Projet sans titre';
+      Doc.mutate((dd) => { dd.sheet = v; dd.name = n; });
+    } }]);
+  }
+
   /* Menu « Exporter » : s'ouvre sous le bouton, se ferme au clic ailleurs, sur Échap ou après le choix d'un format. */
   function bindExportMenu() {
     const btn = $('#exportBtn'), pop = $('#exportPop');
@@ -3125,6 +3278,8 @@ const UI = (() => {
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
     bindExportMenu();
+    $('#v3d').addEventListener('click', () => View3D.show());
+    $('#settings').addEventListener('click', projectDialog);
     $('#panelBtn').addEventListener('click', () => { const o = $('#app').classList.toggle('pn-open'); $('#panelBtn').setAttribute('aria-expanded', String(o)); });
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());

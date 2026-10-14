@@ -17,11 +17,18 @@ const SYMBOLS = {
   moteur:     { label: 'Moteur', group: 'equip', size: 500, tag: 'M', prims: [['C', 0, 0, 0.5], ['P', [-0.28, -0.2, -0.28, 0.2, 0, -0.05, 0.28, 0.2, 0.28, -0.2], false]] },
   ventilo:    { label: 'Ventilateur', group: 'equip', size: 500, tag: 'VT', prims: [['C', 0, 0, 0.5], ['L', -0.35, -0.35, 0.35, 0.35], ['L', -0.35, 0.35, 0.35, -0.35]] },
   echangeur:  { label: 'Échangeur', group: 'equip', size: 800, tag: 'EC', prims: [['P', [-0.5, -0.35, 0.5, -0.35, 0.5, 0.35, -0.5, 0.35], true], ['P', [-0.4, 0, -0.2, 0.25, 0, -0.25, 0.2, 0.25, 0.4, 0], false]] },
+  filtre:     { label: 'Filtre', group: 'equip', size: 300, tag: 'F', prims: [['L', -0.5, 0, 0.5, 0], ['P', [-0.3, -0.3, 0.3, -0.3, 0, 0.3], true], ['L', -0.15, -0.12, 0.15, -0.12]] },
+  ballon:     { label: 'Ballon / bouteille', group: 'equip', size: 1000, tag: 'BA', prims: [['P', [-0.3, -0.5, 0.3, -0.5, 0.3, 0.5, -0.3, 0.5], true], ['L', -0.3, 0.25, 0.3, 0.25], ['L', -0.3, -0.25, 0.3, -0.25]] },
+  hydrant:    { label: 'Poteau incendie', group: 'equip', size: 500, tag: 'PI', prims: [['C', 0, 0, 0.5], ['L', 0, -0.5, 0, 0.5], ['L', -0.5, 0, 0.5, 0], ['C', 0, 0, 0.15]] },
+  chambre:    { label: 'Chambre de tirage', group: 'sec', size: 800, tag: 'CT', prims: [['P', SQ, true], ['L', -0.5, 0, 0.5, 0], ['L', 0, -0.5, 0, 0.5]] },
+  chambreRac: { label: 'Chambre de raccordement', group: 'sec', size: 1000, tag: 'CR', prims: [['P', SQ, true], ['P', [-0.35, -0.35, 0.35, -0.35, 0.35, 0.35, -0.35, 0.35], true], ['C', 0, 0, 0.12]] },
+  candelabre: { label: 'Candélabre', group: 'sec', size: 400, tag: 'EP', prims: [['C', 0, 0, 0.2], ['L', -0.5, 0, -0.2, 0], ['L', 0.2, 0, 0.5, 0], ['L', 0, -0.5, 0, -0.2], ['L', 0, 0.2, 0, 0.5]] },
+  armoire:    { label: 'Armoire / borne', group: 'sec', size: 600, tag: 'AR', prims: [['P', [-0.5, -0.3, 0.5, -0.3, 0.5, 0.3, -0.5, 0.3], true], ['P', [-0.2, -0.1, 0.2, -0.1, 0.2, 0.1, -0.2, 0.1], true]] },
   poteau:     { label: 'Poteau carré', group: 'struct', size: 300, tag: 'PO', prims: [['P', SQ, true], ['L', -0.5, -0.5, 0.5, 0.5], ['L', -0.5, 0.5, 0.5, -0.5]] },
   poteauRond: { label: 'Poteau rond', group: 'struct', size: 300, tag: 'PO', prims: [['C', 0, 0, 0.5], ['L', -0.5, 0, 0.5, 0], ['L', 0, -0.5, 0, 0.5]] },
   semelle:    { label: 'Semelle', group: 'struct', size: 1200, tag: 'S', prims: [['P', SQ, true], ['P', [-0.3, -0.3, 0.3, -0.3, 0.3, 0.3, -0.3, 0.3], true]] },
 };
-const SYM_GROUPS = { equip: 'Équipements', struct: 'Structure' };
+const SYM_GROUPS = { equip: 'Équipements et fluides', sec: 'Réseaux secs', struct: 'Structure' };
 
 /* Structures linéaires : attribut `st` {kind, w (mm), prof, tag}. mur : w = épaisseur, prof = matériau ; poutre : w = largeur, prof = profilé. */
 const ST_KINDS = { mur: { label: 'Mur', wDef: 200, wLabel: 'Épaisseur (mm)', pLabel: 'Matériau', ex: ['Béton', 'Parpaing', 'Brique', 'Béton armé', 'Acier'] }, poutre: { label: 'Poutre', wDef: 150, wLabel: 'Largeur (mm)', pLabel: 'Profilé', ex: ['IPE 160', 'IPE 200', 'IPE 240', 'IPE 300', 'HEA 160', 'HEA 200', 'HEB 200', 'UPN 160', 'Béton 20x40'] } };

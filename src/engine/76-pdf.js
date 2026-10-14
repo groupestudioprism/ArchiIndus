@@ -147,6 +147,7 @@ const PDF = (() => {
       net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
       other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
       sym: { head: BOM.SYM_HEAD, num: BOM.SYM_NUM, frac: [0.26, 0.26, 0.14, 0.22, 0.12] },
+      tech: { head: BOM.TECH_HEAD, num: BOM.TECH_NUM, frac: [0.13, 0.19, 0.08, 0.09, 0.08, 0.43] },
       st: { head: BOM.ST_HEAD, num: BOM.ST_NUM, frac: [0.20, 0.10, 0.22, 0.11, 0.17, 0.09, 0.11] },
     };
     const items = [];
@@ -165,6 +166,10 @@ const PDF = (() => {
       items.push({ t: 'title', text: 'Nomenclature : structures (murs et poutres)' }, { t: 'head', s: specs.st });
       b.structs.forEach((r) => items.push({ t: 'row', s: specs.st, cells: BOM.stRow(r) }));
       items.push({ t: 'row', s: specs.st, bold: true, cells: ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), BOM.f2(b.structs.reduce((a, r) => a + r.length, 0))] });
+    }
+    if (b.techs.length) {
+      items.push({ t: 'title', text: 'Nomenclature : propriétés techniques renseignées' }, { t: 'head', s: specs.tech });
+      b.techs.forEach((r) => items.push({ t: 'row', s: specs.tech, cells: BOM.techRow(r) }));
     }
     if (b.others.length) {
       items.push({ t: 'title', text: 'Nomenclature : autres éléments par calque' }, { t: 'head', s: specs.other });

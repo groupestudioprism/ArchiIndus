@@ -162,3 +162,6 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
   #panelBtn{display:inline-block}
   #hint{display:none}
 }
+
+.v3d{display:block;width:100%;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;touch-action:none;cursor:grab}
+.v3d-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}

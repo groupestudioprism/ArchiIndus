@@ -393,6 +393,24 @@ const UI = (() => {
     $('#orthoBtn').setAttribute('aria-pressed', String(state.snap.ortho));
   }
 
+  /* Paramètres du projet : nom, format de feuille et cartouche (communs avec l'export PDF), informations de contenu. */
+  function projectDialog() {
+    const d = Doc.get(), sh = cleanSheet(d.sheet);
+    const name = el('input', { class: 'fld', type: 'text', maxlength: 80, value: d.name, 'aria-label': 'Nom du projet' });
+    const fmtSel = el('select', { 'aria-label': 'Format de feuille' }, ...Object.keys(SHEET_FORMATS).map((k) => el('option', { value: k, selected: k === sh.format }, `${k} paysage`)));
+    const f = (label, key, max) => { const i = el('input', { class: 'fld', type: 'text', maxlength: max, value: sh[key], 'aria-label': label }); return [el('label', { class: 'lbl' }, label, i), i]; };
+    const [l1, client] = f('Client', 'client', 60), [l2, author] = f('Dessiné par', 'author', 60), [l3, ref] = f('Référence', 'ref', 40), [l4, rev] = f('Indice', 'rev', 10);
+    const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
+    const info = el('dl', { class: 'kv' }, ...kv('Unité', 'millimètres'), ...kv('Objets', String(d.objects.length)), ...kv('Calques', String(d.layers.length)), ...kv('Format du fichier', 'schemaVersion 1'));
+    const body = el('div', {}, el('div', { class: 'frm' }, el('label', { class: 'lbl' }, 'Nom du projet', name), el('label', { class: 'lbl' }, 'Format de feuille', fmtSel), l1, l2, l3, l4), el('h3', { class: 'pn-t', style: 'margin:14px 0 6px' }, 'Informations'), info,
+      el('p', { class: 'mut small' }, 'Le cartouche est repris dans l\'export PDF.'));
+    Dlg.open('Paramètres du projet', body, [{ label: 'Enregistrer', primary: true, run: () => {
+      const v = cleanSheet({ format: fmtSel.value, client: client.value, author: author.value, ref: ref.value, rev: rev.value });
+      const n = name.value.trim().slice(0, 80) || 'Projet sans titre';
+      Doc.mutate((dd) => { dd.sheet = v; dd.name = n; });
+    } }]);
+  }
+
   /* Menu « Exporter » : s'ouvre sous le bouton, se ferme au clic ailleurs, sur Échap ou après le choix d'un format. */
   function bindExportMenu() {
     const btn = $('#exportBtn'), pop = $('#exportPop');
@@ -424,6 +442,8 @@ const UI = (() => {
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
     bindExportMenu();
+    $('#v3d').addEventListener('click', () => View3D.show());
+    $('#settings').addEventListener('click', projectDialog);
     $('#panelBtn').addEventListener('click', () => { const o = $('#app').classList.toggle('pn-open'); $('#panelBtn').setAttribute('aria-expanded', String(o)); });
     $('#svg').addEventListener('click', () => IO.exportSVG());
     $('#dxf').addEventListener('click', () => IO.exportDXF());
