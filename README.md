@@ -32,6 +32,7 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `78-ui`, `80-main`. |
 | `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html`. |
 | `tests/e2e.py` | Test de bout en bout (Playwright pour Python) : `pip install playwright`, `playwright install chromium`, puis `python3 tests/e2e.py`. |
+| `firebase/firestore.ai.rules.proposed` | **Brouillon non publié et non testé** : bloc de règles `ai*` (projets privés, quota) à relire avant d'être ajouté au fichier de règles commun. Ne modifie rien tant qu'on ne le publie pas. |
 | `index.html` | Version publiée (**générée, ne pas modifier à la main**). |
 
 On modifie `src/`, on lance `python3 tools/build.py`, on enregistre (commit) : si GitHub Pages est activé sur la branche principale, le site se met à jour.
