@@ -50,7 +50,16 @@ Prévu, non réalisé :
 - Données dans des collections préfixées `ai` (`aiProjects`, `aiFolders`, …), sur le modèle du préfixe `ap` d'ArchiPlan.
 - Nécessite un bloc de règles Firestore `ai*` dans le fichier de règles commun au site et à ArchiPlan : **modification d'un service partagé, à valider avant toute publication.**
 
-La configuration Firebase publique n'est volontairement pas encore ajoutée ici. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
+### Projets Firebase (14/10/2026)
+
+| Rôle | Projet | Contenu |
+| --- | --- | --- |
+| Commun Studio Prism | `archivision-studioprism` | Comptes (`users`), PIN, licences, futures données `ai*`. Partagé avec le site et ArchiPlan. |
+| Propre à ArchiIndus | `archiindus-studioprism` | Créé le 14/10/2026 : application web enregistrée, rien d'autre activé (ni Auth, ni Firestore, ni Hosting déployé). |
+
+Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Les règles publiées dans le projet commun (relues le 14/10/2026) contiennent les blocs `ap*` et aucun bloc `ai*`.
+
+La configuration publique des deux projets est dans `src/engine/01-firebase-config.js` (clés d'application web, non secrètes ; pas encore utilisée par le moteur). `.firebaserc` déclare les deux projets. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
 
 ## Conventions
 
