@@ -102,6 +102,7 @@ const UI = (() => {
         for (const o of d.objects) {
           if (!ids.has(o.id)) continue;
           o.net = cleanNet({ dn: v, mat: mat.value, tag: objs.length === 1 ? tag.value : (o.net?.tag || '') });
+          delete o.st; const pc = Props.clean(o.props, 'net'); if (pc) o.props = pc; else delete o.props;
         }
       });
     });
@@ -109,7 +110,7 @@ const UI = (() => {
       el('label', { class: 'lbl' }, 'DN (mm)', dn), el('label', { class: 'lbl' }, 'Matériau', mat), el('label', { class: 'lbl' }, 'Repère', tag), apply);
     if (objs.some((o) => o.net)) {
       const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer le réseau');
-      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.net; }));
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { delete o.net; delete o.props; } }));
       box.append(rm);
     }
     return box;
@@ -241,12 +242,12 @@ const UI = (() => {
     apply.addEventListener('click', () => {
       const c = cleanSt({ kind: kind.value, w: Number(w.value), prof: prof.value, tag: objs.length === 1 ? tag.value : '' });
       if (!c) { Status.msg(`Largeur invalide : entrez une valeur entre 1 et ${ST_W_MAX} mm.`, 6000); return; }
-      Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { o.st = { ...c, tag: objs.length === 1 ? c.tag : (o.st?.tag || '') }; delete o.net; } });
+      Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { o.st = { ...c, tag: objs.length === 1 ? c.tag : (o.st?.tag || '') }; delete o.net; const pc = Props.clean(o.props, 'st'); if (pc) o.props = pc; else delete o.props; } });
     });
     const box = el('div', { class: 'netbox' }, el('b', {}, 'Structure'), el('label', { class: 'lbl' }, 'Type', kind), lw, lp, el('label', { class: 'lbl' }, 'Repère', tag), apply);
     if (objs.some((o) => o.st)) {
       const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer la structure');
-      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.st; }));
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { delete o.st; delete o.props; } }));
       box.append(rm);
     }
     return box;
@@ -289,6 +290,30 @@ const UI = (() => {
     return box;
   }
 
+  /* --- Propriétés techniques (même famille d'objets) : champ vide = propriété supprimée ; appliqué à la sortie du champ --- */
+  function propsForm(objs) {
+    const kind = Props.kindOf(objs[0]);
+    if (!kind || !objs.every((o) => Props.kindOf(o) === kind)) return null;
+    const ids = new Set(objs.map((o) => o.id));
+    const box = el('div', { class: 'netbox' }, el('b', {}, 'Propriétés techniques'));
+    const grid = el('div', { class: 'row2b' });
+    for (const k of Props.keys(kind)) {
+      const d = PROP_DEFS[k];
+      const vals = objs.map((o) => o.props && typeof o.props[k] === 'number' ? o.props[k] : null);
+      const same = vals.every((v) => v === vals[0]);
+      const inp = el('input', { class: 'fld', type: 'number', min: d.min, max: d.max, step: 'any', 'aria-label': `${d.label} (${d.unit})`, value: same && vals[0] !== null ? vals[0] : '', placeholder: same ? '' : '(différent)' });
+      inp.addEventListener('change', () => {
+        const raw = inp.value.trim(), v = Number(raw);
+        if (raw && (!Number.isFinite(v) || v < d.min || v > d.max)) { Status.msg(`${d.label} : valeur entre ${d.min} et ${d.max} ${d.unit}.`, 6000); renderProps(); return; }
+        Doc.mutate((dd) => { for (const o of dd.objects) if (ids.has(o.id)) { const p = { ...(o.props || {}) }; if (raw) p[k] = v; else delete p[k]; const pc = Props.clean(p, kind); if (pc) o.props = pc; else delete o.props; } });
+      });
+      grid.append(el('label', { class: 'lbl' }, `${d.label} (${d.unit})`, inp));
+    }
+    box.append(grid);
+    if (objs.length === 1) { const sl = Props.slopeStr(objs[0]); if (sl) box.append(el('p', { class: 'mut small' }, `Pente moyenne : ${sl} (calculée sur la longueur tracée).`)); }
+    return box;
+  }
+
   /* --- Propriétés de la sélection --- */
   function renderProps() {
     const box = $('#props');
@@ -320,6 +345,7 @@ const UI = (() => {
     box.append(dl);
     if (objs.every((o) => o.type === 'line' || o.type === 'poly')) { box.append(netForm(objs)); box.append(stForm(objs)); }
     if (objs.length === 1 && objs[0].type === 'sym') box.append(symForm(objs[0]));
+    { const pf = propsForm(objs); if (pf) box.append(pf); }
     const sel = el('select', { 'aria-label': 'Calque des objets sélectionnés' });
     const same = objs.every((o) => o.layer === objs[0].layer);
     if (!same) sel.append(el('option', { value: '' }, '— plusieurs calques —'));

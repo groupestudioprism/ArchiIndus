@@ -10,10 +10,15 @@ const BOM = (() => {
 
   function compute() {
     const d = Doc.get();
-    const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map();
+    const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map(), techs = [];
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
+      if (o.props && Props.kindOf(o)) {
+        const len = o.type === 'sym' ? null : (Geo.length(o) || 0) / 1000, sl = Props.slope(o);
+        const what = o.net ? `Réseau DN${o.net.dn}${o.net.mat ? ' ' + o.net.mat : ''}` : o.st ? Sym.stLabel({ ...o.st, tag: '' }) : SYMBOLS[o.k].label;
+        techs.push({ layer: l.name, group: l.group, what, tag: (o.net ? o.net.tag : o.st ? o.st.tag : o.tag) || '', length: len, slope: sl, data: Props.summary(o) });
+      }
       if (o.net) {
         const key = `${l.id}|${o.net.mat}|${o.net.dn}`;
         let r = nets.get(key);
@@ -50,6 +55,7 @@ const BOM = (() => {
       syms: [...syms.values()].sort((a, b) => byGroup(a, b) || a.label.localeCompare(b.label, 'fr') || a.size - b.size).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       structs: [...structs.values()].sort((a, b) => byGroup(a, b) || a.kind.localeCompare(b.kind, 'fr') || a.prof.localeCompare(b.prof, 'fr') || a.w - b.w).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       others: [...others.values()].sort(byGroup),
+      techs: techs.sort(byGroup),
     };
   }
 
@@ -61,6 +67,8 @@ const BOM = (() => {
   const stRow = (r) => [r.layer, r.kind, r.prof || '—', String(r.w), r.tags.join(', ') || '—', String(r.segments), f2(r.length)];
   const SYM_HEAD = ['Calque', 'Type', 'Dimension (mm)', 'Repères', 'Quantité'], SYM_NUM = [2, 4];
   const ST_HEAD = ['Calque', 'Type', 'Profilé / matériau', 'Largeur (mm)', 'Repères', 'Tronçons', 'Longueur (m)'], ST_NUM = [3, 5, 6];
+  const TECH_HEAD = ['Calque', 'Objet', 'Repère', 'Longueur (m)', 'Pente (%)', 'Données techniques'], TECH_NUM = [3, 4];
+  const techRow = (r) => [r.layer, r.what, r.tag || '—', r.length === null ? '—' : f2(r.length), r.slope === null ? '—' : f2(r.slope), r.data];
   const isEmpty = (b) => !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
   const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
   const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
@@ -91,6 +99,7 @@ const BOM = (() => {
       } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
       if (b.syms.length) body.append(table('Équipements et poteaux', SYM_HEAD, b.syms.map(symRow), SYM_NUM, ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))]));
       if (b.structs.length) body.append(table('Structures (murs et poutres)', ST_HEAD, b.structs.map(stRow), ST_NUM, ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), f2(b.structs.reduce((a, r) => a + r.length, 0))]));
+      if (b.techs.length) body.append(table('Propriétés techniques renseignées', TECH_HEAD, b.techs.map(techRow), TECH_NUM));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
     Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { exportCSV(); return false; } }]);
@@ -117,6 +126,11 @@ const BOM = (() => {
       lines.push(q('Structures (murs et poutres)'), ST_HEAD.map(q).join(';'));
       for (const r of b.structs) lines.push(stRow(r).map(q).join(';'));
       lines.push(['Total', '', '', '', '', b.structs.reduce((a, r) => a + r.segments, 0), f2(b.structs.reduce((a, r) => a + r.length, 0))].map(q).join(';'), '');
+    }
+    if (b.techs.length) {
+      lines.push(q('Propriétés techniques renseignées'), TECH_HEAD.map(q).join(';'));
+      for (const r of b.techs) lines.push(techRow(r).map(q).join(';'));
+      lines.push('');
     }
     if (b.others.length) {
       lines.push(q('Autres éléments par calque'), OTHER_HEAD.map(q).join(';'));

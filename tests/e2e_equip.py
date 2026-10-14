@@ -112,6 +112,21 @@ with sync_playwright() as p:
     n = len(objs()); pg.evaluate("Doc.undo()"); ok(len(objs()) == n or True, 'undo sans erreur')
     pg.evaluate("Doc.redo()")
 
+    # --- propriétés techniques
+    pg.evaluate("Doc.mutate(d=>{d.layers[1].visible=true}); Tools.selection.clear()")
+    pg.evaluate("Doc.mutate(d=>{d.objects.push({id:900,type:'line',a:[0,9000],b:[10000,9000],layer:2,net:{dn:200,mat:'PVC',tag:'EU9'}}); d.nextId=Math.max(d.nextId,901)}); Tools.selection.add(900)")
+    key('v'); pg.evaluate("Tools.selection.clear(); Tools.selection.add(900)"); pg.evaluate("Doc.mutate(()=>{})"); pg.wait_for_timeout(100)
+    ok(pg.locator('#props input[aria-label="Altitude amont (m)"]').count() == 1 and pg.locator('#props input[aria-label="Hauteur (mm)"]').count() == 0, 'propriétés techniques propres à la famille réseau')
+    pg.fill('#props input[aria-label="Altitude amont (m)"]', '12.5'); pg.press('#props input[aria-label="Altitude amont (m)"]', 'Tab')
+    pg.fill('#props input[aria-label="Altitude aval (m)"]', '12.4'); pg.press('#props input[aria-label="Altitude aval (m)"]', 'Tab')
+    pg.fill('#props input[aria-label="Débit (L/s)"]', '3'); pg.press('#props input[aria-label="Débit (L/s)"]', 'Tab')
+    pr = pg.evaluate("Doc.get().objects.find(o=>o.id===900).props"); ok(pr == {'zi': 12.5, 'zf': 12.4, 'q': 3}, f'props enregistrées {pr}')
+    sl = pg.evaluate("Props.slope(Doc.get().objects.find(o=>o.id===900))"); ok(abs(sl - 1.0) < 1e-9, f'pente 1 % ({sl})')
+    ok('1 %' in pg.inner_text('#props'), 'pente affichée')
+    pg.fill('#props input[aria-label="Débit (L/s)"]', ''); pg.press('#props input[aria-label="Débit (L/s)"]', 'Tab')
+    ok('q' not in pg.evaluate("Doc.get().objects.find(o=>o.id===900).props"), 'champ vidé : propriété supprimée')
+    bt = pg.evaluate("BOM.compute().techs"); ok(len(bt) == 1 and abs(bt[0]['length'] - 10) < 1e-9 and 'Altitude amont' in bt[0]['data'], f'nomenclature techs {bt}')
+    pg.evaluate("Doc.mutate(d=>{d.objects=d.objects.filter(o=>o.id!==900)}); Tools.selection.clear()")
     # --- panneau contextuel : résumé du projet, sélection multiple
     pg.evaluate('Tools.selection.clear()'); pg.wait_for_timeout(100)
     ok('Projet' in pg.inner_text('#props') and 'Ouvrir la nomenclature' in pg.inner_text('#props'), 'rien de sélectionné : résumé du projet')
@@ -183,6 +198,8 @@ with sync_playwright() as p:
     m, o = imp([S(3, rot=450, tag='T' * 99), T(6, st={'kind': 'mur', 'w': 200.04, 'prof': 'B' * 99}, net={'dn': 100})])
     s3 = [x for x in o if x['id'] == 3]; ok(s3 and s3[0]['rot'] == 90 and len(s3[0]['tag']) == 30, f'import : rotation ramenée à [0;360[, repère borné ({m})')
     x6 = [x for x in o if x['id'] == 6]; ok(x6 and 'net' in x6[0] and 'st' not in x6[0], 'import : net prioritaire sur st')
+    m, o = imp([T(8, net={'dn': 100}, props={'zi': 5, 'zf': 'x', 'h': 100, 'inconnu': 1, 'depth': 99999}), S(9, props={'q': 2, 'zi': 3}), T(10, props={'zi': 1})])
+    ok(o[0]['props'] == {'zi': 5} and o[1]['props'] == {'q': 2} and 'props' not in o[2], f'import : props filtrées par famille et bornes {[x.get("props") for x in o]}')
     m, o = imp([T(7, st={'kind': 'mur', 'w': 200.04, 'prof': 'B' * 99})]); ok(o and o[0]['st']['w'] == 200 and len(o[0]['st']['prof']) == 30, 'import : st borné')
 
     # --- captures

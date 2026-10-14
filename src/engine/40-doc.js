@@ -98,7 +98,7 @@ const Doc = (() => {
     const layerIds = new Set(layers.map((l) => l.id));
 
     /* Réseau (net) ou structure (st) : un seul des deux ; le réseau l'emporte. */
-    const attrs = (o, out) => { const nt = cleanNet(o.net); if (nt) out.net = nt; else { const sc = cleanSt(o.st); if (sc) out.st = sc; } };
+    const attrs = (o, out) => { const nt = cleanNet(o.net); if (nt) out.net = nt; else { const sc = cleanSt(o.st); if (sc) out.st = sc; } const pr = Props.clean(o.props, Props.kindOf(out)); if (pr) out.props = pr; };
     const objects = [];
     const seenO = new Set();
     let maxO = 0;
@@ -115,7 +115,7 @@ const Doc = (() => {
           out.closed = o.closed === true;
           attrs(o, out);
           break;
-        case 'sym': { out.c = pt(o.c); const cs = cleanSym(o); if (!out.c || !cs) bad(where + ' (symbole).'); Object.assign(out, cs); break; }
+        case 'sym': { out.c = pt(o.c); const cs = cleanSym(o); if (!out.c || !cs) bad(where + ' (symbole).'); Object.assign(out, cs); { const pr = Props.clean(o.props, 'sym'); if (pr) out.props = pr; } break; }
         case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
         case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
         case 'text':

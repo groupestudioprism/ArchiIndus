@@ -1124,7 +1124,7 @@ const Doc = (() => {
     const layerIds = new Set(layers.map((l) => l.id));
 
     /* Réseau (net) ou structure (st) : un seul des deux ; le réseau l'emporte. */
-    const attrs = (o, out) => { const nt = cleanNet(o.net); if (nt) out.net = nt; else { const sc = cleanSt(o.st); if (sc) out.st = sc; } };
+    const attrs = (o, out) => { const nt = cleanNet(o.net); if (nt) out.net = nt; else { const sc = cleanSt(o.st); if (sc) out.st = sc; } const pr = Props.clean(o.props, Props.kindOf(out)); if (pr) out.props = pr; };
     const objects = [];
     const seenO = new Set();
     let maxO = 0;
@@ -1141,7 +1141,7 @@ const Doc = (() => {
           out.closed = o.closed === true;
           attrs(o, out);
           break;
-        case 'sym': { out.c = pt(o.c); const cs = cleanSym(o); if (!out.c || !cs) bad(where + ' (symbole).'); Object.assign(out, cs); break; }
+        case 'sym': { out.c = pt(o.c); const cs = cleanSym(o); if (!out.c || !cs) bad(where + ' (symbole).'); Object.assign(out, cs); { const pr = Props.clean(o.props, 'sym'); if (pr) out.props = pr; } break; }
         case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
         case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
         case 'text':
@@ -1348,6 +1348,50 @@ const Sym = (() => {
   return { expand, band, world, stLabel, isComposite };
 })();
 
+/* ==== 46-props.js ==== */
+/* Propriétés techniques extensibles : objet `props` {clé: nombre} sur les réseaux (net), structures (st) et équipements (sym).
+   Chaque propriété est décrite une seule fois dans PROP_DEFS (libellé, unité, bornes, familles concernées) : formulaire, validation à
+   l'import, nomenclature et étiquettes s'appuient sur cette table. Ajouter une propriété = ajouter une ligne ici.
+   Les valeurs sont celles saisies par l'utilisateur : aucune vérification de conformité à une norme n'est faite. */
+const PROP_DEFS = {
+  zi:    { label: 'Altitude amont', unit: 'm', min: -1000, max: 10000, dec: 3, kinds: ['net'] },
+  zf:    { label: 'Altitude aval', unit: 'm', min: -1000, max: 10000, dec: 3, kinds: ['net'] },
+  depth: { label: 'Profondeur', unit: 'm', min: 0, max: 1000, dec: 2, kinds: ['net'] },
+  q:     { label: 'Débit', unit: 'L/s', min: 0, max: 1e6, dec: 3, kinds: ['net', 'sym'] },
+  pr:    { label: 'Pression', unit: 'bar', min: -1, max: 1000, dec: 2, kinds: ['net', 'sym'] },
+  t:     { label: 'Température', unit: '°C', min: -273, max: 2000, dec: 1, kinds: ['net', 'sym'] },
+  z:     { label: 'Altitude / niveau', unit: 'm', min: -1000, max: 10000, dec: 3, kinds: ['st', 'sym'] },
+  h:     { label: 'Hauteur', unit: 'mm', min: 1, max: 100000, dec: 1, kinds: ['st'] },
+};
+const Props = (() => {
+  const kindOf = (o) => (o.net ? 'net' : o.st ? 'st' : o.type === 'sym' ? 'sym' : null);
+  const keys = (kind) => Object.keys(PROP_DEFS).filter((k) => PROP_DEFS[k].kinds.includes(kind));
+  const round = (v, d) => { const f = 10 ** d; return Math.round(v * f) / f; };
+  /* Ne garde que les clés connues de la famille, avec des nombres finis dans leurs bornes. Renvoie null si rien ne reste. */
+  function clean(p, kind) {
+    if (!kind || !p || typeof p !== 'object') return null;
+    const out = {};
+    for (const k of keys(kind)) {
+      const d = PROP_DEFS[k], v = p[k];
+      if (typeof v === 'number' && Number.isFinite(v) && v >= d.min && v <= d.max) out[k] = round(v, d.dec);
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  /* Pente moyenne d'un réseau en % ((amont − aval) / longueur horizontale), si les deux altitudes sont connues. */
+  function slope(o) {
+    const p = o.props;
+    if (!o.net || !p || typeof p.zi !== 'number' || typeof p.zf !== 'number') return null;
+    const L = (Geo.length(o) || 0) / 1000;
+    return L > 0 ? (p.zi - p.zf) / L * 100 : null;
+  }
+  const f = (v, d) => v.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const fmtVal = (k, v) => `${f(v, PROP_DEFS[k].dec)} ${PROP_DEFS[k].unit}`;
+  const slopeStr = (o) => { const s = slope(o); return s === null ? '' : f(s, 2) + ' %'; };
+  /* « Altitude amont 12,5 m ; Débit 3 L/s » */
+  const summary = (o) => keys(kindOf(o) || '').filter((k) => o.props && typeof o.props[k] === 'number').map((k) => `${PROP_DEFS[k].label} ${fmtVal(k, o.props[k])}`).join(' ; ');
+  return { kindOf, keys, clean, slope, slopeStr, summary, fmtVal };
+})();
+
 /* ==== 50-snap.js ==== */
 /* Accroches aux objets : extrémité, centre, milieu, intersection, puis grille. Mode orthogonal (horizontal / vertical).
    Priorité : extrémité > centre > milieu > intersection > grille. Tolérance : 10 pixels. */
@@ -1477,7 +1521,7 @@ const Render = (() => {
     const a = Canvas2D.toScreen(best[0]), b = Canvas2D.toScreen(best[1]);
     let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
     if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
-    const txt = (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn;
+    const txt = (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn + (Props.slopeStr(o) ? ' · ' + Props.slopeStr(o) : '');
     ctx.save();
     ctx.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
     ctx.rotate(ang);
@@ -2113,7 +2157,7 @@ const IO = (() => {
     if (!best) return null;
     let deg = Math.atan2(best[1][1] - best[0][1], best[1][0] - best[0][0]) * 180 / Math.PI;
     if (deg > 90 || deg < -90) deg += 180;
-    return { mid: G.mid(best[0], best[1]), deg, str: (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn, h: 120 };
+    return { mid: G.mid(best[0], best[1]), deg, str: (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn + (Props.slopeStr(o) ? ' · ' + Props.slopeStr(o) : ''), h: 120 };
   }
 
   const xmlEsc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2521,10 +2565,15 @@ const BOM = (() => {
 
   function compute() {
     const d = Doc.get();
-    const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map();
+    const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map(), techs = [];
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
+      if (o.props && Props.kindOf(o)) {
+        const len = o.type === 'sym' ? null : (Geo.length(o) || 0) / 1000, sl = Props.slope(o);
+        const what = o.net ? `Réseau DN${o.net.dn}${o.net.mat ? ' ' + o.net.mat : ''}` : o.st ? Sym.stLabel({ ...o.st, tag: '' }) : SYMBOLS[o.k].label;
+        techs.push({ layer: l.name, group: l.group, what, tag: (o.net ? o.net.tag : o.st ? o.st.tag : o.tag) || '', length: len, slope: sl, data: Props.summary(o) });
+      }
       if (o.net) {
         const key = `${l.id}|${o.net.mat}|${o.net.dn}`;
         let r = nets.get(key);
@@ -2561,6 +2610,7 @@ const BOM = (() => {
       syms: [...syms.values()].sort((a, b) => byGroup(a, b) || a.label.localeCompare(b.label, 'fr') || a.size - b.size).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       structs: [...structs.values()].sort((a, b) => byGroup(a, b) || a.kind.localeCompare(b.kind, 'fr') || a.prof.localeCompare(b.prof, 'fr') || a.w - b.w).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       others: [...others.values()].sort(byGroup),
+      techs: techs.sort(byGroup),
     };
   }
 
@@ -2572,6 +2622,8 @@ const BOM = (() => {
   const stRow = (r) => [r.layer, r.kind, r.prof || '—', String(r.w), r.tags.join(', ') || '—', String(r.segments), f2(r.length)];
   const SYM_HEAD = ['Calque', 'Type', 'Dimension (mm)', 'Repères', 'Quantité'], SYM_NUM = [2, 4];
   const ST_HEAD = ['Calque', 'Type', 'Profilé / matériau', 'Largeur (mm)', 'Repères', 'Tronçons', 'Longueur (m)'], ST_NUM = [3, 5, 6];
+  const TECH_HEAD = ['Calque', 'Objet', 'Repère', 'Longueur (m)', 'Pente (%)', 'Données techniques'], TECH_NUM = [3, 4];
+  const techRow = (r) => [r.layer, r.what, r.tag || '—', r.length === null ? '—' : f2(r.length), r.slope === null ? '—' : f2(r.slope), r.data];
   const isEmpty = (b) => !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
   const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
   const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
@@ -2602,6 +2654,7 @@ const BOM = (() => {
       } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
       if (b.syms.length) body.append(table('Équipements et poteaux', SYM_HEAD, b.syms.map(symRow), SYM_NUM, ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))]));
       if (b.structs.length) body.append(table('Structures (murs et poutres)', ST_HEAD, b.structs.map(stRow), ST_NUM, ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), f2(b.structs.reduce((a, r) => a + r.length, 0))]));
+      if (b.techs.length) body.append(table('Propriétés techniques renseignées', TECH_HEAD, b.techs.map(techRow), TECH_NUM));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
     Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { exportCSV(); return false; } }]);
@@ -2628,6 +2681,11 @@ const BOM = (() => {
       lines.push(q('Structures (murs et poutres)'), ST_HEAD.map(q).join(';'));
       for (const r of b.structs) lines.push(stRow(r).map(q).join(';'));
       lines.push(['Total', '', '', '', '', b.structs.reduce((a, r) => a + r.segments, 0), f2(b.structs.reduce((a, r) => a + r.length, 0))].map(q).join(';'), '');
+    }
+    if (b.techs.length) {
+      lines.push(q('Propriétés techniques renseignées'), TECH_HEAD.map(q).join(';'));
+      for (const r of b.techs) lines.push(techRow(r).map(q).join(';'));
+      lines.push('');
     }
     if (b.others.length) {
       lines.push(q('Autres éléments par calque'), OTHER_HEAD.map(q).join(';'));
@@ -2745,6 +2803,7 @@ const UI = (() => {
         for (const o of d.objects) {
           if (!ids.has(o.id)) continue;
           o.net = cleanNet({ dn: v, mat: mat.value, tag: objs.length === 1 ? tag.value : (o.net?.tag || '') });
+          delete o.st; const pc = Props.clean(o.props, 'net'); if (pc) o.props = pc; else delete o.props;
         }
       });
     });
@@ -2752,7 +2811,7 @@ const UI = (() => {
       el('label', { class: 'lbl' }, 'DN (mm)', dn), el('label', { class: 'lbl' }, 'Matériau', mat), el('label', { class: 'lbl' }, 'Repère', tag), apply);
     if (objs.some((o) => o.net)) {
       const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer le réseau');
-      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.net; }));
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { delete o.net; delete o.props; } }));
       box.append(rm);
     }
     return box;
@@ -2884,12 +2943,12 @@ const UI = (() => {
     apply.addEventListener('click', () => {
       const c = cleanSt({ kind: kind.value, w: Number(w.value), prof: prof.value, tag: objs.length === 1 ? tag.value : '' });
       if (!c) { Status.msg(`Largeur invalide : entrez une valeur entre 1 et ${ST_W_MAX} mm.`, 6000); return; }
-      Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { o.st = { ...c, tag: objs.length === 1 ? c.tag : (o.st?.tag || '') }; delete o.net; } });
+      Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { o.st = { ...c, tag: objs.length === 1 ? c.tag : (o.st?.tag || '') }; delete o.net; const pc = Props.clean(o.props, 'st'); if (pc) o.props = pc; else delete o.props; } });
     });
     const box = el('div', { class: 'netbox' }, el('b', {}, 'Structure'), el('label', { class: 'lbl' }, 'Type', kind), lw, lp, el('label', { class: 'lbl' }, 'Repère', tag), apply);
     if (objs.some((o) => o.st)) {
       const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer la structure');
-      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.st; }));
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { delete o.st; delete o.props; } }));
       box.append(rm);
     }
     return box;
@@ -2932,6 +2991,30 @@ const UI = (() => {
     return box;
   }
 
+  /* --- Propriétés techniques (même famille d'objets) : champ vide = propriété supprimée ; appliqué à la sortie du champ --- */
+  function propsForm(objs) {
+    const kind = Props.kindOf(objs[0]);
+    if (!kind || !objs.every((o) => Props.kindOf(o) === kind)) return null;
+    const ids = new Set(objs.map((o) => o.id));
+    const box = el('div', { class: 'netbox' }, el('b', {}, 'Propriétés techniques'));
+    const grid = el('div', { class: 'row2b' });
+    for (const k of Props.keys(kind)) {
+      const d = PROP_DEFS[k];
+      const vals = objs.map((o) => o.props && typeof o.props[k] === 'number' ? o.props[k] : null);
+      const same = vals.every((v) => v === vals[0]);
+      const inp = el('input', { class: 'fld', type: 'number', min: d.min, max: d.max, step: 'any', 'aria-label': `${d.label} (${d.unit})`, value: same && vals[0] !== null ? vals[0] : '', placeholder: same ? '' : '(différent)' });
+      inp.addEventListener('change', () => {
+        const raw = inp.value.trim(), v = Number(raw);
+        if (raw && (!Number.isFinite(v) || v < d.min || v > d.max)) { Status.msg(`${d.label} : valeur entre ${d.min} et ${d.max} ${d.unit}.`, 6000); renderProps(); return; }
+        Doc.mutate((dd) => { for (const o of dd.objects) if (ids.has(o.id)) { const p = { ...(o.props || {}) }; if (raw) p[k] = v; else delete p[k]; const pc = Props.clean(p, kind); if (pc) o.props = pc; else delete o.props; } });
+      });
+      grid.append(el('label', { class: 'lbl' }, `${d.label} (${d.unit})`, inp));
+    }
+    box.append(grid);
+    if (objs.length === 1) { const sl = Props.slopeStr(objs[0]); if (sl) box.append(el('p', { class: 'mut small' }, `Pente moyenne : ${sl} (calculée sur la longueur tracée).`)); }
+    return box;
+  }
+
   /* --- Propriétés de la sélection --- */
   function renderProps() {
     const box = $('#props');
@@ -2963,6 +3046,7 @@ const UI = (() => {
     box.append(dl);
     if (objs.every((o) => o.type === 'line' || o.type === 'poly')) { box.append(netForm(objs)); box.append(stForm(objs)); }
     if (objs.length === 1 && objs[0].type === 'sym') box.append(symForm(objs[0]));
+    { const pf = propsForm(objs); if (pf) box.append(pf); }
     const sel = el('select', { 'aria-label': 'Calque des objets sélectionnés' });
     const same = objs.every((o) => o.layer === objs[0].layer);
     if (!same) sel.append(el('option', { value: '' }, '— plusieurs calques —'));

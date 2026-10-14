@@ -70,7 +70,7 @@ const Render = (() => {
     const a = Canvas2D.toScreen(best[0]), b = Canvas2D.toScreen(best[1]);
     let ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
     if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
-    const txt = (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn;
+    const txt = (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn + (Props.slopeStr(o) ? ' · ' + Props.slopeStr(o) : '');
     ctx.save();
     ctx.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
     ctx.rotate(ang);

@@ -69,7 +69,7 @@ const IO = (() => {
     if (!best) return null;
     let deg = Math.atan2(best[1][1] - best[0][1], best[1][0] - best[0][0]) * 180 / Math.PI;
     if (deg > 90 || deg < -90) deg += 180;
-    return { mid: G.mid(best[0], best[1]), deg, str: (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn, h: 120 };
+    return { mid: G.mid(best[0], best[1]), deg, str: (o.net.tag ? o.net.tag + ' · ' : '') + 'DN' + o.net.dn + (Props.slopeStr(o) ? ' · ' + Props.slopeStr(o) : ''), h: 120 };
   }
 
   const xmlEsc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
