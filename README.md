@@ -2,7 +2,7 @@
 
 Application de conception de plans industriels et de réseaux techniques (réseaux humides, réseaux secs, structures industrielles, génie civil), de la suite **Studio Prism**. Elle reprend l'identité graphique d'ArchiPlan et vise la compatibilité avec les autres applications de l'écosystème.
 
-> **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le bloc de règles `ai*` a été publié le 14/10/2026 dans le projet commun (relecture en ligne identique au fichier testé). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
+> **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le bloc de règles `ai*` est publié dans le projet commun (v1 le 14/10/2026, v2 avec les dossiers le 15/10/2026 ; relecture en ligne identique au fichier testé à l'émulateur). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
 
 ## Ce qui fonctionne (testé dans Chromium sans interface, `tests/e2e.py`)
 
@@ -41,7 +41,7 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | `tests/e2e_reseaux.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
 | `tests/rules/` | Règles Firestore testées à l'émulateur contre les règles publiées d'ArchiPlan + le bloc `ai*` proposé : `cd tests/rules && npm install && PUBLISHED_RULES=<chemin firestore.rules> npm test`. |
 | `tests/e2e.py` | Test de bout en bout (Playwright pour Python) : `pip install playwright`, `playwright install chromium`, puis `python3 tests/e2e.py`. |
-| `firebase/firestore.ai.rules.proposed` | **Brouillon non publié et non testé** : bloc de règles `ai*` (projets privés, quota) à relire avant d'être ajouté au fichier de règles commun. Ne modifie rien tant qu'on ne le publie pas. |
+| `firebase/firestore.ai.rules.proposed` | Bloc de règles `ai*` (projets, dossiers, quota) **déjà publié** dans le fichier de règles commun (v2, 15/10/2026), testé à l'émulateur (63 contrôles). Toute modification se publie en comparant d'abord au fichier de base. |
 | `index.html` | Version publiée (**générée, ne pas modifier à la main**). |
 
 On modifie `src/`, on lance `python3 tools/build.py`, on enregistre (commit) : si GitHub Pages est activé sur la branche principale, le site se met à jour.
@@ -57,7 +57,7 @@ Réalisé dans le code : comptes et licence. Reste à faire :
 - Réutiliser les comptes Studio Prism (`users/{uid}`) et le code PIN, dans le projet Firebase commun.
 - Licence propre : `licenses/{uid}_archiindus`. Une licence ArchiPlan ne donne pas droit à ArchiIndus.
 - Données dans des collections préfixées `ai` (`aiProjects`, `aiFolders`, …), sur le modèle du préfixe `ap` d'ArchiPlan.
-- Nécessite un bloc de règles Firestore `ai*` dans le fichier de règles commun au site et à ArchiPlan : **modification d'un service partagé, à valider avant toute publication.**
+- Nécessite un bloc de règles Firestore `ai*` dans le fichier de règles commun au site et à ArchiPlan : **modification d'un service partagé : comparer les règles en ligne, publier les règles seules, relire en ligne.**
 
 ### Projets Firebase (14/10/2026)
 
@@ -66,7 +66,7 @@ Réalisé dans le code : comptes et licence. Reste à faire :
 | Commun Studio Prism | `archivision-studioprism` | Comptes (`users`), PIN, licences, futures données `ai*`. Partagé avec le site et ArchiPlan. |
 | Propre à ArchiIndus | `archiindus-studioprism` | Créé le 14/10/2026 : application web enregistrée, rien d'autre activé (ni Auth, ni Firestore, ni Hosting déployé). |
 
-Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Le 14/10/2026, le bloc `ai*` a été ajouté aux règles publiées du projet commun (les blocs existants sont inchangés ; relecture en ligne identique au fichier fusionné testé à l'émulateur).
+Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Le bloc `ai*` a été ajouté aux règles publiées du projet commun le 14/10/2026 (v1) puis mis à jour le 15/10/2026 (v2, dossiers) ; les blocs existants sont inchangés et la relecture en ligne est identique au fichier fusionné testé à l'émulateur.
 
 La configuration publique des deux projets est dans `src/engine/01-firebase-config.js` (clés d'application web, non secrètes ; chargée à la demande par le module Compte (SDK compat 10.12.2)). `.firebaserc` déclare les deux projets. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
 
