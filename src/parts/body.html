@@ -1,0 +1,30 @@
+<div id="app">
+  <header id="top">
+    <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <div class="proj" title="Projet courant">Projet sans titre <em>· non enregistré</em></div>
+    <button id="theme" class="btn" type="button" aria-label="Basculer le thème clair / sombre">Thème</button>
+  </header>
+
+  <nav id="rail" aria-label="Outils">
+    <button class="tool" type="button" disabled title="Sélection : pas encore disponible">Sél.</button>
+    <button class="tool" type="button" disabled title="Ligne : pas encore disponible">Ligne</button>
+    <button class="tool" type="button" disabled title="Cote : pas encore disponible">Cote</button>
+  </nav>
+
+  <main id="stage">
+    <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
+    <div id="hint">Glisser pour déplacer · molette pour zoomer</div>
+  </main>
+
+  <aside id="panel" aria-label="Panneau">
+    <h2>Calques</h2>
+    <p class="mut">Aucun calque pour l'instant. La gestion des calques n'est pas encore développée.</p>
+    <h2>État du projet</h2>
+    <p class="mut">Socle technique : coquille, charte, canevas 2D de base. Aucune fonction de conception n'est encore opérationnelle.</p>
+  </aside>
+
+  <footer id="status">
+    <span id="coords">x : 0 mm · y : 0 mm</span>
+    <span id="zoom">1 m = 100 px</span>
+  </footer>
+</div>

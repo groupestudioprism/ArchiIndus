@@ -1,0 +1,19 @@
+/* Charte Studio Prism : valeurs reprises d'ArchiPlan (src/css/app.css du dépôt archiplan), relevées le 2026-10-14.
+   Toute évolution de la charte commune doit d'abord être faite dans ArchiPlan, puis recopiée ici. */
+:root{
+  --nuit:#071B55; --prism:#0877B9; --cyan:#1F89C5; --turq:#169999;
+  --bg:#F2F7FA; --panel:#FFFFFF; --ink:#111827; --mut:#4B5563; --line:#DCE7EF; --chip:#EEF4F8;
+  --accent:#0877B9; --accent-2:#0E7C7C; --accent-soft:#E6F1F8; --sel:#E2861B; --danger:#B3261E; --ok:#1E8E5A; --warn:#B7791F;
+  --vp:#FFFFFF; --grid-major:#D3E0EA; --grid-minor:#EAF1F6; --edge:#1B2433;
+  --grad:linear-gradient(135deg,#071B55 0%,#0877B9 58%,#169999 100%);
+  --shadow:0 10px 30px rgb(7 27 85 / .08); --shadow-s:0 1px 3px rgb(7 27 85 / .08);
+  --f-display:"Montserrat","Inter",system-ui,sans-serif;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:12px; color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#121418; --panel:#1B1E24; --ink:#E9EBEE; --mut:#A2A8B1; --line:#2B2F37; --chip:#242830;
+  --accent:#5AAFE0; --accent-2:#2CC3C9; --accent-soft:#1E3142; --sel:#F2A043;
+  --vp:#16191E; --grid-major:#30353E; --grid-minor:#22262D; --edge:#0E1014; color-scheme:dark;
+}

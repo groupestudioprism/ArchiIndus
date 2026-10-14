@@ -1,0 +1,9 @@
+.DS_Store
+*.log
+*.bak.html
+node_modules/
+# Jamais de secrets dans ce dépôt
+*serviceAccount*.json
+*.pem
+.env*
+dist/
