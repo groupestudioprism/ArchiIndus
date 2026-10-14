@@ -102,6 +102,44 @@ const proj = (n) => JSON.stringify({ schemaVersion: 1, name: 'p', pad: 'x'.repea
   const bl = await B.list();
   ok(await code(B.remove(bl[0].id)) === 'ok' && await usageOf('bob') === (made - 1) * sb, 'suppression possible quand le quota est atteint');
 
+  // --- dossiers (aiFolders) : droits, intégrité, rattachement des projets
+  const f1 = await A.createFolder('Eau potable'); const f2 = await A.createFolder('Branchements', f1);
+  const fl = await A.folders();
+  ok(fl.length === 2 && fl.find((f) => f.id === f2).parentId === f1 && fl.find((f) => f.id === f1).parentId === '', 'dossiers : création, sous-dossier, liste');
+  ok(await code(A.renameFolder(f1, 'Eau froide')) === 'ok' && (await A.folders()).find((f) => f.id === f1).name === 'Eau froide', 'dossier renommé');
+  const pf = await A.create('Dans un dossier', proj(400), f2);
+  ok((await A.list()).find((x) => x.id === pf).folderId === f2, 'projet créé directement dans un dossier');
+  ok(await code(A.move(pf, f1)) === 'ok' && (await A.list()).find((x) => x.id === pf).folderId === f1, 'projet déplacé');
+  ok(await code(A.move(pf, '')) === 'ok' && (await A.list()).find((x) => x.id === pf).folderId === '', 'projet remis à la racine');
+  ok(await code(A.rename(pf, 'Renommé')) === 'ok' && (await A.list()).find((x) => x.id === pf).name === 'Renommé', 'projet renommé (compteur inchangé)');
+  ok(await code(A.moveFolder(f2, '')) === 'ok' && (await A.folders()).find((x) => x.id === f2).parentId === '', 'dossier déplacé à la racine');
+  ok(await code(A.moveFolder(f2, f1)) === 'ok', 'dossier remis dans un autre');
+  ok(await code(A.move(pf, 'inexistant')) !== 'ok', 'déplacement vers un dossier inexistant refusé');
+  ok(await code(A.moveFolder(f1, f1)) !== 'ok', 'dossier dans lui-même refusé');
+  await A.move(pf, f2);
+  ok(await code(A.removeFolder(f2, f1, [pf], [])) === 'ok' && (await A.list()).find((x) => x.id === pf).folderId === f1 && (await A.folders()).length === 1, 'suppression d\'un dossier : le projet remonte d\'un niveau, dans le même lot');
+  ok(await code(A.removeFolder(f1, '', [pf], [])) === 'ok' && (await A.list()).find((x) => x.id === pf).folderId === '' && (await A.folders()).length === 0, 'suppression du dernier dossier');
+  // confidentialité et intégrité des dossiers
+  const fa = await A.createFolder('Privé A');
+  ok(await raw('bob', (db) => db.doc('aiFolders/' + fa).get()) === 'permission-denied', 'dossier illisible par un autre compte');
+  ok(await raw('bob', (db) => db.collection('aiFolders').where('ownerUid', '==', 'alice').get()) === 'permission-denied', 'liste des dossiers d\'autrui refusée');
+  ok(denied(await code(B.createFolder('Chez alice', fa))), 'sous-dossier dans le dossier d\'un autre refusé');
+  ok(denied(await code(B.create('Chez alice', proj(100), fa))), 'projet créé dans le dossier d\'un autre refusé');
+  const pbx = (await B.list())[0].id;
+  ok(denied(await code(B.move(pbx, fa))), 'projet déplacé dans le dossier d\'un autre refusé');
+  ok(denied(await code(C.createFolder('Suspendu'))), 'compte désactivé : création de dossier refusée');
+  ok(await code(anon.collection('aiFolders').doc('x').set({ ownerUid: 'x', name: 'a', parentId: '', createdAt: FVx.serverTimestamp(), updatedAt: FVx.serverTimestamp() })) === 'permission-denied', 'anonyme : création de dossier refusée');
+  const T = () => FVx.serverTimestamp();
+  ok(await raw('bob', (db) => db.collection('aiFolders').doc().set({ ownerUid: 'alice', name: 'usurpé', parentId: '', createdAt: T(), updatedAt: T() })) === 'permission-denied', 'dossier créé au nom d\'un autre refusé');
+  ok(await raw('alice', (db) => db.collection('aiFolders').doc().set({ ownerUid: 'alice', name: '', parentId: '', createdAt: T(), updatedAt: T() })) === 'permission-denied', 'nom de dossier vide refusé');
+  ok(await raw('alice', (db) => db.collection('aiFolders').doc().set({ ownerUid: 'alice', name: 'x'.repeat(81), parentId: '', createdAt: T(), updatedAt: T() })) === 'permission-denied', 'nom de dossier trop long refusé');
+  ok(await raw('alice', (db) => db.collection('aiFolders').doc().set({ ownerUid: 'alice', name: 'ok', parentId: '', extra: 1, createdAt: T(), updatedAt: T() })) === 'permission-denied', 'champ inconnu sur un dossier refusé');
+  ok(await raw('alice', (db) => db.doc('aiFolders/' + fa).update({ ownerUid: 'bob', updatedAt: T() })) === 'permission-denied', 'transfert d\'un dossier refusé');
+  ok(await raw('bob', (db) => db.doc('aiFolders/' + fa).update({ name: 'piraté', updatedAt: T() })) === 'permission-denied', 'modification du dossier d\'un autre refusée');
+  ok(await raw('bob', (db) => db.doc('aiFolders/' + fa).delete()) === 'permission-denied', 'suppression du dossier d\'un autre refusée');
+  ok(await raw('root', (db) => db.collection('aiFolders').where('ownerUid', '==', 'alice').get()) === 'ok', 'administrateur : liste des dossiers d\'un compte');
+  ok(await code(A.removeFolder(fa, '', [], [])) === 'ok', 'nettoyage');
+
   // --- administrateur : lecture de la liste d'autrui (comme ArchiPlan)
   const R = storeFor(dbOf('root'), 'root');
   ok(await raw('root', (db) => db.collection('aiProjects').where('ownerUid', '==', 'bob').get()) === 'ok', 'administrateur : liste des projets d\'un compte');

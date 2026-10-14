@@ -105,6 +105,7 @@ const Account = (() => {
 
   const api = {
     me: () => me,
+    remembered() { try { return localStorage.getItem(FLAG) === '1'; } catch (e) { return false; } },
     access: () => access,
     on: (f) => { subs.push(f); },
     licLabel, errMsg, QUOTA,
@@ -157,64 +158,8 @@ const Account = (() => {
     },
 
     /* --- Interface --- */
-    open() { return me ? accountDialog() : loginDialog(); },
+    open() { return me ? accountDialog() : Auth.show(); },
   };
-
-  function field(label, attrs) {
-    const input = el('input', { class: 'fld', ...attrs, 'aria-label': label });
-    return [el('label', { class: 'lbl' }, label, input), input];
-  }
-
-  function loginDialog(mode = 'in') {
-    const body = el('div');
-    const dlg = Dlg.open('Compte Studio Prism', body);
-    const render = (m) => {
-      body.textContent = '';
-      const err = el('p', { class: 'err', role: 'alert' });
-      const info = el('p', { class: 'mut small' });
-      const [lE, email] = field('Email', { type: 'email', autocomplete: 'email', maxlength: 160 });
-      const [lP, pw] = field('Mot de passe', { type: 'password', autocomplete: m === 'up' ? 'new-password' : 'current-password', maxlength: 200 });
-      const go = el('button', { type: 'submit', class: 'btn pri wide' }, m === 'in' ? 'Se connecter' : m === 'up' ? 'Créer mon compte' : 'Envoyer le lien');
-      const form = el('form', { novalidate: true });
-      let fn = null, ln = null, terms = null;
-      if (m === 'up') {
-        const [lF, f1] = field('Prénom', { type: 'text', autocomplete: 'given-name', maxlength: 80 });
-        const [lL, l1] = field('Nom', { type: 'text', autocomplete: 'family-name', maxlength: 80 });
-        fn = f1; ln = l1;
-        form.append(el('div', { class: 'frm' }, lF, lL));
-      }
-      form.append(lE);
-      if (m !== 'reset') form.append(lP);
-      if (m === 'up') {
-        terms = el('input', { type: 'checkbox' });
-        form.append(el('p', { class: 'mut small' }, 'Mot de passe : 8 caractères minimum, avec une lettre et un chiffre.'),
-          el('label', { class: 'chk' }, terms, 'J\'accepte les conditions d\'utilisation de Studio Prism.'));
-      }
-      form.append(err, info, go);
-      form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        err.textContent = ''; info.textContent = '';
-        go.disabled = true;
-        try {
-          if (m === 'in') { await api.signIn(email.value, pw.value); }
-          else if (m === 'up') {
-            if (!fn.value.trim() || !terms.checked) throw { code: 'app/form', message: 'Renseignez votre prénom et acceptez les conditions.' };
-            await api.signUp({ firstName: fn.value.trim().slice(0, 80), lastName: ln.value.trim().slice(0, 80), email: email.value, password: pw.value });
-          } else {
-            await api.sendReset(email.value);
-            info.textContent = 'Si un compte existe pour cet email, un lien de réinitialisation vient d\'être envoyé.';
-            go.disabled = false; return;
-          }
-          dlg.close(); Status.msg(`Connecté : ${me.email}`);
-        } catch (e) { err.textContent = e && e.code === 'app/form' ? e.message : errMsg(e); go.disabled = false; }
-      });
-      const link = (txt, to) => { const b = el('button', { type: 'button', class: 'lnk' }, txt); b.addEventListener('click', () => render(to)); return b; };
-      body.append(el('p', { class: 'mut small' }, 'Un seul compte Studio Prism pour ArchiPlan, ArchiVision, ArchiIndus et le site.'), form,
-        el('div', { class: 'lnks' }, ...(m === 'in' ? [link('Créer un compte', 'up'), link('Mot de passe oublié', 'reset')] : [link('J\'ai déjà un compte', 'in')])));
-    };
-    render(mode);
-    return dlg;
-  }
 
   function accountDialog() {
     const body = el('div');
@@ -228,7 +173,7 @@ const Account = (() => {
     body.append(el('p', { class: 'mut small' }, 'Les licences se gèrent sur le site Studio Prism : l\'attribution d\'une licence ArchiIndus est faite par un administrateur.'),
       el('p', {}, el('a', { href: SITE_URL + '#/compte', target: '_blank', rel: 'noopener' }, 'Ouvrir mon compte sur le site Studio Prism')));
     return Dlg.open('Mon compte', body, [
-      { label: 'Projets cloud', run: () => { Cloud.show(); } },
+      { label: 'Mes projets (cloud)', run: () => { Home.open(); } },
       { label: 'Se déconnecter', run: () => { api.signOut().then(() => Status.msg('Déconnecté.')); } },
     ]);
   }
@@ -236,68 +181,66 @@ const Account = (() => {
   return api;
 })();
 
-/* Projets cloud : enregistrer le projet courant, rouvrir, supprimer. Le lien « projet courant ↔ projet cloud » n'est gardé qu'en mémoire. */
+/* Lien entre le document affiché et un projet cloud ; enregistrement automatique (comme ArchiPlan : « tout s'enregistre tout seul »).
+   Le lien n'est gardé qu'en mémoire : après un rechargement, on rouvre le projet depuis « Mes projets ». */
 const Cloud = (() => {
-  let cur = null;                         /* { id, size } du projet cloud lié au document affiché */
-  const fmtSize = (n) => (n >= 1e6 ? (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Mo' : Math.max(1, Math.round(n / 1000)) + ' Ko');
-  const fmtDate = (t) => (t ? new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+  const DELAY = 2500;
+  let cur = null;                      /* { id, size } */
+  let state = 'idle';                  /* idle | pending | saving | saved | error */
+  let timer = 0, running = false, again = false;
+  const subs = [];
+  const set = (s) => { state = s; subs.forEach((f) => f()); };
 
-  function show() {
-    if (!Account.me()) { Account.open(); return; }
-    const body = el('div');
-    const list = el('div');
-    body.append(el('p', { class: 'mut small' }, 'Projets enregistrés sur votre compte Studio Prism (950 Ko maximum par projet). Ctrl+Z annule l\'ouverture d\'un projet.'), list);
-    const dlg = Dlg.open('Projets cloud', body, [{ label: cur ? 'Mettre à jour le projet cloud' : 'Enregistrer ce projet dans le cloud', primary: true, run: () => { save(); return false; } }]);
-
-    async function refresh() {
-      const pb = dlg.querySelector('.dlg-f .btn.pri'); if (pb) pb.textContent = cur ? 'Mettre à jour le projet cloud' : 'Enregistrer ce projet dans le cloud';
-      list.textContent = '';
-      list.append(el('p', { class: 'mut' }, 'Chargement…'));
-      let items;
-      try { items = await CloudStore.list(); } catch (e) { list.textContent = ''; list.append(el('p', { class: 'err' }, Account.errMsg(e))); return; }
-      list.textContent = '';
-      if (!items.length) { list.append(el('p', { class: 'mut' }, 'Aucun projet dans le cloud.')); return; }
-      const t = el('table', { class: 'tbl' }, el('thead', {}, el('tr', {}, el('th', {}, 'Nom'), el('th', { class: 'n' }, 'Taille'), el('th', {}, 'Modifié'), el('th', {}, ''))));
-      const tb = el('tbody');
-      for (const p of items) {
-        const open = el('button', { type: 'button', class: 'btn' }, 'Ouvrir');
-        const del = el('button', { type: 'button', class: 'btn danger' }, 'Supprimer');
-        open.addEventListener('click', () => openProject(p.id, dlg));
-        let armed = 0;
-        del.addEventListener('click', async () => {
-          if (!armed) { armed = setTimeout(() => { armed = 0; del.textContent = 'Supprimer'; }, 4000); del.textContent = 'Confirmer ?'; return; }
-          clearTimeout(armed); del.disabled = true;
-          try { await CloudStore.remove(p.id); if (cur && cur.id === p.id) cur = null; Status.msg(`« ${p.name} » supprimé du cloud.`); } catch (e) { Status.msg(Account.errMsg(e), 8000); }
-          refresh();
-        });
-        tb.append(el('tr', {}, el('td', {}, p.name), el('td', { class: 'n' }, fmtSize(p.size)), el('td', {}, fmtDate(p.updatedAt)), el('td', {}, el('div', { class: 'grp' }, open, del))));
-      }
-      t.append(tb); list.append(t);
-    }
-
-    async function save() {
-      const d = Doc.get(), data = JSON.stringify(d);
-      try {
-        if (cur) { await CloudStore.save(cur.id, d.name, data, cur.size); cur.size = CloudStore.byteLen(data); }
-        else { const id = await CloudStore.create(d.name, data); cur = { id, size: CloudStore.byteLen(data) }; }
-        Status.msg(`« ${d.name} » enregistré dans le cloud.`);
-      } catch (e) { Status.msg(Account.errMsg(e), 9000); }
-      refresh();
-    }
-    refresh();
-    return dlg;
-  }
-
-  async function openProject(id, dlg) {
+  async function flush() {
+    timer = 0;
+    if (!cur) return;
+    if (running) { again = true; return; }
+    running = true; set('saving');
+    const link = cur;
     try {
+      const d = Doc.get(), data = JSON.stringify(d);
+      await CloudStore.save(link.id, d.name, data, link.size);
+      link.size = CloudStore.byteLen(data);
+      set(again ? 'pending' : 'saved');
+    } catch (e) { set('error'); Status.msg(Account.errMsg(e), 9000); }
+    running = false;
+    if (again && cur === link) { again = false; schedule(); }
+  }
+  function schedule() { if (!cur || !Account.me()) return; clearTimeout(timer); set('pending'); timer = setTimeout(flush, DELAY); }
+  Doc.on((reason) => { if (reason === 'change') schedule(); });
+
+  return {
+    on: (f) => { subs.push(f); },
+    linked: () => (cur ? cur.id : ''),
+    state: () => (cur ? state : 'idle'),
+    suffix() {
+      if (!cur) return '';
+      return ' · cloud : ' + ({ pending: 'à enregistrer…', saving: 'enregistrement…', saved: 'enregistré', error: 'ÉCHEC', idle: '' }[state] || '');
+    },
+    /* Détache le projet cloud ; une modification encore en attente est d'abord envoyée (rien ne se perd en changeant de projet). */
+    forget() { if (cur && timer) { clearTimeout(timer); flush(); } clearTimeout(timer); timer = 0; cur = null; again = false; set('idle'); },
+    /* Enregistre tout de suite (avant de quitter le projet). */
+    async flushNow() { if (cur && timer) { clearTimeout(timer); await flush(); } },
+
+    /* Crée un projet cloud à partir de data (objet validé) et l'affiche. */
+    async createAndOpen(name, data, folderId = '') {
+      data.name = name;
+      const json = JSON.stringify(data);
+      const id = await CloudStore.create(name, json, folderId);
+      this.forget();
+      Doc.load(data); Tools.selection.clear(); Canvas2D.zoomExtents();
+      cur = { id, size: CloudStore.byteLen(json) }; set('saved');
+      return id;
+    },
+    async openProject(id) {
+      await this.flushNow();
       const r = await CloudStore.open(id);
       const data = Doc.sanitize(JSON.parse(r.data));
-      Doc.replace(data); Tools.selection.clear(); Canvas2D.zoomExtents();
-      cur = { id, size: r.meta.size };
-      dlg.close();
-      Status.msg(`Projet « ${data.name} » ouvert depuis le cloud (${data.objects.length} objets).`);
-    } catch (e) { Status.msg(e instanceof SyntaxError ? 'Projet cloud illisible.' : e && e.message && !e.code ? 'Projet cloud invalide : ' + e.message : Account.errMsg(e), 9000); }
-  }
-
-  return { show, forget() { cur = null; } };
+      data.name = r.meta.name || data.name;      /* le nom de la fiche fait foi (renommage depuis l'accueil) */
+      this.forget();                       /* d'abord délier : le remplacement ne doit rien enregistrer dans un autre projet */
+      Doc.load(data); Tools.selection.clear(); Canvas2D.zoomExtents();
+      cur = { id, size: r.meta.size }; set('saved');
+      return data;
+    },
+  };
 })();

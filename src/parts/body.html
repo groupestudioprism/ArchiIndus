@@ -71,3 +71,43 @@
     <span id="zoom">1 m = 100 px</span>
   </footer>
 </div>
+<div id="auth" hidden>
+  <aside class="ap-side">
+    <div class="ap-logo" role="img" aria-label="ARCHIINDUS, Studio Prism"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <div class="ap-pitch"><p class="ap-eyebrow">Compte Studio Prism</p><h1>Un seul compte pour toutes les apps du studio.</h1><p>Connectez-vous une fois : votre compte et vos projets vous suivent d'ArchiPlan à ArchiIndus.</p></div>
+    <ul class="ap-apps">
+      <li><b>ARCHIINDUS</b><span>Plans industriels et réseaux techniques</span><em>Vous êtes ici</em></li>
+      <li><b>ARCHIPLAN</b><span>Conception de plans et modélisation 3D</span><em>Même compte</em></li>
+      <li><b>Archi Vision</b><span>Visite des maquettes en réalité augmentée</span><em>Même compte</em></li>
+    </ul>
+    <p class="ap-foot">Studio Prism · Creative &amp; Technical Solutions</p>
+  </aside>
+  <main class="ap-main"><div class="ap-card" id="apCard" aria-live="polite"></div></main>
+</div>
+<section id="home" hidden aria-label="Accueil ARCHIINDUS">
+  <header class="h-top">
+    <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <div class="h-acts">
+      <button type="button" class="h-back btn" id="homeBack">Retour au dessin</button>
+      <button type="button" class="ib" id="homeUser" aria-haspopup="true" aria-label="Mon compte"></button>
+    </div>
+  </header>
+  <div class="h-scroll">
+    <section class="h-hero">
+      <div class="h-hello"><p class="h-eyebrow">Espace projets</p><h1 id="homeHello">Bonjour</h1><p id="homeSub">Vos projets s'enregistrent tout seuls dans le cloud Studio Prism.</p>
+        <div class="h-quick">
+          <button type="button" class="hq primary" id="homeNewP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span><b>Nouveau projet</b><small>Plan et réseaux</small></span></button>
+          <button type="button" class="hq" id="homeNewF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Nouveau dossier</b><small>Ranger ses projets</small></span></button>
+          <button type="button" class="hq" id="homeImport"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg><span><b>Importer</b><small>Fichier .json</small></span></button>
+          <button type="button" class="hq" id="homeSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7"/></svg><span><b>Dessin actuel</b><small>Vers le cloud</small></span></button>
+        </div>
+      </div>
+      <aside class="h-quota" id="homeQuota" aria-live="polite"></aside>
+    </section>
+    <main class="h-body" id="homeBody"></main>
+    <p class="h-foot">Studio Prism · ARCHIINDUS</p>
+  </div>
+  <div class="h-busy" id="homeBusy" hidden><div class="ap-spin" aria-hidden="true"></div><span></span></div>
+  <input type="file" id="homeFile" accept=".json,application/json" hidden>
+</section>
+<div class="menu" id="homeMenu" hidden></div>

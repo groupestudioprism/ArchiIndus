@@ -23,7 +23,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append('pageerror:' + str(e)))
     pg.on('console', lambda m: errs.append('console:' + m.text) if m.type == 'error' and 'ERR_FAILED' not in m.text else None)
     pg.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(300)
+    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(300); pg.click('#authSkip')
     box = pg.locator('#cv').bounding_box()
     def W(x, y):
         v = pg.evaluate('({x:state.view.x,y:state.view.y,s:state.view.scale})')
@@ -136,7 +136,7 @@ with sync_playwright() as p:
         print('Rendu PDF :', sorted(f.name for f in pathlib.Path(OUT).glob('pdf*.png')))
 
     # --- persistance et import validé
-    pg.wait_for_timeout(700); pg.reload(); pg.wait_for_timeout(400)
+    pg.wait_for_timeout(700); pg.reload(); pg.wait_for_timeout(400); pg.click('#authSkip')
     ok(objs()[0].get('net', {}).get('tag') == 'EP-01', 'réseau restauré après rechargement')
     bad = OUT + 'bad.json'
     base = pg.evaluate('JSON.parse(JSON.stringify(Doc.get()))')

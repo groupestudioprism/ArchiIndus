@@ -1,6 +1,7 @@
 /* Couche de données du cloud ArchiIndus (Firestore, SDK « compat »), sans interface : voir firebase/firestore.ai.rules.proposed.
    Schéma, sur le modèle d'ArchiPlan (préfixe ai au lieu de ap) :
-     aiProjects/{id}               {ownerUid, name, size, createdAt, updatedAt}
+     aiProjects/{id}               {ownerUid, name, size, folderId, createdAt, updatedAt}
+     aiFolders/{id}                {ownerUid, name, parentId ('' = racine), createdAt, updatedAt}
      aiProjects/{id}/content/main  {data (JSON du projet, en chaîne), updatedAt}
      aiUsage/{uid}                 {bytes, lastPid, updatedAt} : octets utilisés, mis à jour dans le MÊME LOT que la fiche.
    Les règles Firestore imposent droits et quota côté serveur. Tant que le bloc ai* n'est pas publié dans le projet commun
@@ -15,9 +16,10 @@ const CloudStore = (() => {
   const ts = () => FV().serverTimestamp();
   const P = (pid) => db.collection('aiProjects').doc(pid);
   const C = (pid) => P(pid).collection('content').doc('main');
+  const F = (fid) => db.collection('aiFolders').doc(fid);
   const U = (u) => db.collection('aiUsage').doc(u);
   const ms = (t) => (t && t.toMillis ? t.toMillis() : 0);
-  const meta = (d) => { const x = d.data(); return { id: d.id, name: x.name, size: x.size || 0, createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; };
+  const meta = (d) => { const x = d.data(); return { id: d.id, name: x.name, size: x.size || 0, folderId: x.folderId || '', createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; };
   const need = () => { if (!db || !uid) throw { code: 'app/not-signed-in' }; };
   /* Le refus d'une écriture peut venir des droits, du quota, ou de règles non publiées : on ne sait pas lequel. */
   /* Lire un projet absent est refusé par les règles (resource nul) : même résultat que « introuvable ou pas à vous ». */
@@ -61,14 +63,14 @@ const CloudStore = (() => {
       return { meta: meta(p), data: c.data().data };
     },
 
-    async create(name, data) {
+    async create(name, data, folderId = '') {
       need();
       const size = byteLen(data);
       if (size > MAX_DATA) throw { code: 'app/too-big' };
       await this.usage();
       const ref = db.collection('aiProjects').doc();
       const b = db.batch();
-      b.set(ref, { ownerUid: uid, name: String(name).slice(0, 120) || 'Projet', size, createdAt: ts(), updatedAt: ts() });
+      b.set(ref, { ownerUid: uid, name: String(name).slice(0, 120) || 'Projet', size, folderId, createdAt: ts(), updatedAt: ts() });
       b.set(C(ref.id), { data, updatedAt: ts() });
       b.set(U(uid), { bytes: FV().increment(size), lastPid: ref.id, updatedAt: ts() }, { merge: true });
       try { await b.commit(); } catch (e) { wrap(e); }
@@ -85,6 +87,47 @@ const CloudStore = (() => {
       b.set(C(pid), { data, updatedAt: ts() });
       b.update(P(pid), { name: String(name).slice(0, 120) || 'Projet', size, updatedAt: ts() });
       if (delta !== 0) b.set(U(uid), { bytes: FV().increment(delta), lastPid: pid, updatedAt: ts() }, { merge: true });
+      try { await b.commit(); } catch (e) { wrap(e); }
+    },
+
+    /* Renommer ou déplacer un projet : la taille ne change pas, le compteur n'est pas touché. */
+    async rename(pid, name) {
+      need();
+      try { await P(pid).update({ name: String(name).trim().slice(0, 120) || 'Projet', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+    async move(pid, folderId) {
+      need();
+      try { await P(pid).update({ folderId: folderId || '', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+
+    async folders() {
+      need();
+      const s = await db.collection('aiFolders').where('ownerUid', '==', uid).get();
+      return s.docs.map((d) => { const x = d.data(); return { id: d.id, name: x.name, parentId: x.parentId || '', createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; });
+    },
+    async createFolder(name, parentId = '') {
+      need();
+      const ref = db.collection('aiFolders').doc();
+      try { await ref.set({ ownerUid: uid, name: String(name).trim().slice(0, 80) || 'Dossier', parentId, createdAt: ts(), updatedAt: ts() }); } catch (e) { wrap(e); }
+      return ref.id;
+    },
+    async renameFolder(fid, name) {
+      need();
+      const s = await F(fid).get().catch(missing);
+      if (!s.exists) throw { code: 'app/not-found' };
+      try { await F(fid).update({ name: String(name).trim().slice(0, 80) || 'Dossier', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+    async moveFolder(fid, parentId) {
+      need();
+      try { await F(fid).update({ parentId: parentId || '', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+    /* Supprime un dossier : son contenu (projets et sous-dossiers) remonte d'un niveau, dans le même lot. */
+    async removeFolder(fid, parentId, projectIds, subfolderIds) {
+      need();
+      const b = db.batch();
+      for (const id of projectIds) b.update(P(id), { folderId: parentId || '', updatedAt: ts() });
+      for (const id of subfolderIds) b.update(F(id), { parentId: parentId || '', updatedAt: ts() });
+      b.delete(F(fid));
       try { await b.commit(); } catch (e) { wrap(e); }
     },
 

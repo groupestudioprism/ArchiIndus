@@ -142,6 +142,251 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
   #panel{display:none}
   #hint{display:none}
 }
+/* Page de connexion et accueil : reprend auth.css et home.css d'ArchiPlan (relevé le 2026-10-14), adapté aux jetons ArchiIndus. */
+/* ===== Compte Studio Prism : connexion, fiche client, code PIN — écran volontairement clair, comme le logo ===== */
+#auth[hidden]{display:none!important}
+#auth{position:fixed;inset:0;z-index:55;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#FFFFFF;color:#0F1B33;color-scheme:light;font-family:var(--f-body);overflow:auto}
+.ap-side{position:relative;display:flex;flex-direction:column;gap:32px;padding:48px clamp(24px,5vw,72px);background-color:#F9FAFA;background-image:linear-gradient(#0A5E8E14 1px,transparent 1px),linear-gradient(90deg,#0A5E8E14 1px,transparent 1px),linear-gradient(#0A5E8E09 1px,transparent 1px),linear-gradient(90deg,#0A5E8E09 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px;border-right:1px solid #DDE5EA}
+.ap-logo{width:min(440px,100%);aspect-ratio:1514/437;background:var(--logo) 0 0/100% 100% no-repeat;flex:none}
+.ap-pitch{max-width:44ch}
+.ap-eyebrow{margin:0 0 10px;font:600 11px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:#03858D}
+.ap-pitch h1{margin:0 0 12px;font:800 clamp(24px,2.6vw,32px)/1.15 "Montserrat",var(--f-display);color:#071A45;text-wrap:balance}
+.ap-pitch p{margin:0;font-size:15px;line-height:1.6;color:#3C4863}
+.ap-apps{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid #DDE5EA;max-width:460px}
+.ap-apps li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 0;border-bottom:1px solid #DDE5EA}
+.ap-apps b{font:700 14px "Montserrat",var(--f-display);color:#071A45}
+.ap-apps span{grid-column:1;font-size:13px;color:#56637C}
+.ap-apps em{grid-row:1 / span 2;grid-column:2;align-self:center;font:500 11px var(--f-mono);font-style:normal;color:#03858D;border:1px solid #9FD6DA;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.ap-apps li:nth-child(n+3) em{color:#56637C;border-color:#CBD6DF}
+.ap-foot{margin:auto 0 0;font-size:12px;color:#7A8499}
+.ap-main{display:grid;place-items:center;padding:40px 24px}
+.ap-card{width:min(400px,100%);display:flex;flex-direction:column;gap:18px}
+.ap-card h2{margin:0;font:800 24px/1.2 "Montserrat",var(--f-display);color:#071A45;text-wrap:balance}
+.ap-sub{margin:-8px 0 0;font-size:14px;line-height:1.55;color:#4A5570}
+.ap-tabs{display:grid;grid-template-columns:1fr 1fr;background:#F0F4F7;border-radius:12px;padding:4px}
+.ap-tabs button{border:0;background:transparent;border-radius:9px;height:38px;font-weight:600;font-size:14px;color:#4A5570}
+.ap-tabs button[aria-selected="true"]{background:#fff;color:#071A45;box-shadow:0 1px 3px rgb(7 26 69 / .12)}
+.ap-form{display:flex;flex-direction:column;gap:14px}
+.ap-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ap-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ap-field > span:first-child{font-size:13px;font-weight:600;color:#26324D}
+.ap-field small{font-weight:400;color:#7A8499}
+.ap-in{position:relative;display:flex}
+.ap-in input,.ap-in select{width:100%;min-width:0;height:46px;border:1px solid #CBD6DF;border-radius:10px;padding:0 14px;font-size:15px;background:#fff;color:#0F1B33;font-family:var(--f-body)}
+.ap-in input[type="password"],.ap-in input.pw{padding-right:84px}
+.ap-in input:focus,.ap-in select:focus{outline:none;border-color:#0A5E8E;box-shadow:0 0 0 3px #0A5E8E26}
+.ap-in input[readonly]{background:#F5F7F9;color:#4A5570}
+.ap-eye{position:absolute;right:6px;top:6px;height:34px;padding:0 10px;border:0;background:transparent;color:#4A5570;font-size:12px;font-weight:600;border-radius:7px}
+.ap-eye:hover{background:#F0F4F7}
+.ap-rules{display:flex;flex-wrap:wrap;gap:6px 14px;margin:-6px 0 0;padding:0;list-style:none;font-size:12px;color:#7A8499}
+.ap-rules li::before{content:"○ "}
+.ap-rules li.ok{color:#047A63}.ap-rules li.ok::before{content:"● "}
+.ap-row{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-top:-4px}
+.ap-check{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:#3C4863}
+.ap-check input{margin-top:2px;width:16px;height:16px;accent-color:#0A5E8E;flex:none}
+.ap-btn{height:48px;border-radius:10px;border:1px solid #071A45;background:#071A45;color:#fff;font-weight:600;font-size:15px;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:10px}
+.ap-btn:hover{background:#0B2A63}
+.ap-btn.alt{background:#fff;color:#071A45;border-color:#CBD6DF}.ap-btn.alt:hover{border-color:#0A5E8E;background:#fff}
+.ap-btn[disabled]{opacity:.6;cursor:progress}
+.ap-link{border:0;background:none;padding:0;color:#0A5E8E;font-weight:600;font-size:13.5px;text-align:left}
+.ap-link:hover{text-decoration:underline}
+.ap-links{display:flex;justify-content:center;gap:22px;flex-wrap:wrap}
+.ap-err{margin:0;color:#B4372C;font-size:13px;line-height:1.45}
+.ap-err:empty{display:none}
+.ap-note{margin:0;border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;background:#EEF7F8;border:1px solid #CBE6E9;color:#164A55}
+.ap-note.ok{background:#EDF8F3;border-color:#C6E8D9;color:#145A43}
+.ap-note.warn{background:#FFF6EB;border-color:#F3D9B5;color:#7A4A10}
+.ap-or{display:flex;align-items:center;gap:12px;font-size:12px;color:#7A8499}
+.ap-or::before,.ap-or::after{content:"";flex:1;border-top:1px solid #DDE5EA}
+.ap-mode{margin:4px 0 0;font:11.5px/1.5 var(--f-mono);color:#7A8499;text-align:center}
+/* étapes de l'inscription, dessinées comme une ligne de cote */
+/* code PIN */
+.ap-spin{width:28px;height:28px;border-radius:50%;border:3px solid #DDE5EA;border-top-color:#0A5E8E;animation:ap-rot .8s linear infinite}
+@keyframes ap-rot{to{transform:rotate(360deg)}}
+#auth :focus-visible{outline:2px solid #0A5E8E;outline-offset:2px}
+@media (max-width:860px){
+  #auth{grid-template-columns:minmax(0,1fr);align-content:start}
+  .ap-side{padding:28px 20px 0;border-right:0;background-image:none;background-color:#fff;align-items:center;gap:0}
+  .ap-logo{width:min(300px,82%)}
+  .ap-pitch,.ap-apps,.ap-foot{display:none}
+  .ap-main{place-items:start center;padding:20px 20px calc(32px + env(safe-area-inset-bottom,0px))}
+  .ap-pad{grid-template-columns:repeat(3,68px);gap:12px 20px}.ap-pad button{width:68px;height:68px}
+}
+@media (max-width:380px){.ap-grid2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){.ap-dots.shake,.ap-spin{animation:none}}
+/* bouton et menu du compte dans l'app */
+
+/* ===== Accueil cloud — habillage Studio Prism ===== */
+#home{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+#home[hidden]{display:none!important}
+.h-top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 22px;background:var(--panel);border-bottom:1px solid var(--line);z-index:2}
+.h-top .brand{display:flex;align-items:center;gap:10px;min-width:0}
+.h-top .brand small{display:block;font-size:11px;color:var(--mut);margin-top:3px;letter-spacing:.04em}
+.h-acts{display:flex;align-items:center;gap:10px}
+.h-lic{height:28px;padding:0 12px;border-radius:14px;border:1px solid var(--line);background:var(--chip);color:var(--mut);font:600 11.5px var(--f-body);white-space:nowrap}
+.h-site{font:600 13px var(--f-body);color:var(--mut);text-decoration:none;padding:6px 10px;border-radius:8px;white-space:nowrap}
+.h-site:hover{background:var(--chip);color:var(--ink)}
+#homeUser{border-radius:50%;width:36px;min-width:36px;height:36px;padding:0;background:var(--chip);border:1px solid var(--line);color:var(--ink);font:700 12px "Montserrat",var(--f-display)}
+.h-tabs{display:inline-flex;background:var(--chip);border-radius:11px;padding:3px}
+.h-tabs button{border:0;background:transparent;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;color:var(--mut);white-space:nowrap}
+.h-tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow-s)}
+.h-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+.h-scroll>*{flex-shrink:0}
+
+/* Bandeau d'accueil : clair, texte foncé, bleu en simple accent */
+.h-hero{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:28px;align-items:start;padding:34px max(22px,calc((100% - 1240px)/2)) 30px;background:var(--panel);color:var(--ink);border-bottom:1px solid var(--line)}
+.h-eyebrow{margin:0 0 8px;font:700 11.5px var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.h-hero h1{margin:0;font:800 clamp(26px,3.2vw,36px)/1.15 "Montserrat",var(--f-display);letter-spacing:-.01em;color:var(--ink)}
+#homeSub{margin:10px 0 22px;font-size:15px;line-height:1.55;color:var(--mut);max-width:560px}
+.h-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:820px}
+.hq{display:flex;align-items:center;gap:12px;text-align:left;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);transition:border-color .15s,box-shadow .15s,transform .15s;min-width:0}
+.hq:hover:not(:disabled){border-color:#C9CDD3;box-shadow:var(--shadow);transform:translateY(-1px)}
+.hq:disabled{opacity:.45;cursor:not-allowed}
+.hq svg{width:34px;height:34px;padding:7px;border-radius:9px;background:var(--chip);color:var(--ink);flex:none;fill:none;stroke:currentColor;stroke-width:2}
+.hq span{min-width:0}
+.hq b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hq small{display:block;font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hq.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.hq.primary small{color:rgb(255 255 255 / .85)}
+.hq.primary svg{background:rgb(255 255 255 / .18);color:#fff}
+.hq.primary:hover:not(:disabled){border-color:var(--accent);filter:brightness(1.06)}
+
+/* Carte « Mon cloud » */
+.h-quota{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.q-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font:700 11.5px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.q-plan{font:600 11.5px var(--f-body);letter-spacing:0;text-transform:none;padding:3px 9px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.q-plan.pro{color:var(--ok)}
+.q-plan.admin{color:var(--ink)}
+.q-num{margin:12px 0 8px;font-size:13px;color:var(--mut)}
+.q-num b{font:800 24px "Montserrat",var(--f-display);color:var(--ink)}
+.q-bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.q-bar i{display:block;height:100%;border-radius:4px;background:var(--accent);transition:width .4s}
+.q-bar i.mid{background:#D99A1E}
+.q-bar i.full{background:var(--danger)}
+.q-dl{display:grid;grid-template-columns:1fr auto;gap:6px 10px;margin:14px 0 0;font-size:13px}
+.q-dl dt{color:var(--mut)}.q-dl dd{margin:0;font-weight:700;font-family:var(--f-mono);font-size:12.5px}
+.q-up{margin-top:14px;width:100%;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:600;font-size:13px}
+.q-up:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Corps */
+.h-body{flex:1;padding:24px 22px 40px;max-width:1284px;width:100%;margin:0 auto}
+.hsec{display:flex;align-items:center;gap:10px;margin:22px 0 12px;font:700 13px "Montserrat",var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.hsec::after{content:"";flex:1;height:1px;background:var(--line)}
+.hsec:first-child{margin-top:4px}
+.hcrumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 6px;font-size:13px;color:var(--mut)}
+.hcrumbs button{border:0;background:transparent;font-weight:600;color:var(--accent);padding:4px 6px;border-radius:6px;font-size:13px}
+.hcrumbs button:hover{background:var(--chip)}
+.hcrumbs button:last-child{color:var(--ink)}
+.hfolders{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.hfold{position:relative;display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 6px 12px 14px;cursor:pointer;min-width:0;transition:border-color .15s,box-shadow .15s,transform .15s}
+.hfold:hover,.hfold:focus-visible{border-color:#C9CDD3;box-shadow:var(--shadow);transform:translateY(-1px)}
+.hfold>svg{width:34px;height:34px;padding:7px;border-radius:9px;background:var(--chip);color:var(--mut);flex:none;fill:none;stroke:currentColor;stroke-width:2}
+.hfold.sh>svg{background:var(--accent-soft);color:var(--accent)}
+.hfold>div{flex:1;min-width:0}
+.hfold b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.hfold small{display:block;font-size:12px;color:var(--mut);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb2{display:grid;place-items:center;width:24px;height:24px;border-radius:12px;color:var(--accent);flex:none}
+.hb2 svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+.hfold.locked{opacity:.7}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:16px}
+.hcard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .2s,transform .2s}
+.hcard:hover,.hcard:focus-visible{border-color:#C9CDD3;box-shadow:0 12px 30px rgb(20 22 28 / .10);transform:translateY(-2px)}
+.hthumb{position:relative;aspect-ratio:16/10;background:
+  repeating-linear-gradient(90deg,rgb(0 0 0 / .035) 0 1px,transparent 1px 20px),
+  repeating-linear-gradient(0deg,rgb(0 0 0 / .035) 0 1px,transparent 1px 20px),#FAFAFB;display:grid;place-items:center;color:#9AA0A8}
+.hthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.hthumb>svg{width:54px;height:54px;opacity:.6;fill:none;stroke:currentColor;stroke-width:1.6}
+.hb{position:absolute;left:10px;top:10px;width:26px;height:26px;border-radius:13px;background:var(--panel);display:grid;place-items:center;box-shadow:var(--shadow-s)}
+.hb svg{width:13px;height:13px;color:var(--accent);fill:none;stroke:currentColor;stroke-width:2}
+.hmeta{padding:11px 42px 13px 14px;min-width:0;border-top:1px solid var(--line)}
+.hmeta b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hmeta span{display:block;font-size:12px;color:var(--mut);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdots{position:absolute;right:5px;bottom:9px;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--mut);display:grid;place-items:center;flex:none}
+.hfold .hdots{position:static}
+.hdots:hover,.hdots:focus-visible{background:var(--chip);color:var(--ink)}
+.hdots svg{width:18px;height:18px;fill:currentColor}
+.hcard.locked .hthumb{color:var(--mut)}
+.hcard.sk{pointer-events:none}.hcard.sk .hthumb{animation:hsk 1.2s ease-in-out infinite alternate}
+.hcard.sk b,.hcard.sk span{height:10px;border-radius:5px;background:var(--line);width:70%}.hcard.sk span{width:45%;margin-top:8px}
+@keyframes hsk{from{opacity:.55}to{opacity:1}}
+.hempty{max-width:520px;margin:40px auto;text-align:center;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:16px;padding:28px 22px}
+.hempty h3{color:var(--ink);font:700 18px "Montserrat",var(--f-display);margin:10px 0 6px}
+.hempty p{line-height:1.5;margin:0 0 18px}
+.hempty .ap-btn{width:auto;padding:0 22px;display:inline-flex}
+.hic svg{width:60px;height:60px;color:var(--mut);opacity:.7;fill:none;stroke:currentColor;stroke-width:1.6}
+.hrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}.hrow .ap-btn{text-decoration:none}
+.hlocal{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));border-radius:12px;padding:12px 14px;margin:6px 0 14px}
+.hlocal div{flex:1;min-width:200px}.hlocal b{display:block;font-size:13.5px}.hlocal span{font-size:12px;color:var(--mut)}
+.hlocal .ap-btn{width:auto;height:38px;padding:0 14px;font-size:13px}
+.hint{font-size:12.5px;color:var(--mut);margin:6px 0 0}
+.h-foot{padding:18px 22px 26px;text-align:center;font:600 11px "Montserrat",var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);border-top:1px solid var(--line)}
+.h-busy{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 70%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-weight:600;color:var(--ink);z-index:5}
+.h-busy[hidden]{display:none}
+#homeMenu{z-index:60}
+#homeMenu button.danger b,#userMenu button.danger b{color:var(--danger)}
+#homeMenu button[disabled]{opacity:.5;cursor:not-allowed}
+
+
+@media (max-width:980px){
+  .h-hero{grid-template-columns:1fr;padding:26px 18px 28px}
+  .h-quota{align-self:stretch}
+  .h-quick{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:700px){
+  .h-top{padding:8px 12px;flex-wrap:wrap}
+  .h-top .brand small,.h-site{display:none}
+  .h-tabs{order:3;width:100%}.h-tabs button{flex:1;padding:7px 8px}
+  .h-hero{padding:20px 14px 22px;gap:18px}
+  #homeSub{font-size:14px;margin-bottom:16px}
+  .hq{padding:11px;gap:9px}.hq small{display:none}
+  .h-body{padding:14px 14px 30px}
+  .hgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .hfolders{grid-template-columns:1fr 1fr;gap:10px}
+  .hmeta{padding:8px 36px 10px 10px}
+}
+@media (max-width:420px){ .hfolders{grid-template-columns:1fr} }
+/* bandeau offre gratuite */
+.h-offer{max-width:1284px;width:100%;margin:18px auto 0;padding:0 22px}
+.ho-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line));background:var(--accent-soft);border-radius:12px;padding:12px 14px}
+.ho-in>div:first-child{flex:1;min-width:240px}
+.ho-in b{display:block;font-size:14px}.ho-in span{font-size:13px;color:var(--mut);line-height:1.45}
+.ho-a{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ho-b{height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:600;font-size:13px;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer}
+.ho-b:hover{border-color:var(--accent);color:var(--accent)}
+.ho-x{width:30px;height:30px;border:0;background:transparent;border-radius:8px;color:var(--mut);cursor:pointer}.ho-x:hover{background:var(--panel)}
+@media (max-width:700px){.h-offer{padding:0 14px}}
+
+
+/* ArchiIndus */
+#home{font-family:var(--f-body)}
+.h-top .brand b{font-family:var(--f-display);font-weight:800;font-size:18px;letter-spacing:.02em;color:var(--nuit)}
+:root[data-theme="dark"] .h-top .brand b{color:var(--ink)}
+.h-top .brand b span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.h-top .brand{display:flex;flex-direction:column;line-height:1}
+.ap-logo{display:flex;flex-direction:column;justify-content:center;aspect-ratio:auto;background:none;line-height:1}
+.ap-logo b{font:800 clamp(34px,4vw,48px)/1 var(--f-display);letter-spacing:.02em;color:#071B55}
+.ap-logo b span{background:linear-gradient(135deg,#071B55 0%,#0877B9 58%,#169999 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ap-logo small{margin-top:8px;font:600 12px var(--f-mono);letter-spacing:.2em;text-transform:uppercase;color:#56637C}
+#auth button,#home button{font-family:inherit;cursor:pointer}
+#homeUser{display:grid;place-items:center}
+.h-back{height:34px}
+.menu{position:fixed;z-index:80;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 36px rgb(7 27 85 / .22);padding:6px;width:min(300px,calc(100vw - 24px))}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:0;background:transparent;text-align:left;padding:9px 10px;border-radius:8px;color:var(--ink)}
+.menu button:hover,.menu button:focus-visible{background:var(--chip)}
+.menu button b{font-weight:600;font-size:13px}
+.menu button span{font-size:11.5px;color:var(--mut);word-break:break-all}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+.hint2{font-size:12.5px;color:var(--mut)}
+.pick{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto}
+.pick button{display:flex;align-items:center;gap:10px;border:1px solid transparent;background:transparent;border-radius:8px;padding:9px 10px;text-align:left;font:inherit;font-size:14px;color:var(--ink)}
+.pick button:hover{background:var(--chip)}
+.pick button.cur{border-color:var(--accent);background:var(--accent-soft)}
+.pick svg{width:18px;height:18px;color:var(--accent);flex:none;fill:none;stroke:currentColor;stroke-width:2}
+.hdots svg circle{fill:currentColor}
+#home .hq:focus-visible,#home .hfold:focus-visible,#home .hcard:focus-visible,#home .hdots:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hcard .hdots svg,.hfold .hdots svg{width:18px;height:18px}
+
+.h-top .brand{align-items:flex-start}
 </style>
 <div id="app">
   <header id="top">
@@ -216,6 +461,46 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
     <span id="zoom">1 m = 100 px</span>
   </footer>
 </div>
+<div id="auth" hidden>
+  <aside class="ap-side">
+    <div class="ap-logo" role="img" aria-label="ARCHIINDUS, Studio Prism"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <div class="ap-pitch"><p class="ap-eyebrow">Compte Studio Prism</p><h1>Un seul compte pour toutes les apps du studio.</h1><p>Connectez-vous une fois : votre compte et vos projets vous suivent d'ArchiPlan à ArchiIndus.</p></div>
+    <ul class="ap-apps">
+      <li><b>ARCHIINDUS</b><span>Plans industriels et réseaux techniques</span><em>Vous êtes ici</em></li>
+      <li><b>ARCHIPLAN</b><span>Conception de plans et modélisation 3D</span><em>Même compte</em></li>
+      <li><b>Archi Vision</b><span>Visite des maquettes en réalité augmentée</span><em>Même compte</em></li>
+    </ul>
+    <p class="ap-foot">Studio Prism · Creative &amp; Technical Solutions</p>
+  </aside>
+  <main class="ap-main"><div class="ap-card" id="apCard" aria-live="polite"></div></main>
+</div>
+<section id="home" hidden aria-label="Accueil ARCHIINDUS">
+  <header class="h-top">
+    <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <div class="h-acts">
+      <button type="button" class="h-back btn" id="homeBack">Retour au dessin</button>
+      <button type="button" class="ib" id="homeUser" aria-haspopup="true" aria-label="Mon compte"></button>
+    </div>
+  </header>
+  <div class="h-scroll">
+    <section class="h-hero">
+      <div class="h-hello"><p class="h-eyebrow">Espace projets</p><h1 id="homeHello">Bonjour</h1><p id="homeSub">Vos projets s'enregistrent tout seuls dans le cloud Studio Prism.</p>
+        <div class="h-quick">
+          <button type="button" class="hq primary" id="homeNewP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span><b>Nouveau projet</b><small>Plan et réseaux</small></span></button>
+          <button type="button" class="hq" id="homeNewF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Nouveau dossier</b><small>Ranger ses projets</small></span></button>
+          <button type="button" class="hq" id="homeImport"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg><span><b>Importer</b><small>Fichier .json</small></span></button>
+          <button type="button" class="hq" id="homeSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7"/></svg><span><b>Dessin actuel</b><small>Vers le cloud</small></span></button>
+        </div>
+      </div>
+      <aside class="h-quota" id="homeQuota" aria-live="polite"></aside>
+    </section>
+    <main class="h-body" id="homeBody"></main>
+    <p class="h-foot">Studio Prism · ARCHIINDUS</p>
+  </div>
+  <div class="h-busy" id="homeBusy" hidden><div class="ap-spin" aria-hidden="true"></div><span></span></div>
+  <input type="file" id="homeFile" accept=".json,application/json" hidden>
+</section>
+<div class="menu" id="homeMenu" hidden></div>
 <script>
 /* ==== 00-util.js ==== */
 'use strict';
@@ -781,6 +1066,7 @@ const Doc = (() => {
     canUndo: () => past.length > 0,
     canRedo: () => future.length > 0,
     sanitize,
+    fresh: () => fresh(),
 
     /* Modifie le document : point de retour, puis fn(data), puis notification et enregistrement différé. */
     mutate(fn) { checkpoint(); fn(data); changed(); },
@@ -803,6 +1089,10 @@ const Doc = (() => {
 
     /* Remplace tout le projet (nouveau / ouvrir) ; annulable. */
     replace(newData) { checkpoint(); data = newData; changed(); },
+
+    /* Remplace tout le projet ET efface l'historique : on ne peut plus revenir au document précédent (utilisé pour les projets cloud,
+       afin qu'un « annuler » ne puisse pas écrire un autre document dans le projet cloud qui vient d'être ouvert). */
+    load(newData) { past.length = 0; future.length = 0; data = newData; changed(); },
     reset() { Doc.replace(fresh()); },
 
     /* Lecture du stockage local au démarrage ; retourne true si un projet a été restauré. */
@@ -1511,6 +1801,7 @@ const IO = (() => {
     if (file.size > 20 * 1024 * 1024) { Status.msg('Fichier trop volumineux (20 Mo maximum).', 8000); return; }
     try {
       const data = Doc.sanitize(JSON.parse(await file.text()));
+      Cloud.forget();
       Doc.replace(data);
       Tools.selection.clear();
       Canvas2D.zoomExtents();
@@ -2187,6 +2478,7 @@ const UI = (() => {
     if (document.activeElement !== pn) pn.value = Doc.get().name;
     const s = Doc.saveState();
     $('#saved').textContent = s === 'saved' ? 'enregistré dans ce navigateur' : s === 'pending' ? 'enregistrement…' : 'enregistrement local impossible';
+    $('#saved').textContent += Cloud.suffix();
     $('#saved').classList.toggle('err', s === 'error');
     document.title = `${Doc.get().name} · ARCHIINDUS`;
   }
@@ -2216,7 +2508,7 @@ const UI = (() => {
     $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
     $('#undo').addEventListener('click', () => Doc.undo());
     $('#redo').addEventListener('click', () => Doc.redo());
-    $('#new').addEventListener('click', () => { Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
+    $('#new').addEventListener('click', () => { Cloud.forget(); Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
@@ -2224,7 +2516,8 @@ const UI = (() => {
     $('#dxf').addEventListener('click', () => IO.exportDXF());
     $('#pdf').addEventListener('click', () => PDF.dialog());
     $('#acct').addEventListener('click', () => Account.open());
-    $('#cloud').addEventListener('click', () => Cloud.show());
+    $('#cloud').addEventListener('click', () => Home.open());
+    Cloud.on(refreshChrome);
     Account.on(() => { const m = Account.me(); $('#acct').textContent = m ? (m.firstName || 'Compte') : 'Compte'; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
     $('#bom').addEventListener('click', () => BOM.show());
     $('#addLayer').addEventListener('click', addLayer);
@@ -2357,6 +2650,7 @@ const Account = (() => {
 
   const api = {
     me: () => me,
+    remembered() { try { return localStorage.getItem(FLAG) === '1'; } catch (e) { return false; } },
     access: () => access,
     on: (f) => { subs.push(f); },
     licLabel, errMsg, QUOTA,
@@ -2409,64 +2703,8 @@ const Account = (() => {
     },
 
     /* --- Interface --- */
-    open() { return me ? accountDialog() : loginDialog(); },
+    open() { return me ? accountDialog() : Auth.show(); },
   };
-
-  function field(label, attrs) {
-    const input = el('input', { class: 'fld', ...attrs, 'aria-label': label });
-    return [el('label', { class: 'lbl' }, label, input), input];
-  }
-
-  function loginDialog(mode = 'in') {
-    const body = el('div');
-    const dlg = Dlg.open('Compte Studio Prism', body);
-    const render = (m) => {
-      body.textContent = '';
-      const err = el('p', { class: 'err', role: 'alert' });
-      const info = el('p', { class: 'mut small' });
-      const [lE, email] = field('Email', { type: 'email', autocomplete: 'email', maxlength: 160 });
-      const [lP, pw] = field('Mot de passe', { type: 'password', autocomplete: m === 'up' ? 'new-password' : 'current-password', maxlength: 200 });
-      const go = el('button', { type: 'submit', class: 'btn pri wide' }, m === 'in' ? 'Se connecter' : m === 'up' ? 'Créer mon compte' : 'Envoyer le lien');
-      const form = el('form', { novalidate: true });
-      let fn = null, ln = null, terms = null;
-      if (m === 'up') {
-        const [lF, f1] = field('Prénom', { type: 'text', autocomplete: 'given-name', maxlength: 80 });
-        const [lL, l1] = field('Nom', { type: 'text', autocomplete: 'family-name', maxlength: 80 });
-        fn = f1; ln = l1;
-        form.append(el('div', { class: 'frm' }, lF, lL));
-      }
-      form.append(lE);
-      if (m !== 'reset') form.append(lP);
-      if (m === 'up') {
-        terms = el('input', { type: 'checkbox' });
-        form.append(el('p', { class: 'mut small' }, 'Mot de passe : 8 caractères minimum, avec une lettre et un chiffre.'),
-          el('label', { class: 'chk' }, terms, 'J\'accepte les conditions d\'utilisation de Studio Prism.'));
-      }
-      form.append(err, info, go);
-      form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        err.textContent = ''; info.textContent = '';
-        go.disabled = true;
-        try {
-          if (m === 'in') { await api.signIn(email.value, pw.value); }
-          else if (m === 'up') {
-            if (!fn.value.trim() || !terms.checked) throw { code: 'app/form', message: 'Renseignez votre prénom et acceptez les conditions.' };
-            await api.signUp({ firstName: fn.value.trim().slice(0, 80), lastName: ln.value.trim().slice(0, 80), email: email.value, password: pw.value });
-          } else {
-            await api.sendReset(email.value);
-            info.textContent = 'Si un compte existe pour cet email, un lien de réinitialisation vient d\'être envoyé.';
-            go.disabled = false; return;
-          }
-          dlg.close(); Status.msg(`Connecté : ${me.email}`);
-        } catch (e) { err.textContent = e && e.code === 'app/form' ? e.message : errMsg(e); go.disabled = false; }
-      });
-      const link = (txt, to) => { const b = el('button', { type: 'button', class: 'lnk' }, txt); b.addEventListener('click', () => render(to)); return b; };
-      body.append(el('p', { class: 'mut small' }, 'Un seul compte Studio Prism pour ArchiPlan, ArchiVision, ArchiIndus et le site.'), form,
-        el('div', { class: 'lnks' }, ...(m === 'in' ? [link('Créer un compte', 'up'), link('Mot de passe oublié', 'reset')] : [link('J\'ai déjà un compte', 'in')])));
-    };
-    render(mode);
-    return dlg;
-  }
 
   function accountDialog() {
     const body = el('div');
@@ -2480,7 +2718,7 @@ const Account = (() => {
     body.append(el('p', { class: 'mut small' }, 'Les licences se gèrent sur le site Studio Prism : l\'attribution d\'une licence ArchiIndus est faite par un administrateur.'),
       el('p', {}, el('a', { href: SITE_URL + '#/compte', target: '_blank', rel: 'noopener' }, 'Ouvrir mon compte sur le site Studio Prism')));
     return Dlg.open('Mon compte', body, [
-      { label: 'Projets cloud', run: () => { Cloud.show(); } },
+      { label: 'Mes projets (cloud)', run: () => { Home.open(); } },
       { label: 'Se déconnecter', run: () => { api.signOut().then(() => Status.msg('Déconnecté.')); } },
     ]);
   }
@@ -2488,76 +2726,75 @@ const Account = (() => {
   return api;
 })();
 
-/* Projets cloud : enregistrer le projet courant, rouvrir, supprimer. Le lien « projet courant ↔ projet cloud » n'est gardé qu'en mémoire. */
+/* Lien entre le document affiché et un projet cloud ; enregistrement automatique (comme ArchiPlan : « tout s'enregistre tout seul »).
+   Le lien n'est gardé qu'en mémoire : après un rechargement, on rouvre le projet depuis « Mes projets ». */
 const Cloud = (() => {
-  let cur = null;                         /* { id, size } du projet cloud lié au document affiché */
-  const fmtSize = (n) => (n >= 1e6 ? (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Mo' : Math.max(1, Math.round(n / 1000)) + ' Ko');
-  const fmtDate = (t) => (t ? new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+  const DELAY = 2500;
+  let cur = null;                      /* { id, size } */
+  let state = 'idle';                  /* idle | pending | saving | saved | error */
+  let timer = 0, running = false, again = false;
+  const subs = [];
+  const set = (s) => { state = s; subs.forEach((f) => f()); };
 
-  function show() {
-    if (!Account.me()) { Account.open(); return; }
-    const body = el('div');
-    const list = el('div');
-    body.append(el('p', { class: 'mut small' }, 'Projets enregistrés sur votre compte Studio Prism (950 Ko maximum par projet). Ctrl+Z annule l\'ouverture d\'un projet.'), list);
-    const dlg = Dlg.open('Projets cloud', body, [{ label: cur ? 'Mettre à jour le projet cloud' : 'Enregistrer ce projet dans le cloud', primary: true, run: () => { save(); return false; } }]);
-
-    async function refresh() {
-      const pb = dlg.querySelector('.dlg-f .btn.pri'); if (pb) pb.textContent = cur ? 'Mettre à jour le projet cloud' : 'Enregistrer ce projet dans le cloud';
-      list.textContent = '';
-      list.append(el('p', { class: 'mut' }, 'Chargement…'));
-      let items;
-      try { items = await CloudStore.list(); } catch (e) { list.textContent = ''; list.append(el('p', { class: 'err' }, Account.errMsg(e))); return; }
-      list.textContent = '';
-      if (!items.length) { list.append(el('p', { class: 'mut' }, 'Aucun projet dans le cloud.')); return; }
-      const t = el('table', { class: 'tbl' }, el('thead', {}, el('tr', {}, el('th', {}, 'Nom'), el('th', { class: 'n' }, 'Taille'), el('th', {}, 'Modifié'), el('th', {}, ''))));
-      const tb = el('tbody');
-      for (const p of items) {
-        const open = el('button', { type: 'button', class: 'btn' }, 'Ouvrir');
-        const del = el('button', { type: 'button', class: 'btn danger' }, 'Supprimer');
-        open.addEventListener('click', () => openProject(p.id, dlg));
-        let armed = 0;
-        del.addEventListener('click', async () => {
-          if (!armed) { armed = setTimeout(() => { armed = 0; del.textContent = 'Supprimer'; }, 4000); del.textContent = 'Confirmer ?'; return; }
-          clearTimeout(armed); del.disabled = true;
-          try { await CloudStore.remove(p.id); if (cur && cur.id === p.id) cur = null; Status.msg(`« ${p.name} » supprimé du cloud.`); } catch (e) { Status.msg(Account.errMsg(e), 8000); }
-          refresh();
-        });
-        tb.append(el('tr', {}, el('td', {}, p.name), el('td', { class: 'n' }, fmtSize(p.size)), el('td', {}, fmtDate(p.updatedAt)), el('td', {}, el('div', { class: 'grp' }, open, del))));
-      }
-      t.append(tb); list.append(t);
-    }
-
-    async function save() {
-      const d = Doc.get(), data = JSON.stringify(d);
-      try {
-        if (cur) { await CloudStore.save(cur.id, d.name, data, cur.size); cur.size = CloudStore.byteLen(data); }
-        else { const id = await CloudStore.create(d.name, data); cur = { id, size: CloudStore.byteLen(data) }; }
-        Status.msg(`« ${d.name} » enregistré dans le cloud.`);
-      } catch (e) { Status.msg(Account.errMsg(e), 9000); }
-      refresh();
-    }
-    refresh();
-    return dlg;
-  }
-
-  async function openProject(id, dlg) {
+  async function flush() {
+    timer = 0;
+    if (!cur) return;
+    if (running) { again = true; return; }
+    running = true; set('saving');
+    const link = cur;
     try {
+      const d = Doc.get(), data = JSON.stringify(d);
+      await CloudStore.save(link.id, d.name, data, link.size);
+      link.size = CloudStore.byteLen(data);
+      set(again ? 'pending' : 'saved');
+    } catch (e) { set('error'); Status.msg(Account.errMsg(e), 9000); }
+    running = false;
+    if (again && cur === link) { again = false; schedule(); }
+  }
+  function schedule() { if (!cur || !Account.me()) return; clearTimeout(timer); set('pending'); timer = setTimeout(flush, DELAY); }
+  Doc.on((reason) => { if (reason === 'change') schedule(); });
+
+  return {
+    on: (f) => { subs.push(f); },
+    linked: () => (cur ? cur.id : ''),
+    state: () => (cur ? state : 'idle'),
+    suffix() {
+      if (!cur) return '';
+      return ' · cloud : ' + ({ pending: 'à enregistrer…', saving: 'enregistrement…', saved: 'enregistré', error: 'ÉCHEC', idle: '' }[state] || '');
+    },
+    /* Détache le projet cloud ; une modification encore en attente est d'abord envoyée (rien ne se perd en changeant de projet). */
+    forget() { if (cur && timer) { clearTimeout(timer); flush(); } clearTimeout(timer); timer = 0; cur = null; again = false; set('idle'); },
+    /* Enregistre tout de suite (avant de quitter le projet). */
+    async flushNow() { if (cur && timer) { clearTimeout(timer); await flush(); } },
+
+    /* Crée un projet cloud à partir de data (objet validé) et l'affiche. */
+    async createAndOpen(name, data, folderId = '') {
+      data.name = name;
+      const json = JSON.stringify(data);
+      const id = await CloudStore.create(name, json, folderId);
+      this.forget();
+      Doc.load(data); Tools.selection.clear(); Canvas2D.zoomExtents();
+      cur = { id, size: CloudStore.byteLen(json) }; set('saved');
+      return id;
+    },
+    async openProject(id) {
+      await this.flushNow();
       const r = await CloudStore.open(id);
       const data = Doc.sanitize(JSON.parse(r.data));
-      Doc.replace(data); Tools.selection.clear(); Canvas2D.zoomExtents();
-      cur = { id, size: r.meta.size };
-      dlg.close();
-      Status.msg(`Projet « ${data.name} » ouvert depuis le cloud (${data.objects.length} objets).`);
-    } catch (e) { Status.msg(e instanceof SyntaxError ? 'Projet cloud illisible.' : e && e.message && !e.code ? 'Projet cloud invalide : ' + e.message : Account.errMsg(e), 9000); }
-  }
-
-  return { show, forget() { cur = null; } };
+      data.name = r.meta.name || data.name;      /* le nom de la fiche fait foi (renommage depuis l'accueil) */
+      this.forget();                       /* d'abord délier : le remplacement ne doit rien enregistrer dans un autre projet */
+      Doc.load(data); Tools.selection.clear(); Canvas2D.zoomExtents();
+      cur = { id, size: r.meta.size }; set('saved');
+      return data;
+    },
+  };
 })();
 
 /* ==== 79-cloudstore.js ==== */
 /* Couche de données du cloud ArchiIndus (Firestore, SDK « compat »), sans interface : voir firebase/firestore.ai.rules.proposed.
    Schéma, sur le modèle d'ArchiPlan (préfixe ai au lieu de ap) :
-     aiProjects/{id}               {ownerUid, name, size, createdAt, updatedAt}
+     aiProjects/{id}               {ownerUid, name, size, folderId, createdAt, updatedAt}
+     aiFolders/{id}                {ownerUid, name, parentId ('' = racine), createdAt, updatedAt}
      aiProjects/{id}/content/main  {data (JSON du projet, en chaîne), updatedAt}
      aiUsage/{uid}                 {bytes, lastPid, updatedAt} : octets utilisés, mis à jour dans le MÊME LOT que la fiche.
    Les règles Firestore imposent droits et quota côté serveur. Tant que le bloc ai* n'est pas publié dans le projet commun
@@ -2572,9 +2809,10 @@ const CloudStore = (() => {
   const ts = () => FV().serverTimestamp();
   const P = (pid) => db.collection('aiProjects').doc(pid);
   const C = (pid) => P(pid).collection('content').doc('main');
+  const F = (fid) => db.collection('aiFolders').doc(fid);
   const U = (u) => db.collection('aiUsage').doc(u);
   const ms = (t) => (t && t.toMillis ? t.toMillis() : 0);
-  const meta = (d) => { const x = d.data(); return { id: d.id, name: x.name, size: x.size || 0, createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; };
+  const meta = (d) => { const x = d.data(); return { id: d.id, name: x.name, size: x.size || 0, folderId: x.folderId || '', createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; };
   const need = () => { if (!db || !uid) throw { code: 'app/not-signed-in' }; };
   /* Le refus d'une écriture peut venir des droits, du quota, ou de règles non publiées : on ne sait pas lequel. */
   /* Lire un projet absent est refusé par les règles (resource nul) : même résultat que « introuvable ou pas à vous ». */
@@ -2618,14 +2856,14 @@ const CloudStore = (() => {
       return { meta: meta(p), data: c.data().data };
     },
 
-    async create(name, data) {
+    async create(name, data, folderId = '') {
       need();
       const size = byteLen(data);
       if (size > MAX_DATA) throw { code: 'app/too-big' };
       await this.usage();
       const ref = db.collection('aiProjects').doc();
       const b = db.batch();
-      b.set(ref, { ownerUid: uid, name: String(name).slice(0, 120) || 'Projet', size, createdAt: ts(), updatedAt: ts() });
+      b.set(ref, { ownerUid: uid, name: String(name).slice(0, 120) || 'Projet', size, folderId, createdAt: ts(), updatedAt: ts() });
       b.set(C(ref.id), { data, updatedAt: ts() });
       b.set(U(uid), { bytes: FV().increment(size), lastPid: ref.id, updatedAt: ts() }, { merge: true });
       try { await b.commit(); } catch (e) { wrap(e); }
@@ -2642,6 +2880,47 @@ const CloudStore = (() => {
       b.set(C(pid), { data, updatedAt: ts() });
       b.update(P(pid), { name: String(name).slice(0, 120) || 'Projet', size, updatedAt: ts() });
       if (delta !== 0) b.set(U(uid), { bytes: FV().increment(delta), lastPid: pid, updatedAt: ts() }, { merge: true });
+      try { await b.commit(); } catch (e) { wrap(e); }
+    },
+
+    /* Renommer ou déplacer un projet : la taille ne change pas, le compteur n'est pas touché. */
+    async rename(pid, name) {
+      need();
+      try { await P(pid).update({ name: String(name).trim().slice(0, 120) || 'Projet', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+    async move(pid, folderId) {
+      need();
+      try { await P(pid).update({ folderId: folderId || '', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+
+    async folders() {
+      need();
+      const s = await db.collection('aiFolders').where('ownerUid', '==', uid).get();
+      return s.docs.map((d) => { const x = d.data(); return { id: d.id, name: x.name, parentId: x.parentId || '', createdAt: ms(x.createdAt), updatedAt: ms(x.updatedAt) }; });
+    },
+    async createFolder(name, parentId = '') {
+      need();
+      const ref = db.collection('aiFolders').doc();
+      try { await ref.set({ ownerUid: uid, name: String(name).trim().slice(0, 80) || 'Dossier', parentId, createdAt: ts(), updatedAt: ts() }); } catch (e) { wrap(e); }
+      return ref.id;
+    },
+    async renameFolder(fid, name) {
+      need();
+      const s = await F(fid).get().catch(missing);
+      if (!s.exists) throw { code: 'app/not-found' };
+      try { await F(fid).update({ name: String(name).trim().slice(0, 80) || 'Dossier', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+    async moveFolder(fid, parentId) {
+      need();
+      try { await F(fid).update({ parentId: parentId || '', updatedAt: ts() }); } catch (e) { wrap(e); }
+    },
+    /* Supprime un dossier : son contenu (projets et sous-dossiers) remonte d'un niveau, dans le même lot. */
+    async removeFolder(fid, parentId, projectIds, subfolderIds) {
+      need();
+      const b = db.batch();
+      for (const id of projectIds) b.update(P(id), { folderId: parentId || '', updatedAt: ts() });
+      for (const id of subfolderIds) b.update(F(id), { parentId: parentId || '', updatedAt: ts() });
+      b.delete(F(fid));
       try { await b.commit(); } catch (e) { wrap(e); }
     },
 
@@ -2671,6 +2950,387 @@ const CloudStore = (() => {
   };
 })();
 
+/* ==== 79-home.js ==== */
+/* Page de connexion (Auth) et accueil « Mes projets » avec dossiers (Home), sur le modèle d'ArchiPlan (src/js/auth.js, cloud.js, home.css).
+   Reprend : écran de connexion / création de compte / mot de passe oublié, accueil avec carte de stockage, dossiers imbriqués,
+   projets, menus, déplacement, renommage, suppression, enregistrement automatique du projet ouvert.
+   NON repris pour l'instant : partage par email ou lien, « Partagés avec moi », miniatures des projets, code PIN, vérification d'email.
+   Aucun texte venant de l'utilisateur ou du serveur n'est inséré comme HTML : tout passe par textContent (fonction h). */
+
+/* Nœud DOM sans enfants vides ; les chaînes sont du texte. */
+const h = (tag, attrs = {}, ...kids) => el(tag, attrs, ...kids.flat().filter((k) => k != null && k !== false));
+const svgIcon = (d) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); s.append(p); return s; };
+const ICON = {
+  plus: 'M12 5v14M5 12h14',
+  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  up: 'M12 15V3M7 8l5-5 5 5M5 21h14',
+  save: 'M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7',
+  plan: 'M4 4h16v16H4zM4 10h16M10 4v16',
+};
+const icon = (k) => svgIcon(ICON[k]);
+
+/* Boîtes de saisie / de confirmation basées sur Dlg (élément <dialog>). */
+const Ask = {
+  text(title, label, value = '', ok = 'Valider') {
+    return new Promise((res) => {
+      let done = false;
+      const input = h('input', { class: 'fld', type: 'text', maxlength: 120, value, 'aria-label': label });
+      const err = h('p', { class: 'err', role: 'alert' });
+      const body = h('form', { novalidate: true }, h('label', { class: 'lbl' }, label, input), err);
+      const fin = (v) => { if (!done) { done = true; res(v); } };
+      const go = () => { const v = input.value.trim(); if (!v) { err.textContent = 'Saisissez un nom.'; input.focus(); return false; } fin(v); return true; };
+      const dlg = Dlg.open(title, body, [{ label: ok, primary: true, run: () => go() ? undefined : false }]);
+      body.addEventListener('submit', (e) => { e.preventDefault(); if (go()) dlg.close(); });
+      dlg.addEventListener('close', () => fin(null));
+      input.focus(); input.select();
+    });
+  },
+  confirm(title, text, ok = 'Confirmer') {
+    return new Promise((res) => {
+      let done = false; const fin = (v) => { if (!done) { done = true; res(v); } };
+      const dlg = Dlg.open(title, h('p', {}, text), [{ label: ok, primary: true, run: () => { fin(true); } }]);
+      dlg.addEventListener('close', () => fin(false));
+    });
+  },
+  info(title, text) { Dlg.open(title, h('p', {}, text)); },
+};
+
+/* ---------------------------------------------------------------- Connexion */
+const Auth = (() => {
+  const root = () => $('#auth');
+  const card = () => $('#apCard');
+  let mode = 'in';
+
+  function pwField(id, auto) {
+    const input = h('input', { id, type: 'password', autocomplete: auto, maxlength: 200, required: true, 'aria-label': 'Mot de passe' });
+    const eye = h('button', { type: 'button', class: 'ap-eye', 'aria-pressed': 'false' }, 'Afficher');
+    eye.addEventListener('click', () => { const on = input.type === 'password'; input.type = on ? 'text' : 'password'; eye.textContent = on ? 'Masquer' : 'Afficher'; eye.setAttribute('aria-pressed', String(on)); });
+    return { input, wrap: h('div', { class: 'ap-in' }, input, eye) };
+  }
+  const field = (label, input) => h('label', { class: 'ap-field' }, h('span', {}, label), input.wrap || h('div', { class: 'ap-in' }, input));
+
+  function render() {
+    const c = card(); c.textContent = '';
+    const err = h('p', { class: 'ap-err', role: 'alert' });
+    const note = h('p', { class: 'ap-note ok', hidden: true });
+    const tabs = h('div', { class: 'ap-tabs', role: 'tablist' },
+      ...[['in', 'Connexion'], ['up', 'Créer un compte']].map(([m, t]) => {
+        const b = h('button', { type: 'button', role: 'tab', 'aria-selected': String(mode === m || (mode === 'reset' && m === 'in')) }, t);
+        b.addEventListener('click', () => { mode = m; render(); });
+        return b;
+      }));
+    const email = h('input', { type: 'email', autocomplete: 'email', maxlength: 160, required: true, 'aria-label': 'Email' });
+    const form = h('form', { class: 'ap-form', novalidate: true });
+    const go = h('button', { type: 'submit', class: 'ap-btn' }, mode === 'in' ? 'Se connecter' : mode === 'up' ? 'Créer mon compte' : 'Envoyer le lien');
+    let fn, ln, pw, terms;
+    if (mode === 'up') {
+      fn = h('input', { type: 'text', autocomplete: 'given-name', maxlength: 80, required: true, 'aria-label': 'Prénom' });
+      ln = h('input', { type: 'text', autocomplete: 'family-name', maxlength: 80, 'aria-label': 'Nom' });
+      form.append(h('div', { class: 'ap-grid2' }, field('Prénom', fn), field('Nom', ln)));
+    }
+    form.append(field('Email', email));
+    if (mode !== 'reset') {
+      pw = pwField('apPw', mode === 'up' ? 'new-password' : 'current-password');
+      form.append(field('Mot de passe', pw));
+    }
+    if (mode === 'up') {
+      const rules = [['8 caractères minimum', (v) => v.length >= 8], ['une lettre', (v) => /[A-Za-z]/.test(v)], ['un chiffre', (v) => /\d/.test(v)]];
+      const items = rules.map(([t]) => h('li', {}, t));
+      pw.input.addEventListener('input', () => rules.forEach(([, f], i) => items[i].classList.toggle('ok', f(pw.input.value))));
+      terms = h('input', { type: 'checkbox' });
+      form.append(h('ul', { class: 'ap-rules' }, ...items), h('label', { class: 'ap-check' }, terms, h('span', {}, 'J\'accepte les conditions d\'utilisation de Studio Prism.')));
+    }
+    if (mode === 'in') {
+      const forgot = h('button', { type: 'button', class: 'ap-link' }, 'Mot de passe oublié ?');
+      forgot.addEventListener('click', () => { mode = 'reset'; render(); });
+      form.append(h('div', { class: 'ap-row' }, forgot));
+    }
+    form.append(err, note, go);
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      err.textContent = ''; note.hidden = true; go.disabled = true;
+      try {
+        if (mode === 'in') await Account.signIn(email.value, pw.input.value);
+        else if (mode === 'up') {
+          if (!fn.value.trim()) throw { code: 'app/form', message: 'Renseignez votre prénom.' };
+          if (!terms.checked) throw { code: 'app/form', message: 'Vous devez accepter les conditions d\'utilisation pour créer un compte.' };
+          await Account.signUp({ firstName: fn.value.trim().slice(0, 80), lastName: ln.value.trim().slice(0, 80), email: email.value, password: pw.input.value });
+        } else {
+          if (!email.value.trim()) throw { code: 'app/form', message: 'Saisissez votre adresse email.' };
+          await Account.sendReset(email.value);
+          note.textContent = 'Si un compte existe pour cette adresse, un lien de réinitialisation vient d\'être envoyé. Pensez à regarder vos courriers indésirables.'; note.hidden = false;
+          go.disabled = false; return;
+        }
+        api.hide(); Home.open();
+      } catch (e) { err.textContent = e && e.code === 'app/form' ? e.message : Account.errMsg(e); go.disabled = false; }
+    });
+    const skip = h('button', { type: 'button', class: 'ap-btn alt', id: 'authSkip' }, 'Continuer sans compte');
+    skip.addEventListener('click', () => api.hide());
+    const back = mode === 'reset' ? h('button', { type: 'button', class: 'ap-link' }, '‹ Retour à la connexion') : null;
+    if (back) back.addEventListener('click', () => { mode = 'in'; render(); });
+    c.append(...[
+      h('h2', {}, mode === 'up' ? 'Créer votre compte Studio Prism' : mode === 'reset' ? 'Mot de passe oublié' : 'Connexion à ARCHIINDUS'),
+      h('p', { class: 'ap-sub' }, mode === 'up' ? 'Un seul compte pour toutes les apps du studio. Il est gratuit ; la licence ArchiIndus se règle ensuite avec Studio Prism.'
+        : mode === 'reset' ? 'Saisissez l\'email de votre compte : nous vous enverrons un lien pour choisir un nouveau mot de passe.'
+          : 'Utilisez votre compte Studio Prism, le même que pour ArchiPlan et le site.'),
+      mode === 'reset' ? null : tabs, form, back,
+      h('div', { class: 'ap-or' }, 'ou'), skip,
+      h('p', { class: 'ap-mode' }, 'Sans compte, le dessin reste enregistré dans ce navigateur uniquement.')].filter(Boolean));
+    (mode === 'up' ? fn : email).focus();
+  }
+
+  const api = {
+    show(m = 'in') { mode = m; root().hidden = false; render(); },
+    hide() { root().hidden = true; },
+    visible: () => !root().hidden,
+  };
+  return api;
+})();
+
+/* ------------------------------------------------------------------- Accueil */
+const Home = (() => {
+  const FOLDER_LIMIT = 5;                       /* dossiers par compte, comme les dossiers privés d'ArchiPlan */
+  const S = { folder: '', projects: [], folders: [], usage: null, loading: false, err: '' };
+  const root = () => $('#home');
+  const fmtSize = (n) => (n >= 1e6 ? (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Mo' : Math.max(1, Math.round(n / 1000)) + ' Ko');
+  const fmtDate = (t) => (t ? new Date(t).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
+  const byName = (a, b) => a.name.localeCompare(b.name, 'fr');
+  const folderOf = (id) => S.folders.find((f) => f.id === id);
+  const crumbs = () => { const out = []; let f = folderOf(S.folder), n = 0; while (f && n++ < 20) { out.unshift(f); f = folderOf(f.parentId); } return out; };
+  const descendants = (fid) => { const out = new Set([fid]); let grow = true; while (grow) { grow = false; for (const f of S.folders) if (!out.has(f.id) && out.has(f.parentId)) { out.add(f.id); grow = true; } } return out; };
+  const busy = (t) => { const b = $('#homeBusy'); if (t) { b.querySelector('span').textContent = t; b.hidden = false; } else b.hidden = true; };
+  const toast = (t, ms) => Status.msg(t, ms);
+
+  async function load() {
+    S.loading = true; S.err = ''; render();
+    try {
+      const [projects, folders] = await Promise.all([CloudStore.list(), CloudStore.folders()]);
+      S.projects = projects; S.folders = folders;
+      if (S.folder && !folderOf(S.folder)) S.folder = '';
+      try { S.usage = (await CloudStore.usage(projects)).bytes; } catch (e) { S.usage = projects.reduce((a, p) => a + p.size, 0); }
+    } catch (e) { S.err = Account.errMsg(e); }
+    S.loading = false; render();
+  }
+
+  /* --- Menus --- */
+  function openMenu(anchor, items) {
+    return new Promise((res) => {
+      const m = $('#homeMenu'); m.textContent = '';
+      const close = (v) => { m.hidden = true; document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', esc, true); res(v); };
+      const away = (e) => { if (!m.contains(e.target)) close(null); };
+      const esc = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(null); } };
+      for (const it of items) {
+        if (it === '-') { m.append(h('hr')); continue; }
+        const b = h('button', { type: 'button', class: it.danger ? 'danger' : '' }, h('b', {}, it.t), it.s ? h('span', {}, it.s) : null);
+        b.addEventListener('click', () => close(it.k));
+        m.append(b);
+      }
+      m.hidden = false;
+      const r = anchor.getBoundingClientRect(), w = m.offsetWidth, hh = m.offsetHeight;
+      m.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+      m.style.top = Math.max(8, Math.min(r.bottom + 4, innerHeight - hh - 8)) + 'px';
+      setTimeout(() => { document.addEventListener('pointerdown', away, true); document.addEventListener('keydown', esc, true); }, 0);
+      const first = m.querySelector('button'); if (first) first.focus();
+    });
+  }
+
+  /* --- Choix d'un dossier de destination --- */
+  function pickFolder(title, excluded, current) {
+    return new Promise((res) => {
+      let done = false; const fin = (v) => { if (!done) { done = true; res(v); } };
+      const list = h('div', { class: 'pick' });
+      const dlg = Dlg.open(title, list);
+      const add = (id, label, depth) => {
+        const b = h('button', { type: 'button', class: id === current ? 'cur' : '', style: `padding-left:${10 + depth * 18}px` }, icon('folder'), label);
+        b.addEventListener('click', () => { fin(id); dlg.close(); });
+        list.append(b);
+      };
+      add('', 'Mes projets (racine)', 0);
+      const walk = (pid, depth) => S.folders.filter((f) => f.parentId === pid && !excluded.has(f.id)).sort(byName).forEach((f) => { add(f.id, f.name, depth); walk(f.id, depth + 1); });
+      walk('', 1);
+      dlg.addEventListener('close', () => fin(undefined));
+    });
+  }
+
+  /* --- Actions --- */
+  const quotaFull = (extra) => {
+    if (S.usage != null && S.usage + extra > Account.quota()) {
+      Ask.info('Espace cloud plein', `Votre espace (${(Account.quota() / 1e6).toLocaleString('fr-FR')} Mo) est plein. Supprimez des projets, ou demandez une licence ArchiIndus à Studio Prism pour disposer de plus de place.`);
+      return true;
+    }
+    return false;
+  };
+  const failMsg = (e) => e && e.code === 'app/too-big' ? 'Projet trop volumineux pour le cloud (950 Ko maximum).' : Account.errMsg(e);
+
+  async function newProject() {
+    const name = await Ask.text('Nouveau projet', 'Nom du projet', 'Projet sans titre', 'Créer'); if (!name) return;
+    if (quotaFull(2000)) return;
+    busy('Création du projet…');
+    try { const d = Doc.sanitize({ ...Doc.fresh(), name }); await Cloud.createAndOpen(name, d, S.folder); busy(); api.close(); toast(`Projet « ${name} » créé. Il s'enregistre tout seul dans le cloud.`); }
+    catch (e) { busy(); toast(failMsg(e), 9000); }
+  }
+  async function saveCurrent() {
+    const d = JSON.parse(JSON.stringify(Doc.get()));
+    const name = await Ask.text('Enregistrer dans le cloud', 'Nom du projet', d.name, 'Enregistrer'); if (!name) return;
+    const size = CloudStore.byteLen(JSON.stringify({ ...d, name }));
+    if (quotaFull(size)) return;
+    busy('Enregistrement…');
+    try { const id = await CloudStore.create(name, JSON.stringify({ ...d, name }), S.folder); Cloud.forget(); await Cloud.openProject(id); busy(); api.close(); toast('Projet enregistré dans le cloud.'); }
+    catch (e) { busy(); toast(failMsg(e), 9000); }
+  }
+
+  async function importFile(file) {
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast('Fichier trop volumineux (20 Mo maximum).', 8000); return; }
+    let data;
+    try { data = Doc.sanitize(JSON.parse(await file.text())); }
+    catch (e) { toast('Import impossible : ' + (e instanceof SyntaxError ? 'ce fichier n\'est pas du JSON valide.' : e.message), 9000); return; }
+    if (quotaFull(CloudStore.byteLen(JSON.stringify(data)))) return;
+    busy('Import du projet…');
+    try { await Cloud.createAndOpen(data.name, data, S.folder); busy(); api.close(); toast(`Projet « ${data.name} » importé dans le cloud.`); }
+    catch (e) { busy(); toast(failMsg(e), 9000); }
+  }
+
+  async function newFolder() {
+    if (S.folders.length >= FOLDER_LIMIT) { Ask.info('Limite atteinte', `Vous avez déjà ${FOLDER_LIMIT} dossiers. Supprimez-en un pour en créer un autre.`); return; }
+    const name = await Ask.text('Nouveau dossier', 'Nom du dossier', '', 'Créer'); if (!name) return;
+    try { await CloudStore.createFolder(name, S.folder); await load(); } catch (e) { toast(failMsg(e), 9000); }
+  }
+
+  async function openProject(p) {
+    busy(`Ouverture de « ${p.name} »…`);
+    try { await Cloud.openProject(p.id); busy(); api.close(); toast(`Projet « ${p.name} » ouvert depuis le cloud. Enregistrement automatique activé.`); }
+    catch (e) { busy(); toast(e instanceof SyntaxError ? 'Projet cloud illisible.' : e && e.message && !e.code ? 'Projet cloud invalide : ' + e.message : failMsg(e), 9000); }
+  }
+
+  async function projectMenu(p, btn) {
+    const k = await openMenu(btn, [{ k: 'open', t: 'Ouvrir' }, { k: 'rename', t: 'Renommer' }, { k: 'move', t: 'Déplacer…' }, '-', { k: 'del', t: 'Supprimer', s: 'Définitif', danger: true }]);
+    if (!k) return;
+    try {
+      if (k === 'open') await openProject(p);
+      else if (k === 'rename') { const n = await Ask.text('Renommer le projet', 'Nouveau nom', p.name, 'Renommer'); if (!n) return; await CloudStore.rename(p.id, n); if (Cloud.linked() === p.id) Doc.mutate((x) => { x.name = n; }); await load(); }
+      else if (k === 'move') { const f = await pickFolder('Déplacer le projet', new Set(), p.folderId); if (f === undefined) return; await CloudStore.move(p.id, f); await load(); }
+      else if (k === 'del') {
+        if (!(await Ask.confirm('Supprimer le projet', `Supprimer « ${p.name} » du cloud ? Cette action est définitive.`, 'Supprimer'))) return;
+        await CloudStore.remove(p.id); if (Cloud.linked() === p.id) Cloud.forget(); toast(`« ${p.name} » supprimé du cloud.`); await load();
+      }
+    } catch (e) { toast(failMsg(e), 9000); }
+  }
+
+  async function folderMenu(f, btn) {
+    const k = await openMenu(btn, [{ k: 'open', t: 'Ouvrir' }, { k: 'rename', t: 'Renommer' }, { k: 'move', t: 'Déplacer…' }, '-', { k: 'del', t: 'Supprimer le dossier', s: 'Son contenu remonte d\'un niveau', danger: true }]);
+    if (!k) return;
+    try {
+      if (k === 'open') { S.folder = f.id; render(); }
+      else if (k === 'rename') { const n = await Ask.text('Renommer le dossier', 'Nouveau nom', f.name, 'Renommer'); if (!n) return; await CloudStore.renameFolder(f.id, n); await load(); }
+      else if (k === 'move') { const t = await pickFolder('Déplacer le dossier', descendants(f.id), f.parentId); if (t === undefined) return; await CloudStore.moveFolder(f.id, t); await load(); }
+      else if (k === 'del') {
+        if (!(await Ask.confirm('Supprimer le dossier', `Supprimer le dossier « ${f.name} » ? Ses projets et sous-dossiers ne sont pas supprimés : ils remontent d'un niveau.`, 'Supprimer le dossier'))) return;
+        await CloudStore.removeFolder(f.id, f.parentId, S.projects.filter((p) => p.folderId === f.id).map((p) => p.id), S.folders.filter((x) => x.parentId === f.id).map((x) => x.id));
+        if (S.folder === f.id) S.folder = f.parentId; toast(`Dossier « ${f.name} » supprimé.`); await load();
+      }
+    } catch (e) { toast(failMsg(e), 9000); }
+  }
+
+  /* --- Affichage --- */
+  const dots = () => { const b = h('button', { type: 'button', class: 'hdots', 'aria-label': 'Actions', 'aria-haspopup': 'true' }); b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>'; return b; };   /* HTML statique, sans donnée utilisateur */
+
+  function folderCard(f) {
+    const n = S.projects.filter((p) => p.folderId === f.id).length + S.folders.filter((x) => x.parentId === f.id).length;
+    const d = dots();
+    const c = h('div', { class: 'hfold', tabindex: '0', role: 'button', 'aria-label': `Dossier ${f.name}` }, icon('folder'), h('div', {}, h('b', {}, f.name), h('small', {}, n ? `${n} élément${n > 1 ? 's' : ''}` : 'Vide')), d);
+    const open = () => { S.folder = f.id; render(); };
+    c.addEventListener('click', (e) => { if (!d.contains(e.target)) open(); });
+    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === c) open(); });
+    d.addEventListener('click', (e) => { e.stopPropagation(); folderMenu(f, d); });
+    return c;
+  }
+  function projectCard(p) {
+    const d = dots();
+    const thumb = h('div', { class: 'hthumb' }, icon('plan'));
+    const mine = Cloud.linked() === p.id;
+    const c = h('div', { class: 'hcard', tabindex: '0', role: 'button', 'aria-label': `Projet ${p.name}` }, thumb, h('div', { class: 'hmeta' }, h('b', {}, p.name), h('span', {}, `${mine ? 'Ouvert · ' : ''}${fmtDate(p.updatedAt)} · ${fmtSize(p.size)}`)), d);
+    c.addEventListener('click', (e) => { if (!d.contains(e.target)) openProject(p); });
+    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === c) openProject(p); });
+    d.addEventListener('click', (e) => { e.stopPropagation(); projectMenu(p, d); });
+    return c;
+  }
+
+  function renderQuota() {
+    const q = $('#homeQuota'); q.textContent = '';
+    const acc = Account.access(), lvl = acc ? acc.level : 'free', cap = Account.quota(), used = S.usage;
+    const pct = used == null ? 0 : Math.min(100, Math.round(used / cap * 100));
+    q.append(
+      h('div', { class: 'q-h' }, 'Mon cloud', h('span', { class: 'q-plan ' + (lvl === 'licensed' ? 'pro' : lvl === 'admin' ? 'admin' : '') }, lvl === 'admin' ? 'Admin' : lvl === 'licensed' ? 'Licence' : 'Gratuit')),
+      h('p', { class: 'q-num' }, h('b', {}, used == null ? '—' : (used / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Mo'), ` utilisés sur ${(cap / 1e6).toLocaleString('fr-FR')} Mo`),
+      h('div', { class: 'q-bar', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(pct) }, h('i', { class: pct >= 100 ? 'full' : pct >= 80 ? 'mid' : '', style: `width:${pct}%` })),
+      h('dl', { class: 'q-dl' }, h('dt', {}, 'Projets'), h('dd', {}, String(S.projects.length)), h('dt', {}, 'Dossiers'), h('dd', {}, `${S.folders.length} / ${FOLDER_LIMIT}`), h('dt', {}, 'Licence ArchiIndus'), h('dd', {}, Account.licenseText())));
+  }
+
+  function render() {
+    const me = Account.me(); if (!me) return;
+    $('#homeHello').textContent = `Bonjour ${me.firstName || ''}`.trim();
+    const ini = ((me.firstName || '?').charAt(0) + (me.lastName || '').charAt(0)).toUpperCase();
+    $('#homeUser').textContent = ini || '?';
+    $('#homeUser').title = me.email;
+    renderQuota();
+    $('#homeNewF').disabled = S.loading || !!S.err;
+    $('#homeNewP').disabled = S.loading || !!S.err; $('#homeImport').disabled = S.loading || !!S.err; $('#homeSave').disabled = S.loading || !!S.err;
+    const body = $('#homeBody'); body.textContent = '';
+    if (S.loading && !S.projects.length && !S.folders.length) { body.append(h('div', { class: 'hgrid' }, ...[1, 2, 3, 4].map(() => h('div', { class: 'hcard sk' }, h('div', { class: 'hthumb' }), h('div', { class: 'hmeta' }, h('b'), h('span')))))); return; }
+    if (S.err) { const r = h('button', { type: 'button', class: 'ap-btn alt' }, 'Réessayer'); r.addEventListener('click', load); body.append(h('div', { class: 'hempty' }, h('p', {}, S.err), r)); return; }
+    if (S.folder) {
+      const cr = h('nav', { class: 'hcrumbs', 'aria-label': 'Dossiers' });
+      const root_ = h('button', { type: 'button' }, 'Mes projets'); root_.addEventListener('click', () => { S.folder = ''; render(); }); cr.append(root_);
+      for (const f of crumbs()) { const b = h('button', { type: 'button' }, f.name); b.addEventListener('click', () => { S.folder = f.id; render(); }); cr.append(h('span', {}, '›'), b); }
+      body.append(cr);
+    }
+    if (!S.folder && !Cloud.linked() && Doc.get().objects.length) {
+      const b = h('button', { type: 'button', class: 'ap-btn alt' }, 'Enregistrer dans le cloud'); b.addEventListener('click', saveCurrent);
+      body.append(h('div', { class: 'hlocal' }, h('div', {}, h('b', {}, 'Un dessin est ouvert sur cet appareil'), h('span', {}, `${Doc.get().name} · ${Doc.get().objects.length} objet${Doc.get().objects.length > 1 ? 's' : ''}, enregistré dans ce navigateur uniquement`)), b));
+    }
+    const fs = S.folders.filter((f) => f.parentId === S.folder).sort(byName);
+    const ps = S.projects.filter((p) => p.folderId === S.folder).sort((a, b) => b.updatedAt - a.updatedAt);
+    if (fs.length) body.append(h('h2', { class: 'hsec' }, 'Dossiers'), h('div', { class: 'hfolders' }, ...fs.map(folderCard)));
+    if (ps.length) body.append(h('h2', { class: 'hsec' }, S.folder ? 'Projets du dossier' : 'Projets récents'), h('div', { class: 'hgrid' }, ...ps.map(projectCard)));
+    else {
+      const b = h('button', { type: 'button', class: 'ap-btn' }, 'Nouveau projet'); b.addEventListener('click', newProject);
+      body.append(h('div', { class: 'hempty' }, h('div', { class: 'hic' }, icon('plan')), h('h3', {}, S.folder ? 'Ce dossier ne contient aucun projet' : 'Aucun projet pour l\'instant'), h('p', {}, 'Créez un projet : il s\'enregistre tout seul dans le cloud, à chaque modification.'), b));
+    }
+  }
+
+  let bound = false;
+  function bind() {
+    if (bound) return; bound = true;
+    $('#homeNewP').addEventListener('click', newProject);
+    $('#homeNewF').addEventListener('click', newFolder);
+    $('#homeSave').addEventListener('click', saveCurrent);
+    $('#homeImport').addEventListener('click', () => $('#homeFile').click());
+    $('#homeFile').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; importFile(f); });
+    $('#homeBack').addEventListener('click', () => api.close());
+    $('#homeUser').addEventListener('click', async (e) => {
+      const me = Account.me();
+      const k = await openMenu(e.currentTarget, [{ k: 'acct', t: 'Mon compte', s: me ? me.email : '' }, { k: 'edit', t: 'Retour au dessin' }, '-', { k: 'out', t: 'Se déconnecter', danger: true }]);
+      if (k === 'acct') Account.open(); else if (k === 'edit') api.close();
+      else if (k === 'out') { await Account.signOut(); api.close(); Auth.show(); }
+    });
+  }
+
+  const api = {
+    open() {
+      if (!Account.me()) { Auth.show(); return; }
+      bind(); root().hidden = false; S.folder = ''; load();
+    },
+    close() { root().hidden = true; $('#homeMenu').hidden = true; },
+    visible: () => !root().hidden,
+    /* Affiche tout de suite l'écran d'accueil pendant que la session est restaurée (évite un flash de l'éditeur). */
+    pending() { bind(); root().hidden = false; $('#homeHello').textContent = 'Connexion…'; $('#homeBody').textContent = ''; $('#homeBody').append(h('div', { class: 'hgrid' }, ...[1, 2, 3, 4].map(() => h('div', { class: 'hcard sk' }, h('div', { class: 'hthumb' }), h('div', { class: 'hmeta' }, h('b'), h('span')))))); },
+    state: S,
+  };
+  Account.on(() => { if (!Account.me() && api.visible()) { api.close(); } });
+  return api;
+})();
+
 /* ==== 80-main.js ==== */
 /* Point d'entrée. */
 document.addEventListener('DOMContentLoaded', () => {
@@ -2679,7 +3339,12 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.init();
   Canvas2D.init();
   if (Doc.get().objects.length) Canvas2D.zoomExtents();
-  Account.restore();
+  /* Comme ArchiPlan : sans session, la page de connexion s'affiche d'abord (avec « Continuer sans compte ») ;
+     avec une session mémorisée, l'accueil s'affiche pendant que la session est restaurée. */
+  if (Account.remembered()) {
+    Home.pending();
+    Account.restore().then(() => { if (Account.me()) Home.open(); else { Home.close(); Auth.show(); } });
+  } else Auth.show();
 });
 
 </script>

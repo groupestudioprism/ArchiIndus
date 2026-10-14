@@ -26,7 +26,7 @@ with sync_playwright() as p:
     pg.on('pageerror',lambda e: errs.append('pageerror:'+str(e)))
     pg.on('console',lambda m: errs.append('console:'+m.text) if m.type=='error' and 'ERR_FAILED' not in m.text else None)
     pg.route('**/*',lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-    pg.goto((ROOT/'index.html').as_uri()); pg.wait_for_timeout(300)
+    pg.goto((ROOT/'index.html').as_uri()); pg.wait_for_timeout(300); pg.click('#authSkip')
     box=pg.locator('#cv').bounding_box()
     def W(x,y):
         v=pg.evaluate('({x:state.view.x,y:state.view.y,s:state.view.scale})')
@@ -99,7 +99,7 @@ with sync_playwright() as p:
     total=n()
     # --- enregistrement local + rechargement
     pg.wait_for_timeout(800); ok(pg.inner_text('#saved').startswith('enregistré'),f"état d'enregistrement {pg.inner_text('#saved')}")
-    pg.reload(); pg.wait_for_timeout(400); ok(n()==total,f'restauration après rechargement {n()} / {total}')
+    pg.reload(); pg.wait_for_timeout(400); pg.click('#authSkip'); ok(n()==total,f'restauration après rechargement {n()} / {total}')
     # --- export / import JSON
     with pg.expect_download() as d: pg.click('#save')
     path=OUT+'sortie.archiindus.json'; d.value.save_as(path)

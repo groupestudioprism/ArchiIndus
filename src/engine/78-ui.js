@@ -156,6 +156,7 @@ const UI = (() => {
     if (document.activeElement !== pn) pn.value = Doc.get().name;
     const s = Doc.saveState();
     $('#saved').textContent = s === 'saved' ? 'enregistré dans ce navigateur' : s === 'pending' ? 'enregistrement…' : 'enregistrement local impossible';
+    $('#saved').textContent += Cloud.suffix();
     $('#saved').classList.toggle('err', s === 'error');
     document.title = `${Doc.get().name} · ARCHIINDUS`;
   }
@@ -185,7 +186,7 @@ const UI = (() => {
     $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
     $('#undo').addEventListener('click', () => Doc.undo());
     $('#redo').addEventListener('click', () => Doc.redo());
-    $('#new').addEventListener('click', () => { Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
+    $('#new').addEventListener('click', () => { Cloud.forget(); Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
@@ -193,7 +194,8 @@ const UI = (() => {
     $('#dxf').addEventListener('click', () => IO.exportDXF());
     $('#pdf').addEventListener('click', () => PDF.dialog());
     $('#acct').addEventListener('click', () => Account.open());
-    $('#cloud').addEventListener('click', () => Cloud.show());
+    $('#cloud').addEventListener('click', () => Home.open());
+    Cloud.on(refreshChrome);
     Account.on(() => { const m = Account.me(); $('#acct').textContent = m ? (m.firstName || 'Compte') : 'Compte'; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
     $('#bom').addEventListener('click', () => BOM.show());
     $('#addLayer').addEventListener('click', addLayer);

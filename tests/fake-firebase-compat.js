@@ -25,7 +25,7 @@
   const err = (code) => Promise.reject(Object.assign(new Error(code), { code }));
   const mat = (v) => (v && typeof v === 'object' && '__t' in v ? { toMillis: () => v.__t, toDate: () => new Date(v.__t) } : v);
   const view = (d) => { const o = {}; for (const k of Object.keys(d)) o[k] = mat(d[k]); return o; };
-  const guarded = (path) => /^(aiProjects|aiUsage)/.test(path);
+  const guarded = (path) => /^(aiProjects|aiUsage|aiFolders)/.test(path);
 
   /* valeurs spéciales : horodatage serveur, incrément */
   const FV = { serverTimestamp: () => ({ __sv: 'ts' }), increment: (n) => ({ __sv: 'inc', n }) };

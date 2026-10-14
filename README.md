@@ -16,14 +16,15 @@ Application de conception de plans industriels et de réseaux techniques (résea
 - **Réseaux** : case « Réseau » dans le panneau (diamètre DN en mm, matériau, repère) appliquée aux lignes et polylignes ouvertes ; halo à l'échelle du DN, étiquette, propriétés modifiables.
 - **Nomenclature** (calques visibles) : longueurs par DN / matériau, autres objets, export CSV (séparateur `;`, virgule décimale).
 - **Export PDF** vectoriel (A4 / A3, échelle au choix, cartouche, nomenclature), écrit à la main ; contrôlé avec qpdf, pypdf et poppler.
-- **Compte Studio Prism et projets cloud** (bouton Compte / Cloud) : connexion, création de compte, licence `licenses/{uid}_archiindus`, quota 10 Mo / 50 Mo (licence active) / 1 Go (admin). Données dans `aiProjects`, `aiUsage` du projet commun.
+- **Page de connexion et accueil « Mes projets »** (comme ArchiPlan) : connexion / création de compte / mot de passe oublié sur une page plein écran, « Continuer sans compte » pour travailler en local ; accueil avec carte de stockage, **dossiers imbriqués** (5 maximum par compte, limite côté application), projets, renommer, déplacer, supprimer, import `.json`, enregistrement du dessin actuel. Un projet ouvert depuis le cloud s'**enregistre automatiquement** (2,5 s après la dernière modification) ; l'historique annuler/rétablir est vidé à l'ouverture pour qu'un « annuler » ne puisse pas écraser un projet cloud.
+- **Compte Studio Prism et projets cloud** (boutons Compte / Cloud) : connexion, création de compte, licence `licenses/{uid}_archiindus`, quota 10 Mo / 50 Mo (licence active) / 1 Go (admin). Données dans `aiProjects`, `aiFolders`, `aiUsage` du projet commun.
 - Thème clair et sombre.
 
 ### Limites connues
 
 - Le DXF n'a pas été ouvert dans un logiciel de CAO : seule sa structure a été contrôlée. Les accents sont supprimés, les couleurs sont ramenées aux indices AutoCAD.
 - Structures, équipements, symboles et vue 3D / ArchiVision **n'existent pas encore** (phases 4 et 7).
-- Compte : pas de code PIN ni de verrouillage, pas de partage de projets. Le lien projet courant ↔ projet cloud n'est gardé qu'en mémoire. Le compteur d'usage cloud dépend des règles ; non vérifié en production.
+- Compte : pas de code PIN ni de verrouillage. Pas de partage de projets ou de dossiers (par email ou lien), pas de « Partagés avec moi », pas de miniatures de projets, pas de vérification d'email. Les règles n'empêchent pas un dossier d'être déplacé dans son propre sous-dossier (contrôlé par l'application seulement). Le lien projet courant ↔ projet cloud n'est gardé qu'en mémoire. Le compteur d'usage cloud dépend des règles ; non vérifié en production.
 - L'export PDF n'a pas été ouvert dans tous les lecteurs (seulement qpdf, pypdf, poppler).
 - Pas de gestion du tactile à deux doigts ; l'outil Main permet de déplacer la vue au doigt.
 - Le stockage local est propre à un navigateur : vider les données du site efface le projet. Utiliser « Enregistrer » pour garder un fichier.
@@ -34,8 +35,8 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | --- | --- |
 | `src/parts/` | Structure de la page : en-tête (polices, thème) et corps (barre haute, outils, zone de dessin, panneau, barre d'état). |
 | `src/css/tokens.css` | Charte Studio Prism : valeurs relevées dans ArchiPlan (`src/css/app.css`), thème clair et sombre. |
-| `src/css/app.css` | Mise en page et composants. |
-| `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `79-cloudstore`, `79-account`, `80-main`. |
+| `src/css/app.css`, `src/css/home.css` | Mise en page et composants ; connexion et accueil (repris d'`auth.css` / `home.css` d'ArchiPlan). |
+| `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `79-cloudstore`, `79-account`, `79-home` (page de connexion et accueil), `80-main`. |
 | `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html`. |
 | `tests/e2e_reseaux.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
 | `tests/rules/` | Règles Firestore testées à l'émulateur contre les règles publiées d'ArchiPlan + le bloc `ai*` proposé : `cd tests/rules && npm install && PUBLISHED_RULES=<chemin firestore.rules> npm test`. |

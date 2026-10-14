@@ -16,7 +16,7 @@ import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 S = ROOT / 'src'
-CSS_ORDER = ['tokens.css', 'app.css']
+CSS_ORDER = ['tokens.css', 'app.css', 'home.css']
 
 
 def rd(p):

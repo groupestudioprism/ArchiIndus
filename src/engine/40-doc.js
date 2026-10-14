@@ -151,6 +151,7 @@ const Doc = (() => {
     canUndo: () => past.length > 0,
     canRedo: () => future.length > 0,
     sanitize,
+    fresh: () => fresh(),
 
     /* Modifie le document : point de retour, puis fn(data), puis notification et enregistrement différé. */
     mutate(fn) { checkpoint(); fn(data); changed(); },
@@ -173,6 +174,10 @@ const Doc = (() => {
 
     /* Remplace tout le projet (nouveau / ouvrir) ; annulable. */
     replace(newData) { checkpoint(); data = newData; changed(); },
+
+    /* Remplace tout le projet ET efface l'historique : on ne peut plus revenir au document précédent (utilisé pour les projets cloud,
+       afin qu'un « annuler » ne puisse pas écrire un autre document dans le projet cloud qui vient d'être ouvert). */
+    load(newData) { past.length = 0; future.length = 0; data = newData; changed(); },
     reset() { Doc.replace(fresh()); },
 
     /* Lecture du stockage local au démarrage ; retourne true si un projet a été restauré. */

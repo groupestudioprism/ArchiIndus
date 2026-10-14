@@ -24,6 +24,7 @@ const IO = (() => {
     if (file.size > 20 * 1024 * 1024) { Status.msg('Fichier trop volumineux (20 Mo maximum).', 8000); return; }
     try {
       const data = Doc.sanitize(JSON.parse(await file.text()));
+      Cloud.forget();
       Doc.replace(data);
       Tools.selection.clear();
       Canvas2D.zoomExtents();

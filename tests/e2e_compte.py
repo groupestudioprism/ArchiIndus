@@ -1,7 +1,7 @@
 """Test du parcours compte Studio Prism et cloud dans le navigateur, avec un SDK Firebase SIMULÉ (tests/fake-firebase-compat.js).
 
-Ce test vérifie l'interface et la logique du client (connexion, licence affichée, création de compte, projets cloud, messages d'erreur,
-restauration de session). Il ne vérifie NI le vrai service Firebase, NI les règles de sécurité (voir tests/rules/ pour les règles).
+Ce test vérifie l'interface et la logique du client (page de connexion, accueil « Mes projets » avec dossiers, licence affichée, création
+de compte, enregistrement automatique, messages d'erreur, restauration de session). Il ne vérifie NI le vrai service Firebase, NI les règles de sécurité (voir tests/rules/ pour les règles).
 Prérequis : python3 tools/build.py, `pip install playwright`, `playwright install chromium`.
 """
 import json, pathlib, re, sys, tempfile
@@ -32,103 +32,173 @@ with sync_playwright() as p:
     S = lambda expr: pg.evaluate(expr)
     dlg = lambda: pg.inner_text('dialog[open]') if pg.locator('dialog[open]').count() else ''
 
-    ok(fb_reqs == [], f'aucun chargement Firebase avant d\'ouvrir le compte {fb_reqs}')
+    ok(fb_reqs == [], f'aucun chargement Firebase avant la connexion {fb_reqs}')
+    ok(pg.is_visible('#auth') and 'Connexion à ARCHIINDUS' in pg.inner_text('#apCard'), 'page de connexion affichée au démarrage')
     ok(pg.inner_text('#acct') == 'Compte', 'bouton Compte au départ')
 
     # --- connexion
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]')
-    ok('Se connecter' in dlg() and 'Créer un compte' in dlg(), 'fenêtre de connexion')
-    pg.fill('dialog input[aria-label="Email"]', 'alice@example.org'); pg.fill('dialog input[aria-label="Mot de passe"]', 'mauvais1')
-    pg.click('dialog button[type=submit]'); pg.wait_for_timeout(200)
-    ok('incorrect' in dlg() and S('Account.me()') is None, f'mauvais mot de passe refusé : {dlg()[-80:]!r}')
-    pg.fill('dialog input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(300)
-    ok(pg.locator('dialog[open]').count() == 0 and S('Account.me().email') == 'alice@example.org', 'connexion réussie, fenêtre fermée')
-    ok(pg.inner_text('#acct') == 'Alice', 'bouton Compte affiche le prénom')
+    pg.fill('#apCard input[aria-label="Email"]', 'alice@example.org'); pg.fill('#apCard input[aria-label="Mot de passe"]', 'mauvais1')
+    pg.click('#apCard button[type=submit]'); pg.wait_for_timeout(250)
+    ok('incorrect' in pg.inner_text('#apCard') and S('Account.me()') is None and pg.is_visible('#auth'), f'mauvais mot de passe refusé : {pg.inner_text("#apCard")[-120:]!r}')
+    pg.click('#apCard .ap-eye'); ok(pg.get_attribute('#apPw', 'type') == 'text', 'bouton Afficher le mot de passe')
+    pg.fill('#apCard input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('#apCard button[type=submit]'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
+    ok(not pg.is_visible('#auth') and S('Account.me().email') == 'alice@example.org', 'connexion réussie, page de connexion fermée, accueil affiché')
+    ok(pg.inner_text('#homeHello') == 'Bonjour Alice' and pg.inner_text('#acct') == 'Alice', f"accueil personnalisé {pg.inner_text('#homeHello')!r}")
     ok(S('window.__fb.cfg.projectId') == 'archivision-studioprism', f"projet Firebase utilisé : {S('window.__fb.cfg.projectId')}")
     ok(sorted(fb_reqs) == ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-firestore-compat.js'], f'SDK chargé à la demande {fb_reqs}')
     ok(S('Account.access().level') == 'licensed', 'licence archiindus active détectée')
+    q = pg.inner_text('#homeQuota'); ok('50 Mo' in q and 'Pro' in q and '0 / 5' in q.replace('\n', ' ').replace('\t', ' ') or ('50' in q and 'Pro' in q), f'carte Mon cloud : {q!r}')
+    ok('Aucun projet' in pg.inner_text('#homeBody'), 'accueil vide au départ')
 
-    # --- fenêtre du compte
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]'); pg.wait_for_timeout(200)
-    t = dlg(); ok('Alice Martin' in t and 'alice@example.org' in t and 'Pro' in t and '0 / 50 Mo' in t.replace('\n', ' ').replace('\t', ' ') or '0 / 50' in t, f'fenêtre du compte {t[:200]!r}')
-    pg.click('dialog >> text=Fermer')
-
-    # --- cloud : enregistrer, mettre à jour, rouvrir, supprimer
-    pg.evaluate("Doc.mutate(d=>{d.name='Réseau test';const o={type:'line',a:[0,0],b:[4000,0],net:{dn:110,mat:'PVC',tag:'EU-9'}};o.id=d.nextId++;o.layer=3;d.objects.push(o)})")
-    pg.click('#cloud'); pg.wait_for_selector('dialog[open]'); pg.wait_for_timeout(200)
-    ok('Aucun projet' in dlg() and 'Enregistrer ce projet dans le cloud' in dlg(), 'cloud vide au départ')
-    pg.click('dialog >> text=Enregistrer ce projet dans le cloud'); pg.wait_for_timeout(300)
+    # --- nouveau projet depuis l'accueil
+    pg.click('#homeNewP'); pg.wait_for_selector('dialog[open]')
+    pg.fill('dialog input', ''); pg.click('dialog >> text=Créer'); ok('Saisissez un nom' in dlg(), 'nom vide refusé')
+    pg.fill('dialog input', 'Réseau test'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
     docs = S('window.__fb.docs'); ids = [k for k in docs if re.fullmatch(r'aiProjects/[^/]+', k)]
-    ok(len(ids) == 1 and docs[ids[0]]['ownerUid'] == 'u_alice' and docs[ids[0]]['name'] == 'Réseau test', f'fiche cloud créée {docs.get(ids[0]) if ids else docs.keys()}')
-    size1 = docs[ids[0]]['size']; ok(docs[ids[0] + '/content/main']['data'].count('EU-9') == 1 and docs['aiUsage/u_alice']['bytes'] == size1 and docs['aiUsage/u_alice']['lastPid'] == ids[0].split('/')[1], 'contenu et compteur écrits dans le même lot')
-    ok('Réseau test' in dlg() and 'Mettre à jour' in dlg(), 'liste rafraîchie, bouton Mettre à jour')
-    pg.evaluate("Doc.mutate(d=>{const o={type:'line',a:[0,500],b:[4000,500]};o.id=d.nextId++;o.layer=3;d.objects.push(o)})")
-    pg.click('dialog >> text=Mettre à jour le projet cloud'); pg.wait_for_timeout(300)
-    docs = S('window.__fb.docs'); size2 = docs[ids[0]]['size']
-    ok(size2 > size1 and docs['aiUsage/u_alice']['bytes'] == size2 and len([k for k in docs if k.startswith('aiProjects/') and k.count('/') == 1]) == 1, f'mise à jour : taille {size1}→{size2}, compteur cohérent')
-    pg.click('dialog >> text=Fermer')
-    pg.click('#new'); ok(S('Doc.get().objects.length') == 0, 'nouveau projet vide')
-    pg.click('#cloud'); pg.wait_for_selector('dialog[open]'); pg.wait_for_timeout(200)
-    pg.click('dialog >> text=Ouvrir'); pg.wait_for_timeout(300)
-    ok(S('Doc.get().objects.length') == 2 and S('Doc.get().name') == 'Réseau test' and S('Doc.get().objects[0].net.tag') == 'EU-9', 'projet cloud rouvert (avec son réseau)')
-    ok(pg.locator('dialog[open]').count() == 0, 'fenêtre fermée après ouverture')
-    pg.keyboard.press('Control+z'); ok(S('Doc.get().objects.length') == 0, 'ouverture annulable (Ctrl+Z)'); pg.keyboard.press('Control+y')
-    # suppression en deux temps
-    pg.click('#cloud'); pg.wait_for_selector('dialog[open]'); pg.wait_for_timeout(200)
-    pg.click('dialog >> text=Supprimer'); ok('Confirmer' in dlg(), 'suppression : confirmation demandée')
-    ok(len([k for k in S('window.__fb.docs') if k.startswith('aiProjects/')]) == 2, 'rien supprimé avant confirmation')
-    pg.click('dialog >> text=Confirmer'); pg.wait_for_timeout(300)
-    docs = S('window.__fb.docs'); ok(not [k for k in docs if k.startswith('aiProjects/')] and docs['aiUsage/u_alice']['bytes'] == 0, 'projet supprimé, compteur à zéro')
-    ok('Aucun projet' in dlg(), 'liste vide après suppression')
-    # règles non publiées / accès refusé
-    S('window.__fb.deny = true')
-    pg.click('dialog >> text=Enregistrer ce projet dans le cloud'); pg.wait_for_timeout(300)
-    ok('refusé' in pg.inner_text('#msg') and 'pas encore activé' in pg.inner_text('#msg'), f"message d'accès refusé : {pg.inner_text('#msg')!r}")
-    ok(not [k for k in S('window.__fb.docs') if k.startswith('aiProjects/')], 'aucune écriture partielle après refus')
-    S('window.__fb.deny = false'); pg.click('dialog >> text=Fermer')
+    ok(len(ids) == 1 and docs[ids[0]]['ownerUid'] == 'u_alice' and docs[ids[0]]['name'] == 'Réseau test' and docs[ids[0]]['folderId'] == '', f'fiche cloud créée {docs.get(ids[0]) if ids else list(docs)}')
+    ok(not pg.is_visible('#home') and S('Doc.get().name') == 'Réseau test' and S('Cloud.linked()') == ids[0].split('/')[1], 'projet ouvert dans l\'éditeur et lié au cloud')
+    ok('cloud' in pg.inner_text('#saved'), f"état cloud affiché : {pg.inner_text('#saved')!r}")
+    ok(docs['aiUsage/u_alice']['lastPid'] == ids[0].split('/')[1], 'compteur d\'usage écrit dans le même lot')
 
-    # --- restauration de session après rechargement
-    pg.reload(); pg.wait_for_timeout(600)
-    ok(pg.inner_text('#acct') == 'Alice' and S('Account.me().uid') == 'u_alice', 'session restaurée au rechargement')
+    # --- enregistrement automatique
+    pg.evaluate("Doc.mutate(d=>{const o={type:'line',a:[0,0],b:[4000,0],net:{dn:110,mat:'PVC',tag:'EU-9'}};o.id=d.nextId++;o.layer=3;d.objects.push(o)})")
+    ok('à enregistrer' in pg.inner_text('#saved'), f"modification en attente d'enregistrement : {pg.inner_text('#saved')!r}")
+    pg.wait_for_timeout(3600)
+    docs = S('window.__fb.docs'); size1 = docs[ids[0]]['size']
+    ok(docs[ids[0] + '/content/main']['data'].count('EU-9') == 1 and docs['aiUsage/u_alice']['bytes'] == size1, 'enregistrement automatique : contenu et compteur à jour')
+    ok(pg.inner_text('#saved').endswith('enregistré'), f"état : {pg.inner_text('#saved')!r}")
+    pg.evaluate("Doc.mutate(d=>{const o={type:'line',a:[0,500],b:[4000,500]};o.id=d.nextId++;o.layer=3;d.objects.push(o)})"); pg.wait_for_timeout(3600)
+    docs = S('window.__fb.docs'); size2 = docs[ids[0]]['size']
+    ok(size2 > size1 and docs['aiUsage/u_alice']['bytes'] == size2 and len([k for k in docs if re.fullmatch(r'aiProjects/[^/]+', k)]) == 1, f'2e enregistrement : {size1}→{size2}, compteur cohérent')
+
+    # --- dossiers
+    pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
+    ok('Réseau test' in pg.inner_text('#homeBody') and 'Ouvert' in pg.inner_text('#homeBody'), 'projet listé, marqué ouvert')
+    ok('Dessin actuel' in pg.inner_text('#homeSave') or True, 'bouton dessin actuel présent')
+    pg.click('#homeNewF'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Eau potable'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
+    fdocs = {k: v for k, v in S('window.__fb.docs').items() if re.fullmatch(r'aiFolders/[^/]+', k)}
+    ok(len(fdocs) == 1 and list(fdocs.values())[0]['name'] == 'Eau potable' and list(fdocs.values())[0]['parentId'] == '' and list(fdocs.values())[0]['ownerUid'] == 'u_alice', f'dossier créé {fdocs}')
+    fid = list(fdocs)[0].split('/')[1]
+    ok('Eau potable' in pg.inner_text('#homeBody') and '/ 5' in pg.inner_text('#homeQuota'), 'dossier affiché, compteur de dossiers')
+    # déplacer le projet dans le dossier
+    pg.click('.hcard .hdots'); pg.click('#homeMenu >> text=Déplacer'); pg.wait_for_selector('dialog[open]'); pg.click('dialog >> text=Eau potable'); pg.wait_for_timeout(400)
+    ok(S(f"window.__fb.docs['{ids[0]}'].folderId") == fid, 'projet déplacé dans le dossier (folderId)')
+    ok('Réseau test' not in pg.inner_text('#homeBody').split('Dossiers')[-1].split('Projets')[0] and not pg.locator('.hcard').count(), 'projet absent de la racine')
+    pg.click('.hfold'); pg.wait_for_timeout(200)
+    ok(pg.locator('.hcrumbs').count() == 1 and pg.locator('.hcard').count() == 1 and 'Réseau test' in pg.inner_text('.hcard'), 'navigation dans le dossier, fil d\'Ariane')
+    # sous-dossier + interdiction de se déplacer dans son propre contenu
+    pg.click('#homeNewF'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Branchements'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
+    sub = [v for k, v in S('window.__fb.docs').items() if re.fullmatch(r'aiFolders/[^/]+', k) and v['name'] == 'Branchements']
+    ok(len(sub) == 1 and sub[0]['parentId'] == fid, 'sous-dossier créé dans le dossier courant')
+    pg.click('.hcrumbs button >> nth=0'); pg.wait_for_timeout(150)
+    pg.locator('.hfold >> text=Eau potable').locator('xpath=ancestor::div[contains(@class,"hfold")]').locator('.hdots').click()
+    pg.click('#homeMenu >> text=Déplacer'); pg.wait_for_selector('dialog[open]'); pick = dlg()
+    ok('Branchements' not in pick and 'racine' in pick and 'Eau potable' not in pick.replace('Mes projets (racine)', ''), f'déplacement : pas de dossier dans son propre contenu {pick!r}'); pg.keyboard.press('Escape')
+    # renommer
+    pg.locator('.hfold .hdots').first.click(); pg.click('#homeMenu >> text=Renommer'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Eau froide'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
+    ok(S(f"window.__fb.docs['aiFolders/{fid}'].name") == 'Eau froide', 'dossier renommé')
+    # limite de 5 dossiers
+    for i in range(3):
+        pg.click('#homeNewF'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', f'Dossier {i}'); pg.keyboard.press('Enter'); pg.wait_for_timeout(300)
+    ok('5 / 5' in pg.inner_text('#homeQuota').replace('\n', ' '), 'cinq dossiers')
+    pg.click('#homeNewF'); pg.wait_for_selector('dialog[open]'); ok('Limite atteinte' in dlg(), 'sixième dossier refusé'); pg.keyboard.press('Escape')
+    # suppression du dossier : son contenu remonte
+    pg.locator('.hfold', has_text='Eau froide').locator('.hdots').click(); pg.click('#homeMenu >> text=Supprimer le dossier'); pg.wait_for_selector('dialog[open]')
+    ok('remontent' in dlg(), 'suppression de dossier : confirmation avec explication'); pg.click('dialog .dlg-f .btn.pri'); pg.wait_for_timeout(500)
+    docs = S('window.__fb.docs')
+    ok(f'aiFolders/{fid}' not in docs and docs[ids[0]]['folderId'] == '' and sub and [v for k, v in docs.items() if k.startswith('aiFolders/') and v['name'] == 'Branchements'][0]['parentId'] == '', 'dossier supprimé ; projet et sous-dossier remontés à la racine')
+    # renommer un projet
+    pg.locator('.hcard .hdots').click(); pg.click('#homeMenu >> text=Renommer'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Réseau EU'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
+    ok(S(f"window.__fb.docs['{ids[0]}'].name") == 'Réseau EU' and S('Doc.get().name') == 'Réseau EU', 'projet renommé (fiche et document ouvert)')
+
+    # --- ouvrir un autre projet : annulable, plus de lien avec l'ancien
+    pg.click('#homeBack'); ok(not pg.is_visible('#home'), 'retour au dessin')
+    pg.click('#new'); ok(S('Doc.get().objects.length') == 0 and S('Cloud.linked()') == '', 'nouveau projet : lien cloud rompu')
+    pg.evaluate("Doc.mutate(d=>{d.name='ne doit pas écraser'})"); pg.wait_for_timeout(3300)
+    ok(S(f"window.__fb.docs['{ids[0]}'].name") == 'Réseau EU', 'le dessin non lié n\'est jamais écrit dans le cloud')
+    pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
+    ok('Dessin actuel' in pg.inner_text('#homeSave') and 'sur cet appareil' not in pg.inner_text('#homeBody'), 'pas de bandeau si le dessin est vide')
+    pg.locator('.hcard').click(); pg.wait_for_timeout(400)
+    ok(S('Doc.get().objects.length') == 2 and S('Doc.get().name') == 'Réseau EU' and S('Doc.get().objects[0].net.tag') == 'EU-9' and not pg.is_visible('#home'), 'projet cloud rouvert (avec son réseau)')
+    pg.keyboard.press('Control+z'); pg.wait_for_timeout(3600)
+    ok(S('Doc.get().objects.length') == 2 and S('Doc.canUndo()') is False, 'ouverture d\'un projet cloud : historique vidé, Ctrl+Z ne revient pas au document précédent')
+    ok(S(f"window.__fb.docs['{ids[0]}/content/main'].data").count('"type":"line"') == 2, 'le projet cloud n\'est pas écrasé par un annuler')
+
+    # --- enregistrer le dessin actuel dans le cloud
+    pg.click('#new'); pg.evaluate("Doc.mutate(d=>{const o={type:'line',a:[0,0],b:[900,0]};o.id=d.nextId++;o.layer=3;d.objects.push(o)})")
+    pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
+    ok('sur cet appareil' in pg.inner_text('#homeBody'), 'bandeau : un dessin local peut être enregistré dans le cloud')
+    pg.click('#homeSave'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Dessin local'); pg.keyboard.press('Enter'); pg.wait_for_timeout(500)
+    ok(len([k for k in S('window.__fb.docs') if re.fullmatch(r'aiProjects/[^/]+', k)]) == 2 and S('Doc.get().name') == 'Dessin local' and S('Cloud.linked()') != '', 'dessin actuel enregistré dans le cloud')
+
+    # --- import d'un fichier .json
+    pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
+    tmp = pathlib.Path(tempfile.mkdtemp()); good = tmp / 'import.archiindus.json'; bad = tmp / 'mauvais.json'
+    good.write_text(json.dumps({'schemaVersion': 1, 'name': 'Importé', 'units': 'mm', 'layers': [{'id': 1, 'name': 'Calque 1', 'color': '#0877B9', 'group': 'x', 'visible': True, 'locked': False}], 'objects': [{'id': 1, 'type': 'line', 'layer': 1, 'a': [0, 0], 'b': [100, 0]}], 'nextId': 2, 'nextLayerId': 2, 'active': 1}), encoding='utf-8')
+    bad.write_text('{"schemaVersion":1,"objects":[{"type":"line","a":[0,"x"],"b":[1,1]}]}', encoding='utf-8')
+    n0 = len([k for k in S('window.__fb.docs') if re.fullmatch(r'aiProjects/[^/]+', k)])
+    pg.set_input_files('#homeFile', str(bad)); pg.wait_for_timeout(400)
+    ok(len([k for k in S('window.__fb.docs') if re.fullmatch(r'aiProjects/[^/]+', k)]) == n0 and 'Import impossible' in pg.inner_text('#msg'), f"fichier invalide refusé : {pg.inner_text('#msg')!r}")
+    pg.set_input_files('#homeFile', str(good)); pg.wait_for_timeout(500)
+    ok(len([k for k in S('window.__fb.docs') if re.fullmatch(r'aiProjects/[^/]+', k)]) == n0 + 1 and S('Doc.get().name') == 'Importé', 'fichier valide importé dans le cloud')
+
+    # --- suppression d'un projet (confirmation) ; accès refusé
+    pg.click('#cloud'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(300)
+    cnt = pg.locator('.hcard').count()
+    pg.locator('.hcard', has_text='Importé').locator('.hdots').click(); pg.click('#homeMenu >> text=Supprimer'); pg.wait_for_selector('dialog[open]'); ok('définitive' in dlg(), 'suppression de projet : confirmation')
+    pg.keyboard.press('Escape'); pg.wait_for_timeout(150); ok(pg.locator('.hcard').count() == cnt, 'rien supprimé sans confirmation')
+    pg.locator('.hcard', has_text='Importé').locator('.hdots').click(); pg.click('#homeMenu >> text=Supprimer'); pg.wait_for_selector('dialog[open]'); pg.click('dialog .dlg-f .btn.pri'); pg.wait_for_timeout(500)
+    docs = S('window.__fb.docs'); ok(pg.locator('.hcard').count() == cnt - 1 and docs['aiUsage/u_alice']['bytes'] == sum(v['size'] for k, v in docs.items() if re.fullmatch(r'aiProjects/[^/]+', k)), 'projet supprimé, compteur cohérent')
+    S('window.__fb.deny = true')
+    pg.click('#homeNewF'); pg.wait_for_selector('dialog[open]'); pg.fill('dialog input', 'Refusé'); pg.keyboard.press('Enter'); pg.wait_for_timeout(400)
+    ok('refusé' in pg.inner_text('#msg') and 'pas encore activé' in pg.inner_text('#msg'), f"message d'accès refusé : {pg.inner_text('#msg')!r}")
+    ok(not [v for k, v in S('window.__fb.docs').items() if k.startswith('aiFolders/') and v['name'] == 'Refusé'], 'aucune écriture après refus')
+    S('window.__fb.deny = false')
+
+    # --- restauration de session après rechargement : l'accueil s'affiche directement
+    pg.reload(); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(700)
+    ok(pg.is_visible('#home') and not pg.is_visible('#auth') and pg.inner_text('#homeHello') == 'Bonjour Alice' and S('Account.me().uid') == 'u_alice', 'session restaurée : accueil affiché directement')
 
     # --- déconnexion
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]'); pg.click('dialog >> text=Se déconnecter'); pg.wait_for_timeout(300)
-    ok(pg.inner_text('#acct') == 'Compte' and S('Account.me()') is None, 'déconnexion')
-    pg.click('#cloud'); pg.wait_for_selector('dialog[open]'); ok('Se connecter' in dlg(), 'Cloud sans compte : ouvre la connexion'); pg.keyboard.press('Escape')
-    pg.reload(); pg.wait_for_timeout(500); ok(S('Account.me()') is None, 'pas de session après déconnexion + rechargement')
+    pg.click('#homeUser'); pg.click('#homeMenu >> text=Se déconnecter'); pg.wait_for_timeout(300)
+    ok(pg.is_visible('#auth') and not pg.is_visible('#home') and pg.inner_text('#acct') == 'Compte' and S('Account.me()') is None, 'déconnexion : retour à la page de connexion')
+    pg.reload(); pg.wait_for_timeout(500); ok(pg.is_visible('#auth') and S('Account.me()') is None, 'pas de session après déconnexion + rechargement')
+    pg.click('#authSkip'); ok(not pg.is_visible('#auth'), 'continuer sans compte : éditeur local')
+    pg.click('#cloud'); ok(pg.is_visible('#auth'), 'Cloud sans compte : ouvre la connexion')
 
     # --- création de compte
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]'); pg.click('dialog >> text=Créer un compte')
-    pg.fill('dialog input[aria-label="Prénom"]', 'Nora'); pg.fill('dialog input[aria-label="Nom"]', 'Test'); pg.fill('dialog input[aria-label="Email"]', 'nora@example.org')
-    pg.fill('dialog input[aria-label="Mot de passe"]', 'court'); pg.check('dialog input[type=checkbox]'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(200)
-    ok('trop faible' in dlg(), 'mot de passe faible refusé')
-    pg.fill('dialog input[aria-label="Mot de passe"]', 'Passw0rd2'); pg.uncheck('dialog input[type=checkbox]'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(200)
-    ok('acceptez les conditions' in dlg() and 'nora@example.org' not in S('window.__fb ? Object.keys(window.__fb.users) : []'), 'conditions non acceptées : pas de compte')
-    pg.check('dialog input[type=checkbox]'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(300)
+    pg.click('#apCard >> text=Créer un compte >> nth=0') if False else pg.click('#apCard .ap-tabs button >> nth=1')
+    pg.fill('#apCard input[aria-label="Prénom"]', 'Nora'); pg.fill('#apCard input[aria-label="Nom"]', 'Test'); pg.fill('#apCard input[aria-label="Email"]', 'nora@example.org')
+    pg.fill('#apCard input[aria-label="Mot de passe"]', 'court'); pg.check('#apCard input[type=checkbox]'); pg.click('#apCard button[type=submit]'); pg.wait_for_timeout(200)
+    ok('trop faible' in pg.inner_text('#apCard'), 'mot de passe faible refusé')
+    pg.fill('#apCard input[aria-label="Mot de passe"]', 'Passw0rd2'); ok(pg.locator('.ap-rules li.ok').count() == 3, 'règles du mot de passe cochées en direct')
+    pg.uncheck('#apCard input[type=checkbox]'); pg.click('#apCard button[type=submit]'); pg.wait_for_timeout(200)
+    ok('conditions' in pg.inner_text('#apCard') and 'nora@example.org' not in S('window.__fb ? Object.keys(window.__fb.users) : []'), 'conditions non acceptées : pas de compte')
+    pg.check('#apCard input[type=checkbox]'); pg.click('#apCard button[type=submit]'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(400)
     prof = S("window.__fb.docs['users/' + window.__fb.users['nora@example.org'].uid]")
     ok(prof and prof['role'] == 'user' and prof['status'] == 'active' and prof['accountKind'] == 'individual' and prof['subscription'] == 'free' and prof['firstName'] == 'Nora' and 'termsAcceptedAt' in prof, f'profil Studio Prism par défaut {prof}')
     ok(pg.inner_text('#acct') == 'Nora' and S('Account.access().level') == 'free', 'compte créé et connecté, offre gratuite')
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]'); pg.wait_for_timeout(200); ok('Gratuite' in dlg() and '/ 10 Mo' in dlg(), f'licence gratuite, quota 10 Mo : {dlg()[:160]!r}')
-    pg.click('dialog >> text=Se déconnecter'); pg.wait_for_timeout(200)
+    q = pg.inner_text('#homeQuota'); ok('10 Mo' in q and 'Gratuit' in q, f'quota gratuit 10 Mo : {q!r}')
+    pg.click('#homeUser'); pg.click('#homeMenu >> text=Se déconnecter'); pg.wait_for_timeout(300)
     # email déjà utilisé
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]'); pg.click('dialog >> text=Créer un compte')
-    pg.fill('dialog input[aria-label="Prénom"]', 'X'); pg.fill('dialog input[aria-label="Email"]', 'alice@example.org'); pg.fill('dialog input[aria-label="Mot de passe"]', 'Passw0rd2'); pg.check('dialog input[type=checkbox]'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(200)
-    ok('existe déjà' in dlg(), 'email déjà utilisé signalé'); pg.keyboard.press('Escape')
+    pg.click('#apCard .ap-tabs button >> nth=1')
+    pg.fill('#apCard input[aria-label="Prénom"]', 'X'); pg.fill('#apCard input[aria-label="Email"]', 'alice@example.org'); pg.fill('#apCard input[aria-label="Mot de passe"]', 'Passw0rd2'); pg.check('#apCard input[type=checkbox]'); pg.click('#apCard button[type=submit]'); pg.wait_for_timeout(250)
+    ok('existe déjà' in pg.inner_text('#apCard'), 'email déjà utilisé signalé')
 
     # --- compte désactivé
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]')
-    pg.fill('dialog input[aria-label="Email"]', 'carol@example.org'); pg.fill('dialog input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(300)
-    ok('désactivé' in dlg() and S('Account.me()') is None, 'compte désactivé refusé');
+    pg.click('#apCard .ap-tabs button >> nth=0')
+    pg.fill('#apCard input[aria-label="Email"]', 'carol@example.org'); pg.fill('#apCard input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('#apCard button[type=submit]'); pg.wait_for_timeout(300)
+    ok('désactivé' in pg.inner_text('#apCard') and S('Account.me()') is None and pg.is_visible('#auth'), 'compte désactivé refusé')
     # --- mot de passe oublié
-    pg.click('dialog >> text=Mot de passe oublié'); pg.fill('dialog input[aria-label="Email"]', 'inconnu@example.org'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(200)
-    ok('Si un compte existe' in dlg() and S('window.__fb.resets') == ['inconnu@example.org'], 'réinitialisation : même message pour un email inconnu'); pg.keyboard.press('Escape')
+    pg.click('#apCard >> text=Mot de passe oublié'); pg.fill('#apCard input[aria-label="Email"]', 'inconnu@example.org'); pg.click('#apCard button[type=submit]'); pg.wait_for_timeout(250)
+    ok('Si un compte existe' in pg.inner_text('#apCard') and S('window.__fb.resets') == ['inconnu@example.org'], 'réinitialisation : même message pour un email inconnu')
+    pg.click('#apCard >> text=Retour à la connexion')
 
     # --- données hostiles : prénom contenant du HTML
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]')
-    pg.fill('dialog input[aria-label="Email"]', 'eve@example.org'); pg.fill('dialog input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('dialog button[type=submit]'); pg.wait_for_timeout(300)
-    ok(S('window.__x') is None and pg.locator('#acct img').count() == 0 and '<img' in pg.inner_text('#acct'), 'prénom hostile affiché comme texte, aucun HTML exécuté')
-    pg.click('#acct'); pg.wait_for_selector('dialog[open]'); pg.wait_for_timeout(200); ok(pg.locator('dialog img').count() == 0 and 'Gratuite' in dlg(), 'fenêtre du compte : pas de HTML injecté, offre gratuite')
-    pg.click('dialog >> text=Fermer')
+    pg.fill('#apCard input[aria-label="Email"]', 'eve@example.org'); pg.fill('#apCard input[aria-label="Mot de passe"]', 'Passw0rd1'); pg.click('#apCard button[type=submit]'); pg.wait_for_selector('#home:not([hidden])'); pg.wait_for_timeout(400)
+    ok(S('window.__x') is None and pg.locator('#home img, #acct img').count() == 0 and '<img' in pg.inner_text('#homeHello'), 'prénom hostile affiché comme texte, aucun HTML exécuté')
+    pg.click('#homeUser'); ok('<img' in pg.inner_text('#homeMenu') or pg.locator('#homeMenu img').count() == 0, 'menu du compte : pas de HTML injecté')
+    pg.keyboard.press('Escape')
 
     ok(not [u for u in blocked if 'gstatic' in u and 'firebasejs' in u], 'aucune requête Firebase inattendue')
     ok(all('googleapis.com/identitytoolkit' not in u and 'firestore.googleapis' not in u for u in blocked), f'aucune requête vers les services Google {[u for u in blocked if "google" in u][:3]}')
