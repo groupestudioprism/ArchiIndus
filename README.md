@@ -18,12 +18,16 @@ Application de conception de plans industriels et de réseaux techniques (résea
 - **Export PDF** vectoriel (A4 / A3, échelle au choix, cartouche, nomenclature), écrit à la main ; contrôlé avec qpdf, pypdf et poppler.
 - **Page de connexion et accueil « Mes projets »** (comme ArchiPlan) : connexion / création de compte / mot de passe oublié sur une page plein écran, « Continuer sans compte » pour travailler en local ; accueil avec carte de stockage, **dossiers imbriqués** (5 maximum par compte, limite côté application), projets, renommer, déplacer, supprimer, import `.json`, enregistrement du dessin actuel. Un projet ouvert depuis le cloud s'**enregistre automatiquement** (2,5 s après la dernière modification) ; l'historique annuler/rétablir est vidé à l'ouverture pour qu'un « annuler » ne puisse pas écraser un projet cloud.
 - **Compte Studio Prism et projets cloud** (boutons Compte / Cloud) : connexion, création de compte, licence `licenses/{uid}_archiindus`, quota 10 Mo / 50 Mo (licence active) / 1 Go (admin). Données dans `aiProjects`, `aiFolders`, `aiUsage` du projet commun.
+- **Équipements et poteaux** (outil « Équip. », touche E) : 13 symboles de principe en plan (pompe, vanne, clapet, regard, cuve, compteur, coffret, moteur, ventilateur, échangeur, poteau carré, poteau rond, semelle), taille, rotation (`[` et `]` : 15°), repère. Modifiables après pose depuis le panneau.
+- **Murs et poutres** : mode de tracé « Mur » (épaisseur, matériau) ou « Poutre » (largeur, profilé) ; la ligne ou polyligne tracée devient une bande d'épaisseur réelle avec étiquette. Applicable aussi à une sélection existante. Un objet ne peut pas être à la fois réseau et structure (le réseau l'emporte).
+- Équipements et structures sont repris dans les exports SVG, DXF, PDF et dans la nomenclature (écran et CSV).
+- **Panneau d'options** refondu : sections repliables (état mémorisé dans le navigateur), calques avec boutons œil / cadenas, mode de tracé en un seul sélecteur, bibliothèque de symboles en vignettes. Tests : `tests/e2e_equip.py`.
 - Thème clair et sombre.
 
 ### Limites connues
 
 - Le DXF n'a pas été ouvert dans un logiciel de CAO : seule sa structure a été contrôlée. Les accents sont supprimés, les couleurs sont ramenées aux indices AutoCAD.
-- Structures, équipements, symboles et vue 3D / ArchiVision **n'existent pas encore** (phases 4 et 7).
+- Vue 3D / ArchiVision **n'existe pas encore** (phase 7). Les symboles sont des schémas de principe, pas des symboles normalisés ; pas de bibliothèque personnalisée, pas de jonction automatique des murs entre eux (chevauchements visibles). Phase 4 et nouveau panneau testés dans Chromium sans interface uniquement, pas sur un téléphone réel.
 - Compte : pas de code PIN ni de verrouillage. Pas de partage de projets ou de dossiers (par email ou lien), pas de « Partagés avec moi », pas de miniatures de projets, pas de vérification d'email. Les règles n'empêchent pas un dossier d'être déplacé dans son propre sous-dossier (contrôlé par l'application seulement). Le lien projet courant ↔ projet cloud n'est gardé qu'en mémoire. Le compteur d'usage cloud dépend des règles ; non vérifié en production.
 - L'export PDF n'a pas été ouvert dans tous les lecteurs (seulement qpdf, pypdf, poppler).
 - Pas de gestion du tactile à deux doigts ; l'outil Main permet de déplacer la vue au doigt.
@@ -38,7 +42,7 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | `src/css/app.css`, `src/css/home.css` | Mise en page et composants ; connexion et accueil (repris d'`auth.css` / `home.css` d'ArchiPlan). |
 | `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `79-cloudstore`, `79-account`, `79-home` (page de connexion et accueil), `80-main`. |
 | `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html`. |
-| `tests/e2e_reseaux.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
+| `tests/e2e_reseaux.py`, `tests/e2e_equip.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF, des équipements / structures / panneau, et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
 | `tests/rules/` | Règles Firestore testées à l'émulateur contre les règles publiées d'ArchiPlan + le bloc `ai*` proposé : `cd tests/rules && npm install && PUBLISHED_RULES=<chemin firestore.rules> npm test`. |
 | `tests/e2e.py` | Test de bout en bout (Playwright pour Python) : `pip install playwright`, `playwright install chromium`, puis `python3 tests/e2e.py`. |
 | `firebase/firestore.ai.rules.proposed` | Bloc de règles `ai*` (projets, dossiers, quota) **déjà publié** dans le fichier de règles commun (v2, 15/10/2026), testé à l'émulateur (63 contrôles). Toute modification se publie en comparant d'abord au fichier de base. |
@@ -48,7 +52,7 @@ On modifie `src/`, on lance `python3 tools/build.py`, on enregistre (commit) : s
 
 ## Format du projet (`schemaVersion` 1)
 
-JSON : `name`, `units` (`mm`), `layers` (`id`, `name`, `color`, `group`, `visible`, `locked`), `objects` (`id`, `type`, `layer` + géométrie), `active`, compteurs. Types d'objets : `line {a,b}`, `poly {pts,closed}`, `circle {c,r}`, `dim {a,b,off,h}`, `text {p,text,h}`. Axe Y vers le haut. À l'ouverture, tout fichier est validé (types, nombres finis, tailles) ; un fichier invalide est refusé sans toucher au projet courant.
+JSON : `name`, `units` (`mm`), `layers` (`id`, `name`, `color`, `group`, `visible`, `locked`), `objects` (`id`, `type`, `layer` + géométrie), `active`, compteurs. Types d'objets : `line {a,b}`, `poly {pts,closed}`, `circle {c,r}`, `dim {a,b,off,h}`, `text {p,text,h}`, `sym {c,k,s,rot,tag}` (équipement ou poteau). Les lignes et polylignes peuvent porter `net {dn,mat,tag}` ou `st {kind: mur|poutre, w, prof, tag}`. Axe Y vers le haut. À l'ouverture, tout fichier est validé (types, nombres finis, tailles) ; un fichier invalide est refusé sans toucher au projet courant.
 
 ## Comptes et licences (codés, non activés)
 

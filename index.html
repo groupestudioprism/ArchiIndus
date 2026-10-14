@@ -76,23 +76,59 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 #tbox:focus,#cmd:focus{outline:2px solid var(--accent-soft)}
 
 /* Panneau */
-#panel{grid-area:panel;overflow:auto;padding:14px 16px;background:var(--panel);border-left:1px solid var(--line)}
-#panel h2{font-family:var(--f-display);font-weight:700;font-size:15px;margin:0 0 6px}
-#panel h2:not(:first-child){margin-top:18px}
+#panel{grid-area:panel;overflow:auto;padding:6px 0 16px;background:var(--panel);border-left:1px solid var(--line);width:300px}
+.pn{border-bottom:1px solid var(--line)}
+.pn-h{margin:0;font:inherit}
+.pn-h button{display:flex;align-items:center;gap:8px;width:100%;height:40px;padding:0 16px;border:0;background:transparent;color:var(--ink);cursor:pointer;text-align:left;font:700 12px var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.pn-h button:hover{background:var(--chip)}
+.pn-h button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pn-t{flex:1}
+.pn-n{min-width:20px;height:18px;padding:0 6px;border-radius:9px;background:var(--chip);color:var(--mut);font:600 11px/18px var(--f-mono);text-align:center}
+.pn-c{width:16px;height:16px;fill:none;stroke:var(--mut);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.pn.closed .pn-c{transform:rotate(-90deg)}
+.pn-b{padding:2px 16px 14px}
+.pn-b[hidden]{display:none}
+.pn-hint{margin:8px 0 0;font-size:12px;line-height:1.45;color:var(--mut)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);padding:3px;gap:2px;border-radius:9px;background:var(--chip)}
+.seg button{height:28px;border:0;border-radius:7px;background:transparent;color:var(--mut);font:600 12px var(--f-body);cursor:pointer;padding:0 2px}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-checked="true"]{background:var(--panel);color:var(--accent);box-shadow:var(--shadow-s)}
+.seg button:focus-visible{outline:2px solid var(--accent)}
+.row3{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3 .lbl:last-child{grid-column:1/-1}
+.row2b{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sym-g{margin:10px 0 6px;font:600 11px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+.sym-g:first-child{margin-top:0}
+.sym-list{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sym-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px 5px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);cursor:pointer;font:500 10.5px/1.2 var(--f-body);min-width:0}
+.sym-btn span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sym-btn:hover{border-color:var(--accent)}
+.sym-btn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.sym-btn:focus-visible{outline:2px solid var(--accent)}
+.sym-svg{width:34px;height:34px}
 .mut{color:var(--mut);margin:0 0 6px;line-height:1.5}
 .small{font-size:12px}
 
-.ly{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:8px}
-.ly.on{background:var(--accent-soft)}
-.ly input[type=text]{flex:1;min-width:0;height:28px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:500 13px var(--f-body);padding:0 6px}
-.ly input[type=text]:hover,.ly input[type=text]:focus{border-color:var(--line);background:var(--panel);outline:none}
-.ly input[type=color]{width:24px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;flex:0 0 auto;cursor:pointer}
-.ly input[type=checkbox],.ly input[type=radio]{margin:0;flex:0 0 auto;accent-color:var(--accent)}
-.ly input.lk{accent-color:var(--danger)}
-.ib{flex:0 0 auto;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--mut);cursor:pointer;padding:0;font-size:12px}
-.ib:hover:not(:disabled){background:var(--chip);color:var(--danger)}
+.ly{display:flex;align-items:center;gap:2px;padding:2px 4px 2px 0;margin:0 -4px 0 -4px;border-radius:8px;border-left:3px solid transparent}
+.ly:hover{background:var(--chip)}
+.ly.on{background:var(--accent-soft);border-left-color:var(--accent)}
+.ly.off .ly-name{color:var(--mut);text-decoration:line-through}
+.ly-pick{flex:0 0 auto;width:8px;height:28px;border:0;background:transparent;cursor:pointer;padding:0}
+.ly-name{flex:1;min-width:0;height:28px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);font:500 13px var(--f-body);padding:0 6px}
+.ly-name:hover,.ly-name:focus{border-color:var(--line);background:var(--panel);outline:none}
+.ly-col{flex:0 0 auto;width:20px;height:20px;padding:0;border:1px solid var(--line);border-radius:50%;background:none;cursor:pointer;margin:0 2px;overflow:hidden}
+.ly-col::-webkit-color-swatch-wrapper{padding:0}.ly-col::-webkit-color-swatch{border:0;border-radius:50%}.ly-col::-moz-color-swatch{border:0}
+.ly-n{flex:0 0 auto;min-width:18px;text-align:right;font:500 11px var(--f-mono);color:var(--mut)}
+.ib{flex:0 0 auto;display:inline-grid;place-items:center;width:26px;height:26px;border:0;border-radius:6px;background:transparent;color:var(--mut);cursor:pointer;padding:0;font-size:12px}
+.ib:hover:not(:disabled){background:var(--chip);color:var(--ink)}
+.ly .ib:hover:not(:disabled){background:var(--panel)}
+.ib.del:hover:not(:disabled){color:var(--danger)}
 .ib:disabled{opacity:.3;cursor:not-allowed}
-
+.ib:focus-visible{outline:2px solid var(--accent)}
+.ib.tg:not(.on){opacity:.55}
+.ib.tg.lk.on{color:var(--danger)}
+.ic{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#addLayer{margin-top:8px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0 0 8px}
 .kv dt{color:var(--mut)}
 .kv dd{margin:0;text-align:right;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -101,7 +137,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 
 .chk{display:flex;align-items:center;gap:8px;margin:0 0 6px;cursor:pointer}
 .chk input{accent-color:var(--accent);margin:0}
-.row2{display:grid;grid-template-columns:90px 1fr;gap:8px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .fld{display:block;width:100%;height:32px;margin-top:4px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;padding:0 8px;min-width:0}
 .fld:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
 .netbox{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0}
@@ -420,6 +456,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
     <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
     <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
     <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
+    <button class="tool" type="button" data-tool="sym" title="Équipements et poteaux (E)">Équip.</button>
     <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
     <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
     <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
@@ -433,23 +470,64 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
     <div id="hint"></div>
   </main>
 
-  <aside id="panel" aria-label="Panneau">
-    <h2>Calques</h2>
-    <p class="mut small">Rond = calque actif · 1re case = visible · 2e case = verrouillé</p>
-    <div id="layers"></div>
-    <button id="addLayer" class="btn wide" type="button">+ Calque</button>
-    <h2>Réseau</h2>
-    <label class="chk"><input id="netOn" type="checkbox"> Tracer en réseau (lignes et polylignes)</label>
-    <div class="row2">
-      <label class="lbl">DN (mm)<input id="netDn" class="fld" type="number" min="1" max="5000" step="any" value="100"></label>
-      <label class="lbl">Matériau<input id="netMat" class="fld" type="text" list="netMats" maxlength="30"></label>
-    </div>
-    <datalist id="netMats"></datalist>
-    <h2>Sélection</h2>
-    <div id="props"></div>
-    <h2>Raccourcis</h2>
-    <p class="mut small">V L P R C D T M K H : outils · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
-    <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud » (le cloud n'est utilisable qu'une fois ses règles de sécurité publiées).</p>
+  <aside id="panel" aria-label="Panneau d'options">
+    <section class="pn" data-sec="layers">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-layers"><span class="pn-t">Calques</span><span class="pn-n" id="layerCount"></span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-layers">
+        <div id="layers"></div>
+        <button id="addLayer" class="btn wide" type="button">+ Calque</button>
+      </div>
+    </section>
+    <section class="pn" data-sec="draw">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-draw"><span class="pn-t">Tracé</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-draw">
+        <div class="seg" role="radiogroup" aria-label="Mode de tracé des lignes et polylignes">
+          <button type="button" role="radio" id="modeNone" data-mode="none" aria-checked="true">Simple</button>
+          <button type="button" role="radio" id="modeNet" data-mode="net" aria-checked="false">Réseau</button>
+          <button type="button" role="radio" id="modeMur" data-mode="mur" aria-checked="false">Mur</button>
+          <button type="button" role="radio" id="modePoutre" data-mode="poutre" aria-checked="false">Poutre</button>
+        </div>
+        <p class="pn-hint" id="modeHint">Les lignes et polylignes sont tracées sans attribut.</p>
+        <div class="row2" id="fldNet" hidden>
+          <label class="lbl">DN (mm)<input id="netDn" class="fld" type="number" min="1" max="5000" step="any" value="100"></label>
+          <label class="lbl">Matériau<input id="netMat" class="fld" type="text" list="netMats" maxlength="30"></label>
+        </div>
+        <div class="row2" id="fldMur" hidden>
+          <label class="lbl">Épaisseur (mm)<input id="murW" class="fld" type="number" min="1" max="5000" step="any" value="200"></label>
+          <label class="lbl">Matériau<input id="murProf" class="fld" type="text" list="stMur" maxlength="30"></label>
+        </div>
+        <div class="row2" id="fldPoutre" hidden>
+          <label class="lbl">Largeur (mm)<input id="poutreW" class="fld" type="number" min="1" max="5000" step="any" value="150"></label>
+          <label class="lbl">Profilé<input id="poutreProf" class="fld" type="text" list="stPoutre" maxlength="30"></label>
+        </div>
+        <datalist id="netMats"></datalist><datalist id="stMur"></datalist><datalist id="stPoutre"></datalist>
+      </div>
+    </section>
+    <section class="pn" data-sec="lib">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-lib"><span class="pn-t">Équipements et structure</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-lib">
+        <div id="symGrid"></div>
+        <div class="row3">
+          <label class="lbl">Taille (mm)<input id="symS" class="fld" type="number" min="10" max="5000" step="any" value="400"></label>
+          <label class="lbl">Rotation (°)<input id="symRot" class="fld" type="number" min="0" max="360" step="15" value="0"></label>
+          <label class="lbl">Repère<input id="symTag" class="fld" type="text" maxlength="30" placeholder="ex. P1"></label>
+        </div>
+        <p class="pn-hint">Choisir un symbole active l'outil Équipements (E) : un clic pose le symbole. [ et ] tournent de 15°.</p>
+      </div>
+    </section>
+    <section class="pn" data-sec="sel">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-sel"><span class="pn-t">Sélection</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-sel">
+        <div id="props"></div>
+      </div>
+    </section>
+    <section class="pn" data-sec="help">
+      <h2 class="pn-h"><button type="button" aria-expanded="false" aria-controls="pn-help"><span class="pn-t">Aide et raccourcis</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-help">
+        <p class="mut small">Outils : V L P R C D T E M K H · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
+        <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud ».</p>
+      </div>
+    </section>
   </aside>
 
   <footer id="status">
@@ -604,6 +682,11 @@ const state = {
   snap: { on: true, ortho: false },
   /* Tracé en réseau : si `on`, les lignes et polylignes ouvertes créées reçoivent {dn, mat} (voir Doc.add). */
   net: { on: false, dn: 100, mat: '' },
+  /* Mode de tracé des lignes et polylignes : 'none' | 'net' (réseau) | 'mur' | 'poutre' (attribut st). net.on reste égal à (mode === 'net'). */
+  mode: 'none',
+  st: { w: { mur: 200, poutre: 150 }, prof: { mur: '', poutre: '' } },
+  /* Symbole à poser (outil « Équipements ») : voir SYMBOLS. */
+  sym: { k: 'pompe', s: 400, rot: 0, tag: '' },
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };
@@ -792,7 +875,7 @@ const Canvas2D = (() => {
 
 /* ==== 30-geometry.js ==== */
 /* Géométrie 2D. Un point est [x, y] en millimètres.
-   Objets : line {a,b} · poly {pts,closed} · circle {c,r} · dim {a,b,off,h} · text {p,text,h}. */
+   Objets : line {a,b} · poly {pts,closed} · circle {c,r} · dim {a,b,off,h} · text {p,text,h} · sym {c,k,s,rot,tag}. */
 const G = {
   dist: (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]),
   mid: (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
@@ -850,10 +933,12 @@ const Geo = {
     else if (o.type === 'poly') pts = o.pts;
     else if (o.type === 'circle') pts = [[o.c[0] - o.r, o.c[1] - o.r], [o.c[0] + o.r, o.c[1] + o.r]];
     else if (o.type === 'dim') { const g = Geo.dimGeom(o); pts = [o.a, o.b, g.p1, g.p2]; }
+    else if (o.type === 'sym') { const r = o.s * 0.71; pts = [[o.c[0] - r, o.c[1] - r], [o.c[0] + r, o.c[1] + r]]; }
     else pts = [o.p, [o.p[0] + Geo.textWidth(o), o.p[1] + o.h]];
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
-    return [x0, y0, x1, y1];
+    const pad = o.st ? o.st.w / 2 * 3 : 0;   /* demi-largeur, angles vifs coupés à 3 × */
+    return [x0 - pad, y0 - pad, x1 + pad, y1 + pad];
   },
 
   /* Distance d'un point à un objet (mm). */
@@ -863,9 +948,10 @@ const Geo = {
         let d = Infinity;
         for (const [a, b] of Geo.segments(o)) d = Math.min(d, G.distPtSeg(p, a, b));
         if (o.type === 'poly' && o.pts.length === 1) d = G.dist(p, o.pts[0]);
-        return d;
+        return o.st ? Math.max(0, d - o.st.w / 2) : d;
       }
       case 'circle': return Math.abs(G.dist(p, o.c) - o.r);
+      case 'sym': return Math.max(0, G.dist(p, o.c) - o.s * 0.5);
       case 'dim': {
         const g = Geo.dimGeom(o);
         return Math.min(G.distPtSeg(p, g.p1, g.p2), G.distPtSeg(p, o.a, g.p1), G.distPtSeg(p, o.b, g.p2));
@@ -883,7 +969,7 @@ const Geo = {
     const mv = (p) => { p[0] += dx; p[1] += dy; };
     if (o.type === 'line' || o.type === 'dim') { mv(o.a); mv(o.b); }
     else if (o.type === 'poly') o.pts.forEach(mv);
-    else if (o.type === 'circle') mv(o.c);
+    else if (o.type === 'circle' || o.type === 'sym') mv(o.c);
     else if (o.type === 'text') mv(o.p);
     return o;
   },
@@ -1012,6 +1098,8 @@ const Doc = (() => {
     for (const l of layers) if (!l.id) l.id = ++maxL;
     const layerIds = new Set(layers.map((l) => l.id));
 
+    /* Réseau (net) ou structure (st) : un seul des deux ; le réseau l'emporte. */
+    const attrs = (o, out) => { const nt = cleanNet(o.net); if (nt) out.net = nt; else { const sc = cleanSt(o.st); if (sc) out.st = sc; } };
     const objects = [];
     const seenO = new Set();
     let maxO = 0;
@@ -1020,14 +1108,15 @@ const Doc = (() => {
       if (!o || typeof o !== 'object') bad(where + '.');
       const out = { type: o.type };
       switch (o.type) {
-        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); { const nt = cleanNet(o.net); if (nt) out.net = nt; } break;
+        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); attrs(o, out); break;
         case 'poly':
           if (!Array.isArray(o.pts) || o.pts.length < 2 || o.pts.length > 100000) bad(where + ' (polyligne).');
           out.pts = o.pts.map(pt);
           if (out.pts.some((p) => !p)) bad(where + ' (polyligne).');
           out.closed = o.closed === true;
-          { const nt = cleanNet(o.net); if (nt) out.net = nt; }
+          attrs(o, out);
           break;
+        case 'sym': { out.c = pt(o.c); const cs = cleanSym(o); if (!out.c || !cs) bad(where + ' (symbole).'); Object.assign(out, cs); break; }
         case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
         case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
         case 'text':
@@ -1074,9 +1163,9 @@ const Doc = (() => {
     /* À appeler dans mutate : ajoute un objet sur le calque actif. */
     add(o) {
       o.id = data.nextId++; o.layer = data.active;
-      if (state.net.on && (o.type === 'line' || (o.type === 'poly' && !o.closed))) {
-        const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' });
-        if (nt) o.net = nt;
+      if (state.mode !== 'none' && (o.type === 'line' || (o.type === 'poly' && (!o.closed || state.mode !== 'net')))) {
+        if (state.mode === 'net') { const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' }); if (nt) o.net = nt; }
+        else { const k = state.mode, sc = cleanSt({ kind: k, w: state.st.w[k], prof: state.st.prof[k], tag: '' }); if (sc) o.st = sc; }
       }
       data.objects.push(o);
       return o;
@@ -1109,6 +1198,131 @@ const Doc = (() => {
   };
 })();
 
+/* ==== 45-symbols.js ==== */
+/* Équipements, poteaux (objets « sym ») et structures linéaires murs / poutres (attribut « st » des lignes et polylignes).
+   Tout est dessiné avec des éléments vectoriels simples (lignes, polylignes, cercles, textes) : Sym.expand(o) convertit un objet en ces
+   éléments, utilisés tels quels par le rendu, l'export SVG, DXF et PDF. Les symboles sont des schémas de principe (vue en plan) : ils ne
+   remplacent pas un symbole normalisé du bureau d'études.
+   Primitives d'un symbole, dans un carré de côté 1 centré sur l'origine, axe Y vers le haut :
+     ['L', x1, y1, x2, y2] · ['C', cx, cy, r] · ['P', [x, y, x, y, …], fermé] */
+const SYM_MIN = 10, SYM_MAX = 5000;
+const SQ = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5];
+const SYMBOLS = {
+  pompe:      { label: 'Pompe', group: 'equip', size: 400, tag: 'P', prims: [['C', 0, 0, 0.5], ['P', [-0.25, -0.3, 0.35, 0, -0.25, 0.3], true]] },
+  vanne:      { label: 'Vanne', group: 'equip', size: 300, tag: 'V', prims: [['P', [-0.5, -0.3, 0.5, 0.3, 0.5, -0.3, -0.5, 0.3], true], ['L', 0, 0, 0, 0.5], ['L', -0.15, 0.5, 0.15, 0.5]] },
+  clapet:     { label: 'Clapet anti-retour', group: 'equip', size: 300, tag: 'CL', prims: [['P', [-0.35, -0.35, 0.35, 0, -0.35, 0.35], true], ['L', 0.42, -0.35, 0.42, 0.35], ['L', -0.5, 0, -0.35, 0], ['L', 0.35, 0, 0.5, 0]] },
+  regard:     { label: 'Regard / avaloir', group: 'equip', size: 800, tag: 'R', prims: [['P', SQ, true], ['L', -0.5, -0.5, 0.5, 0.5], ['L', -0.5, 0.5, 0.5, -0.5]] },
+  cuve:       { label: 'Cuve / réservoir', group: 'equip', size: 2000, tag: 'B', prims: [['C', 0, 0, 0.5], ['C', 0, 0, 0.38]] },
+  compteur:   { label: 'Compteur', group: 'equip', size: 300, tag: 'CPT', prims: [['P', SQ, true], ['C', 0, 0, 0.3]] },
+  coffret:    { label: 'Coffret électrique', group: 'equip', size: 600, tag: 'CE', prims: [['P', [-0.5, -0.35, 0.5, -0.35, 0.5, 0.35, -0.5, 0.35], true], ['L', -0.5, -0.35, 0.5, 0.35]] },
+  moteur:     { label: 'Moteur', group: 'equip', size: 500, tag: 'M', prims: [['C', 0, 0, 0.5], ['P', [-0.28, -0.2, -0.28, 0.2, 0, -0.05, 0.28, 0.2, 0.28, -0.2], false]] },
+  ventilo:    { label: 'Ventilateur', group: 'equip', size: 500, tag: 'VT', prims: [['C', 0, 0, 0.5], ['L', -0.35, -0.35, 0.35, 0.35], ['L', -0.35, 0.35, 0.35, -0.35]] },
+  echangeur:  { label: 'Échangeur', group: 'equip', size: 800, tag: 'EC', prims: [['P', [-0.5, -0.35, 0.5, -0.35, 0.5, 0.35, -0.5, 0.35], true], ['P', [-0.4, 0, -0.2, 0.25, 0, -0.25, 0.2, 0.25, 0.4, 0], false]] },
+  poteau:     { label: 'Poteau carré', group: 'struct', size: 300, tag: 'PO', prims: [['P', SQ, true], ['L', -0.5, -0.5, 0.5, 0.5], ['L', -0.5, 0.5, 0.5, -0.5]] },
+  poteauRond: { label: 'Poteau rond', group: 'struct', size: 300, tag: 'PO', prims: [['C', 0, 0, 0.5], ['L', -0.5, 0, 0.5, 0], ['L', 0, -0.5, 0, 0.5]] },
+  semelle:    { label: 'Semelle', group: 'struct', size: 1200, tag: 'S', prims: [['P', SQ, true], ['P', [-0.3, -0.3, 0.3, -0.3, 0.3, 0.3, -0.3, 0.3], true]] },
+};
+const SYM_GROUPS = { equip: 'Équipements', struct: 'Structure' };
+
+/* Structures linéaires : attribut `st` {kind, w (mm), prof, tag}. mur : w = épaisseur, prof = matériau ; poutre : w = largeur, prof = profilé. */
+const ST_KINDS = { mur: { label: 'Mur', wDef: 200, wLabel: 'Épaisseur (mm)', pLabel: 'Matériau', ex: ['Béton', 'Parpaing', 'Brique', 'Béton armé', 'Acier'] }, poutre: { label: 'Poutre', wDef: 150, wLabel: 'Largeur (mm)', pLabel: 'Profilé', ex: ['IPE 160', 'IPE 200', 'IPE 240', 'IPE 300', 'HEA 160', 'HEA 200', 'HEB 200', 'UPN 160', 'Béton 20x40'] } };
+const ST_W_MAX = 5000;
+function cleanSym(o) {
+  const def = SYMBOLS[o.k];
+  const num = (v) => typeof v === 'number' && Number.isFinite(v);
+  if (!def || !num(o.s) || o.s < SYM_MIN || o.s > SYM_MAX || !num(o.rot)) return null;
+  const s = (v) => (typeof v === 'string' ? v.trim().slice(0, 30) : '');
+  return { k: o.k, s: Math.round(o.s * 10) / 10, rot: ((Math.round(o.rot * 10) / 10) % 360 + 360) % 360, tag: s(o.tag) };
+}
+function cleanSt(n) {
+  if (!n || typeof n !== 'object' || !ST_KINDS[n.kind]) return null;
+  const w = Number(n.w);
+  if (!Number.isFinite(w) || w <= 0 || w > ST_W_MAX) return null;
+  const s = (v) => (typeof v === 'string' ? v.trim().slice(0, 30) : '');
+  return { kind: n.kind, w: Math.round(w * 10) / 10, prof: s(n.prof), tag: s(n.tag) };
+}
+
+const Sym = (() => {
+  /* Primitives d'un symbole transformées en repère monde (taille s, rotation rot en degrés). */
+  function world(o) {
+    const def = SYMBOLS[o.k], th = o.rot * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th);
+    const T = (x, y) => [o.c[0] + (x * cs - y * sn) * o.s, o.c[1] + (x * sn + y * cs) * o.s];
+    const out = [];
+    for (const p of def.prims) {
+      if (p[0] === 'L') out.push({ type: 'line', a: T(p[1], p[2]), b: T(p[3], p[4]) });
+      else if (p[0] === 'C') out.push({ type: 'circle', c: T(p[1], p[2]), r: p[3] * o.s });
+      else { const pts = []; for (let i = 0; i < p[1].length; i += 2) pts.push(T(p[1][i], p[1][i + 1])); out.push({ type: 'poly', pts, closed: p[2] }); }
+    }
+    return out;
+  }
+
+  /* Contour d'une polyligne épaissie de w (mm) : angles vifs coupés au-delà de 3 × la demi-largeur. Ouverte : un polygone ; fermée : deux anneaux. */
+  function band(pts0, closed, w) {
+    const pts = [];
+    for (const p of pts0) if (!pts.length || G.dist(pts[pts.length - 1], p) > 1e-6) pts.push(p);
+    if (closed && pts.length > 1 && G.dist(pts[0], pts[pts.length - 1]) < 1e-6) pts.pop();
+    const n = pts.length, h = w / 2;
+    if (n < 2) return [];
+    const normal = (a, b) => { const L = G.dist(a, b) || 1; return [-(b[1] - a[1]) / L, (b[0] - a[0]) / L]; };
+    const side = (sgn) => {
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const prev = i > 0 || closed ? pts[(i - 1 + n) % n] : null, next = i < n - 1 || closed ? pts[(i + 1) % n] : null;
+        const n1 = prev ? normal(prev, pts[i]) : null, n2 = next ? normal(pts[i], next) : null;
+        let nv;
+        if (!n1) nv = n2; else if (!n2) nv = n1; else nv = [n1[0] + n2[0], n1[1] + n2[1]];
+        let m = Math.hypot(nv[0], nv[1]);
+        if (m < 1e-9) { nv = n1 || n2; m = 1; }                      /* demi-tour : on garde la normale du tronçon */
+        const u = [nv[0] / m, nv[1] / m];
+        const dot = n1 && n2 ? u[0] * n1[0] + u[1] * n1[1] : 1;
+        const len = Math.min(h / Math.max(dot, 1e-6), 3 * h);
+        out.push([pts[i][0] + sgn * u[0] * len, pts[i][1] + sgn * u[1] * len]);
+      }
+      return out;
+    };
+    const L = side(1), R = side(-1);
+    return closed ? [{ pts: L, closed: true }, { pts: R, closed: true }] : [{ pts: L.concat(R.reverse()), closed: true }];
+  }
+
+  const stLabel = (st) => (st.tag ? st.tag + ' · ' : '') + ST_KINDS[st.kind].label + (st.prof ? ' ' + (st.kind === 'mur' ? 'e' + st.w + ' ' + st.prof : st.prof) : (st.kind === 'mur' ? ' e' + st.w : ''));
+
+  /* Texte posé le long du plus long tronçon, centré, lisible (jamais à l'envers). */
+  function alongText(pts, closed, str, h, off) {
+    let best = null, bl = 0;
+    for (const [a, b] of Geo.segments({ type: 'poly', pts, closed })) { const l = G.dist(a, b); if (l > bl) { bl = l; best = [a, b]; } }
+    if (!best) return null;
+    let deg = Math.atan2(best[1][1] - best[0][1], best[1][0] - best[0][0]) * 180 / Math.PI;
+    if (deg > 90 || deg < -90) deg += 180;
+    const th = deg * Math.PI / 180, u = [Math.cos(th), Math.sin(th)], up = [-Math.sin(th), Math.cos(th)], m = G.mid(best[0], best[1]);
+    const wd = str.length * h * 0.6;
+    return { type: 'text', p: [m[0] - u[0] * wd / 2 + up[0] * off, m[1] - u[1] * wd / 2 + up[1] * off], text: str, h, deg: +deg.toFixed(3) };
+  }
+
+  /* Éléments de dessin d'un objet « sym » ou d'une ligne / polyligne « st » (sinon : l'objet lui-même). */
+  function expand(o) {
+    if (o.type === 'sym') {
+      const out = world(o);
+      if (o.tag) {
+        const h = Math.max(o.s * 0.22, 80), wd = o.tag.length * h * 0.6;
+        out.push({ type: 'text', p: [o.c[0] - wd / 2, o.c[1] - o.s * 0.5 - h * 1.4], text: o.tag, h });
+      }
+      return out;
+    }
+    if (o.st && (o.type === 'line' || o.type === 'poly')) {
+      const pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
+      const out = band(pts, closed, o.st.w).map((b) => ({ type: 'poly', pts: b.pts, closed: true, band: true }));
+      if (o.st.kind === 'poutre') out.push(o.type === 'line' ? { type: 'line', a: o.a, b: o.b } : { type: 'poly', pts: o.pts, closed });
+      const lab = alongText(pts, closed, stLabel(o.st), 120, o.st.w / 2 + 40);
+      if (lab) out.push(lab);
+      return out;
+    }
+    return [o];
+  }
+
+  const isComposite = (o) => o.type === 'sym' || !!(o.st && (o.type === 'line' || o.type === 'poly'));
+  return { expand, band, world, stLabel, isComposite };
+})();
+
 /* ==== 50-snap.js ==== */
 /* Accroches aux objets : extrémité, centre, milieu, intersection, puis grille. Mode orthogonal (horizontal / vertical).
    Priorité : extrémité > centre > milieu > intersection > grille. Tolérance : 10 pixels. */
@@ -1134,7 +1348,7 @@ const Snap = {
       else if (o.type === 'poly') {
         ends.push(...o.pts);
         for (const [a, b] of Geo.segments(o)) { mids.push(G.mid(a, b)); segs.push([a, b]); }
-      } else if (o.type === 'circle') centers.push(o.c);
+      } else if (o.type === 'circle' || o.type === 'sym') centers.push(o.c);
     }
     const nearest = (list) => {
       let best = null, bd = tl;
@@ -1251,9 +1465,22 @@ const Render = (() => {
     ctx.restore();
   }
 
+  /* Symboles, murs et poutres : dessinés à partir de leurs éléments vectoriels (Sym.expand), bande de structure légèrement teintée. */
+  function drawComposite(ctx, o, col, lw) {
+    for (const e of Sym.expand(o)) {
+      if (e.band) {
+        ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = col; ctx.beginPath();
+        e.pts.forEach((p, i) => { const s = Canvas2D.toScreen(p); if (i) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]); });
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      drawObject(ctx, e, col, e.type === 'text' ? lw : Math.max(1, lw - (o.type === 'sym' ? 0.2 : 0.3)));
+    }
+  }
+
   function drawObject(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    if (Sym.isComposite(o)) { drawComposite(ctx, o, col, lw); return; }
     switch (o.type) {
       case 'line': if (o.net) netHalo(ctx, [o.a, o.b], false, o); strokePath(ctx, [o.a, o.b], false); if (o.net) netLabel(ctx, o, col); break;
       case 'poly': if (o.net) netHalo(ctx, o.pts, o.closed, o); strokePath(ctx, o.pts, o.closed); if (o.net) netLabel(ctx, o, col); break;
@@ -1267,7 +1494,8 @@ const Render = (() => {
         const p = S(o.p);
         ctx.font = `500 ${clamp(o.h * state.view.scale, 9, 400)}px Inter, system-ui, sans-serif`;
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText(o.text, p[0], p[1]);
+        if (o.deg) { ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(-o.deg * Math.PI / 180); ctx.fillText(o.text, 0, 0); ctx.restore(); }
+        else ctx.fillText(o.text, p[0], p[1]);
         break;
       }
     }
@@ -1319,7 +1547,7 @@ const Render = (() => {
 const Tools = (() => {
   const selection = new Set();
   const listeners = [];
-  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', move: 'Déplacer', copy: 'Copier', pan: 'Main' };
+  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', sym: 'Équipement', move: 'Déplacer', copy: 'Copier', pan: 'Main' };
   const HINTS = {
     select: 'Cliquer un objet, ou glisser pour une fenêtre (gauche → droite : objets entiers ; droite → gauche : objets touchés). Maj : ajouter.',
     line: 'Cliquer le point de départ, puis les points suivants. Clic droit ou Échap pour terminer. Taper une longueur (ex. 1500 ou 1500<45) puis Entrée.',
@@ -1328,11 +1556,12 @@ const Tools = (() => {
     circle: 'Cliquer le centre, puis un point du cercle (ou taper le rayon).',
     dim: 'Cliquer les deux points à coter, puis la position de la ligne de cote.',
     text: 'Cliquer l\'emplacement du texte, taper, Entrée pour valider.',
+    sym: 'Choisir un symbole dans la bibliothèque du panneau, cliquer pour le poser. [ et ] : tourner de 15° · Échap : terminer.',
     move: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis le point d\'arrivée.',
     copy: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis chaque point d\'arrivée. Échap pour finir.',
     pan: 'Glisser pour déplacer la vue (aussi : barre d\'espace ou molette enfoncée).',
   };
-  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', m: 'move', k: 'copy', h: 'pan' };
+  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', e: 'sym', m: 'move', k: 'copy', h: 'pan' };
   const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy'];
 
   let tool = 'select';
@@ -1440,6 +1669,13 @@ const Tools = (() => {
         if (!canCreate()) return;
         askText(p);
         break;
+      case 'sym': {
+        if (!canCreate()) return;
+        const cs = cleanSym({ ...state.sym });
+        if (!cs) { Status.msg(`Dimension invalide : entrez une taille entre ${SYM_MIN} et ${SYM_MAX} mm.`, 6000); return; }
+        addObj({ type: 'sym', c: p, ...cs });
+        break;
+      }
       case 'move': case 'copy': {
         if (!selection.size) { Status.msg('Sélectionnez d\'abord des objets avec l\'outil Sélection (V).'); return; }
         if (!pts.length) { pts = [p]; return; }
@@ -1679,6 +1915,11 @@ const Tools = (() => {
       ctx.restore();
       return;
     }
+    if (tool === 'sym' && cur) {
+      const cs = cleanSym({ ...state.sym });
+      if (cs) { ctx.setLineDash([]); ctx.globalAlpha = 0.75; Render.drawObject(ctx, { type: 'sym', c: cur.p, ...cs, tag: '' }, css('--accent'), 1.6); }
+      ctx.restore(); return;
+    }
     if (!cur || !pts.length) { ctx.restore(); return; }
     const c = cur.p;
     ctx.strokeStyle = css('--accent');
@@ -1752,6 +1993,7 @@ const Tools = (() => {
     if (k === 'F8') { e.preventDefault(); toggleOrtho(); return; }
     if (k === 'F3') { e.preventDefault(); toggleSnap(); return; }
     if (low === 'c' && tool === 'poly' && pts.length >= 3) { finishPoly(true); Canvas2D.requestDraw(); return; }
+    if (tool === 'sym' && (k === '[' || k === ']')) { state.sym.rot = (state.sym.rot + (k === ']' ? 15 : -15) + 360) % 360; notify('sym'); return; }
     if (low === 'z') { Canvas2D.zoomExtents(); return; }
     if (KEYS[low]) { setTool(KEYS[low]); return; }
     if (wantsTyping() && /^[0-9.,<;]$/.test(k)) { e.preventDefault(); UI.focusCmd(k); }
@@ -1813,7 +2055,14 @@ const IO = (() => {
 
   /* Objets visibles, avec leur calque. */
   function visibleObjects() {
-    return Doc.get().objects.filter((o) => { const l = Doc.layer(o.layer); return l && l.visible; });
+    const out = [];
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      if (Sym.isComposite(o)) for (const e of Sym.expand(o)) out.push({ ...e, layer: o.layer });   /* symboles, murs, poutres : éléments vectoriels simples */
+      else out.push(o);
+    }
+    return out;
   }
 
   /* Cote éclatée : lignes (repère monde) + libellé lisible (angle en degrés, jamais à l'envers). */
@@ -1868,7 +2117,7 @@ const IO = (() => {
         if (o.type === 'line') g.push(line(o.a, o.b));
         else if (o.type === 'poly') g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${o.pts.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>`);
         else if (o.type === 'circle') g.push(`<circle cx="${X(o.c[0])}" cy="${Y(o.c[1])}" r="${X(o.r)}"/>`);
-        else if (o.type === 'text') g.push(`<text x="${X(o.p[0])}" y="${Y(o.p[1])}" font-size="${o.h}" fill="${l.color}" stroke="none">${xmlEsc(o.text)}</text>`);
+        else if (o.type === 'text') g.push(`<text x="${X(o.p[0])}" y="${Y(o.p[1])}"${o.deg ? ` transform="rotate(${+(-o.deg).toFixed(3)} ${X(o.p[0])} ${Y(o.p[1])})"` : ''} font-size="${o.h}" fill="${l.color}" stroke="none">${xmlEsc(o.text)}</text>`);
         else if (o.type === 'dim') {
           const d = dimExplode(o);
           for (const [a, b] of d.lines) g.push(line(a, b));
@@ -1944,7 +2193,7 @@ const IO = (() => {
           const wd = str.length * nl.h * 0.6, off = o.net.dn / 2 + nl.h * 0.25;
           text(ly, [nl.mid[0] - u[0] * wd / 2 + up[0] * off, nl.mid[1] - u[1] * wd / 2 + up[1] * off], nl.h, str, nl.deg);
         }
-      } else if (o.type === 'text') text(ly, o.p, o.h, o.text, 0);
+      } else if (o.type === 'text') text(ly, o.p, o.h, o.text, o.deg || 0);
       else if (o.type === 'dim') {
         const d = dimExplode(o);
         for (const [a, b] of d.lines) line(ly, a, b);
@@ -2083,7 +2332,7 @@ const PDF = (() => {
         if (o.type === 'line') P.line(T(o.a), T(o.b));
         else if (o.type === 'poly') P.path(o.pts.map(T), !!o.closed);
         else if (o.type === 'circle') P.circle(T(o.c), o.r / N);
-        else if (o.type === 'text') P.text(...T(o.p), o.text, o.h / N);
+        else if (o.type === 'text') P.text(...T(o.p), o.text, o.h / N, o.deg ? { deg: o.deg } : undefined);
         else if (o.type === 'dim') {
           const d = IO.dimExplode(o);
           P.width(0.18);
@@ -2106,11 +2355,13 @@ const PDF = (() => {
   /* --- Pages de nomenclature --- */
   function bomPages(sheet, name, PW, PH) {
     const b = BOM.compute();
-    if (!b.nets.length && !b.others.length) return [];
+    if (BOM.isEmpty(b)) return [];
     const aw = PW - 2 * (MARGIN + 5);
     const specs = {
       net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
       other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
+      sym: { head: BOM.SYM_HEAD, num: BOM.SYM_NUM, frac: [0.26, 0.26, 0.14, 0.22, 0.12] },
+      st: { head: BOM.ST_HEAD, num: BOM.ST_NUM, frac: [0.20, 0.10, 0.22, 0.11, 0.17, 0.09, 0.11] },
     };
     const items = [];
     if (b.nets.length) {
@@ -2118,6 +2369,16 @@ const PDF = (() => {
       b.nets.forEach((r) => items.push({ t: 'row', s: specs.net, cells: BOM.netRow(r) }));
       const t = BOM.totals(b);
       items.push({ t: 'row', s: specs.net, bold: true, cells: ['Total', '', '', '', String(t.netSegments), BOM.f2(t.netLength)] });
+    }
+    if (b.syms.length) {
+      items.push({ t: 'title', text: 'Nomenclature : équipements et poteaux' }, { t: 'head', s: specs.sym });
+      b.syms.forEach((r) => items.push({ t: 'row', s: specs.sym, cells: BOM.symRow(r) }));
+      items.push({ t: 'row', s: specs.sym, bold: true, cells: ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))] });
+    }
+    if (b.structs.length) {
+      items.push({ t: 'title', text: 'Nomenclature : structures (murs et poutres)' }, { t: 'head', s: specs.st });
+      b.structs.forEach((r) => items.push({ t: 'row', s: specs.st, cells: BOM.stRow(r) }));
+      items.push({ t: 'row', s: specs.st, bold: true, cells: ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), BOM.f2(b.structs.reduce((a, r) => a + r.length, 0))] });
     }
     if (b.others.length) {
       items.push({ t: 'title', text: 'Nomenclature : autres éléments par calque' }, { t: 'head', s: specs.other });
@@ -2225,6 +2486,8 @@ const PDF = (() => {
 /* ==== 77-bom.js ==== */
 /* Nomenclature : quantités calculées à partir des objets des calques VISIBLES (comme les exports SVG, DXF et PDF).
    - Réseaux (objets avec attribut net) : regroupés par calque, matériau et DN ; longueurs en mètres, tronçons = segments.
+   - Équipements et poteaux (objets sym) : par calque, type et dimension, avec nombre et repères.
+   - Structures (murs et poutres, attribut st) : par calque, type, profilé ou matériau et largeur ; longueurs en mètres, tronçons = segments.
    - Autres éléments : par calque, lignes et polylignes (nombre et longueur), cercles, surface des contours fermés.
    Les cotes et les textes ne sont pas comptés. */
 const BOM = (() => {
@@ -2233,7 +2496,7 @@ const BOM = (() => {
 
   function compute() {
     const d = Doc.get();
-    const nets = new Map(), others = new Map();
+    const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map();
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
@@ -2245,6 +2508,20 @@ const BOM = (() => {
         r.segments += Geo.segments(o).length;
         r.length += (Geo.length(o) || 0) / 1000;
         if (o.net.tag) r.tags.add(o.net.tag);
+      } else if (o.type === 'sym') {
+        const key = `${l.id}|${o.k}|${o.s}`;
+        let r = syms.get(key);
+        if (!r) { r = { layer: l.name, group: l.group, label: SYMBOLS[o.k].label, size: o.s, count: 0, tags: new Set() }; syms.set(key, r); }
+        r.count++;
+        if (o.tag) r.tags.add(o.tag);
+      } else if (o.st) {
+        const key = `${l.id}|${o.st.kind}|${o.st.prof}|${o.st.w}`;
+        let r = structs.get(key);
+        if (!r) { r = { layer: l.name, group: l.group, kind: ST_KINDS[o.st.kind].label, prof: o.st.prof, w: o.st.w, objects: 0, segments: 0, length: 0, tags: new Set() }; structs.set(key, r); }
+        r.objects++;
+        r.segments += Geo.segments(o).length;
+        r.length += (Geo.length(o) || 0) / 1000;
+        if (o.st.tag) r.tags.add(o.st.tag);
       } else if (o.type === 'line' || o.type === 'poly' || o.type === 'circle') {
         let r = others.get(l.id);
         if (!r) { r = { layer: l.name, group: l.group, lines: 0, circles: 0, length: 0, area: 0 }; others.set(l.id, r); }
@@ -2256,6 +2533,8 @@ const BOM = (() => {
     const byGroup = (a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.layer.localeCompare(b.layer, 'fr');
     return {
       nets: [...nets.values()].sort((a, b) => byGroup(a, b) || b.dn - a.dn || a.mat.localeCompare(b.mat, 'fr')).map((r) => ({ ...r, tags: [...r.tags].sort() })),
+      syms: [...syms.values()].sort((a, b) => byGroup(a, b) || a.label.localeCompare(b.label, 'fr') || a.size - b.size).map((r) => ({ ...r, tags: [...r.tags].sort() })),
+      structs: [...structs.values()].sort((a, b) => byGroup(a, b) || a.kind.localeCompare(b.kind, 'fr') || a.prof.localeCompare(b.prof, 'fr') || a.w - b.w).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       others: [...others.values()].sort(byGroup),
     };
   }
@@ -2264,6 +2543,11 @@ const BOM = (() => {
 
   function netRow(r) { return [r.layer, r.mat || '—', String(r.dn), r.tags.join(', ') || '—', String(r.segments), f2(r.length)]; }
   function otherRow(r) { return [r.layer, GROUP_NAME[r.group] || r.group, String(r.lines), String(r.circles), f2(r.length), f2(r.area)]; }
+  const symRow = (r) => [r.layer, r.label, String(r.size), r.tags.join(', ') || '—', String(r.count)];
+  const stRow = (r) => [r.layer, r.kind, r.prof || '—', String(r.w), r.tags.join(', ') || '—', String(r.segments), f2(r.length)];
+  const SYM_HEAD = ['Calque', 'Type', 'Dimension (mm)', 'Repères', 'Quantité'], SYM_NUM = [2, 4];
+  const ST_HEAD = ['Calque', 'Type', 'Profilé / matériau', 'Largeur (mm)', 'Repères', 'Tronçons', 'Longueur (m)'], ST_NUM = [3, 5, 6];
+  const isEmpty = (b) => !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
   const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
   const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
   const NET_NUM = [2, 4, 5], OTHER_NUM = [2, 3, 4, 5];
@@ -2283,7 +2567,7 @@ const BOM = (() => {
   function show() {
     const b = compute();
     const body = el('div');
-    if (!b.nets.length && !b.others.length) {
+    if (isEmpty(b)) {
       body.append(el('p', { class: 'mut' }, 'Rien à compter : le dessin est vide ou tous les calques sont masqués.'));
     } else {
       body.append(el('p', { class: 'mut small' }, 'Calques visibles uniquement. Les cotes et les textes ne sont pas comptés. Longueurs mesurées sur le dessin (mm → m), sans coefficient de coupe ni raccords.'));
@@ -2291,6 +2575,8 @@ const BOM = (() => {
         const t = totals(b);
         body.append(table('Réseaux', NET_HEAD, b.nets.map(netRow), NET_NUM, ['Total', '', '', '', String(t.netSegments), f2(t.netLength)]));
       } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
+      if (b.syms.length) body.append(table('Équipements et poteaux', SYM_HEAD, b.syms.map(symRow), SYM_NUM, ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))]));
+      if (b.structs.length) body.append(table('Structures (murs et poutres)', ST_HEAD, b.structs.map(stRow), ST_NUM, ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), f2(b.structs.reduce((a, r) => a + r.length, 0))]));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
     Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { exportCSV(); return false; } }]);
@@ -2299,7 +2585,7 @@ const BOM = (() => {
   /* CSV pour Excel en français : séparateur « ; », virgule décimale, UTF-8 avec BOM. */
   function exportCSV() {
     const b = compute();
-    if (!b.nets.length && !b.others.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    if (isEmpty(b)) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
     const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
     const lines = [];
     if (b.nets.length) {
@@ -2307,6 +2593,16 @@ const BOM = (() => {
       for (const r of b.nets) lines.push(netRow(r).map(q).join(';'));
       const t = totals(b);
       lines.push(['Total', '', '', '', t.netSegments, f2(t.netLength)].map(q).join(';'), '');
+    }
+    if (b.syms.length) {
+      lines.push(q('Équipements et poteaux'), SYM_HEAD.map(q).join(';'));
+      for (const r of b.syms) lines.push(symRow(r).map(q).join(';'));
+      lines.push(['Total', '', '', '', b.syms.reduce((a, r) => a + r.count, 0)].map(q).join(';'), '');
+    }
+    if (b.structs.length) {
+      lines.push(q('Structures (murs et poutres)'), ST_HEAD.map(q).join(';'));
+      for (const r of b.structs) lines.push(stRow(r).map(q).join(';'));
+      lines.push(['Total', '', '', '', '', b.structs.reduce((a, r) => a + r.segments, 0), f2(b.structs.reduce((a, r) => a + r.length, 0))].map(q).join(';'), '');
     }
     if (b.others.length) {
       lines.push(q('Autres éléments par calque'), OTHER_HEAD.map(q).join(';'));
@@ -2316,13 +2612,13 @@ const BOM = (() => {
     Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
   }
 
-  return { compute, show, exportCSV, netRow, otherRow, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+  return { compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
 })();
 
 /* ==== 78-ui.js ==== */
 /* Interface : rail d'outils, panneau des calques, propriétés de la sélection, boutons d'en-tête, barre d'état, saisie de longueur. */
 const UI = (() => {
-  const TYPE_LABEL = { line: 'Ligne', poly: 'Polyligne', circle: 'Cercle', dim: 'Cote', text: 'Texte' };
+  const TYPE_LABEL = { line: 'Ligne', poly: 'Polyligne', circle: 'Cercle', dim: 'Cote', text: 'Texte', sym: 'Équipement' };
   const GROUP_LABEL = { humide: 'Réseau humide', sec: 'Réseau sec', structure: 'Structure', equipement: 'Équipement', divers: 'Divers' };
   const cmd = $('#cmd');
 
@@ -2346,36 +2642,57 @@ const UI = (() => {
   }
 
   /* --- Calques --- */
+  const ICON = {
+    eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.7A17 17 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.4-1"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    unlock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  };
+  function icon(name) {
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'ic');
+    s.innerHTML = ICON[name];
+    return s;
+  }
+  function toggleBtn(on, names, label, title, run) {
+    const b = el('button', { type: 'button', class: 'ib tg' + (on ? ' on' : ''), 'aria-pressed': String(on), 'aria-label': label, title });
+    b.append(icon(on ? names[0] : names[1]));
+    b.addEventListener('click', (e) => { e.stopPropagation(); run(); });
+    return b;
+  }
+
   function renderLayers() {
     const box = $('#layers');
     box.textContent = '';
     const d = Doc.get();
     const counts = new Map();
     d.objects.forEach((o) => counts.set(o.layer, (counts.get(o.layer) || 0) + 1));
+    $('#layerCount').textContent = String(d.layers.length);
     for (const l of d.layers) {
-      const id = l.id;
-      const row = el('div', { class: 'ly' + (id === d.active ? ' on' : '') });
-      const radio = el('input', { type: 'radio', name: 'activeLayer', 'aria-label': `Calque actif : ${l.name}`, title: 'Calque actif (les nouveaux objets y sont dessinés)', checked: id === d.active });
-      radio.addEventListener('change', () => Doc.setActive(id));
-      const vis = el('input', { type: 'checkbox', 'aria-label': `Visible : ${l.name}`, title: 'Visible', checked: l.visible });
-      vis.addEventListener('change', () => Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).visible = vis.checked; }));
-      const lock = el('input', { type: 'checkbox', class: 'lk', 'aria-label': `Verrouillé : ${l.name}`, title: 'Verrouillé (objets non modifiables)', checked: l.locked });
-      lock.addEventListener('change', () => Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).locked = lock.checked; }));
-      const col = el('input', { type: 'color', value: l.color, 'aria-label': `Couleur : ${l.name}`, title: GROUP_LABEL[l.group] || '' });
+      const id = l.id, act = id === d.active, n = counts.get(id) || 0;
+      const row = el('div', { class: 'ly' + (act ? ' on' : '') + (l.visible ? '' : ' off'), role: 'group', 'aria-label': `Calque ${l.name}` });
+      const pick = el('button', { type: 'button', class: 'ly-pick', 'aria-pressed': String(act), 'aria-label': `Calque actif : ${l.name}`, title: act ? 'Calque actif' : 'Définir comme calque actif (les nouveaux objets y sont dessinés)' });
+      pick.addEventListener('click', () => Doc.setActive(id));
+      const col = el('input', { type: 'color', class: 'ly-col', value: l.color, 'aria-label': `Couleur : ${l.name}`, title: 'Couleur · ' + (GROUP_LABEL[l.group] || '') });
       col.addEventListener('change', () => Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).color = col.value; }));
-      const name = el('input', { type: 'text', value: l.name, maxlength: 60, 'aria-label': 'Nom du calque' });
+      const name = el('input', { type: 'text', class: 'ly-name', value: l.name, maxlength: 60, 'aria-label': 'Nom du calque' });
       name.addEventListener('change', () => {
         const v = name.value.trim().slice(0, 60);
         if (!v) { name.value = l.name; return; }
         Doc.mutate((dd) => { dd.layers.find((x) => x.id === id).name = v; });
       });
-      const n = counts.get(id) || 0;
-      const del = el('button', { type: 'button', class: 'ib', title: n ? 'Calque non vide : impossible à supprimer' : 'Supprimer le calque', 'aria-label': `Supprimer le calque ${l.name}`, disabled: n > 0 || d.layers.length <= 1 }, '✕');
+      const cnt = el('span', { class: 'ly-n', title: `${n} objet${n > 1 ? 's' : ''}` }, String(n));
+      const vis = toggleBtn(l.visible, ['eye', 'eyeOff'], `Visible : ${l.name}`, l.visible ? 'Masquer le calque' : 'Afficher le calque', () => Doc.mutate((dd) => { const x = dd.layers.find((y) => y.id === id); x.visible = !x.visible; }));
+      const lock = toggleBtn(l.locked, ['lock', 'unlock'], `Verrouillé : ${l.name}`, l.locked ? 'Déverrouiller (objets modifiables)' : 'Verrouiller (objets non modifiables)', () => Doc.mutate((dd) => { const x = dd.layers.find((y) => y.id === id); x.locked = !x.locked; }));
+      lock.classList.add('lk');
+      const del = el('button', { type: 'button', class: 'ib del', title: n ? 'Calque non vide : impossible à supprimer' : 'Supprimer le calque', 'aria-label': `Supprimer le calque ${l.name}`, disabled: n > 0 || d.layers.length <= 1 });
+      del.append(icon('trash'));
       del.addEventListener('click', () => Doc.mutate((dd) => {
         dd.layers = dd.layers.filter((x) => x.id !== id);
         if (dd.active === id) dd.active = dd.layers[0].id;
       }));
-      row.append(radio, vis, lock, col, name, del);
+      row.append(pick, col, name, cnt, vis, lock, del);
       box.append(row);
     }
   }
@@ -2416,19 +2733,159 @@ const UI = (() => {
     return box;
   }
 
-  function bindNetDefaults() {
-    const dl = $('#netMats');
-    for (const m of NET_MATERIALS) dl.append(el('option', { value: m }));
-    const on = $('#netOn'), dn = $('#netDn'), mat = $('#netMat');
+  /* --- Sections repliables du panneau (état mémorisé dans ce navigateur) --- */
+  function bindSections() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('ai.panel') || '{}') || {}; } catch (e) { saved = {}; }
+    document.querySelectorAll('#panel .pn').forEach((sec) => {
+      const btn = sec.querySelector('.pn-h button'), body = sec.querySelector('.pn-b'), key = sec.dataset.sec;
+      const set = (open) => { btn.setAttribute('aria-expanded', String(open)); body.hidden = !open; sec.classList.toggle('closed', !open); };
+      set(key in saved ? !!saved[key] : btn.getAttribute('aria-expanded') === 'true');
+      btn.addEventListener('click', () => {
+        const open = btn.getAttribute('aria-expanded') !== 'true';
+        set(open); saved[key] = open;
+        try { localStorage.setItem('ai.panel', JSON.stringify(saved)); } catch (e) { /* stockage indisponible : sans conséquence */ }
+      });
+    });
+  }
+
+  /* --- Mode de tracé : simple / réseau / mur / poutre --- */
+  const MODE_HINT = {
+    none: 'Les lignes et polylignes sont tracées sans attribut.',
+    net: 'Les lignes et polylignes ouvertes reçoivent un diamètre (DN) et un matériau.',
+    mur: 'Les lignes et polylignes deviennent des murs : bande d\'épaisseur réelle autour de l\'axe tracé.',
+    poutre: 'Les lignes et polylignes deviennent des poutres : axe tracé et largeur du profilé.',
+  };
+  function setMode(m) {
+    state.mode = m; state.net.on = m === 'net';
+    document.querySelectorAll('#panel .seg [data-mode]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === m)));
+    $('#fldNet').hidden = m !== 'net'; $('#fldMur').hidden = m !== 'mur'; $('#fldPoutre').hidden = m !== 'poutre';
+    $('#modeHint').textContent = MODE_HINT[m];
+  }
+  function bindModeFields() {
+    for (const m of NET_MATERIALS) $('#netMats').append(el('option', { value: m }));
+    for (const v of ST_KINDS.mur.ex) $('#stMur').append(el('option', { value: v }));
+    for (const v of ST_KINDS.poutre.ex) $('#stPoutre').append(el('option', { value: v }));
+    document.querySelectorAll('#panel .seg [data-mode]').forEach((b) => b.addEventListener('click', () => {
+      setMode(b.dataset.mode);
+      Status.msg(b.dataset.mode === 'none' ? 'Tracé simple.' : `Tracé en mode ${b.textContent.toLowerCase()}.`);
+    }));
+    const wOk = (v) => Number.isFinite(v) && v > 0;
     const sync = () => {
-      const v = Number(dn.value);
-      state.net.on = on.checked;
-      state.net.dn = Number.isFinite(v) && v > 0 && v <= NET_DN_MAX ? v : state.net.dn;
-      state.net.mat = mat.value.trim().slice(0, 30);
+      const dn = Number($('#netDn').value);
+      state.net.dn = wOk(dn) && dn <= NET_DN_MAX ? dn : state.net.dn;
+      state.net.mat = $('#netMat').value.trim().slice(0, 30);
+      for (const [k, w, p] of [['mur', '#murW', '#murProf'], ['poutre', '#poutreW', '#poutreProf']]) {
+        const v = Number($(w).value);
+        if (wOk(v) && v <= ST_W_MAX) state.st.w[k] = v;
+        state.st.prof[k] = $(p).value.trim().slice(0, 30);
+      }
     };
-    on.addEventListener('change', () => { sync(); Status.msg(on.checked ? `Tracé en réseau : DN${state.net.dn}.` : 'Tracé en réseau désactivé.'); });
-    dn.addEventListener('change', sync);
-    mat.addEventListener('change', sync);
+    ['#netDn', '#netMat', '#murW', '#murProf', '#poutreW', '#poutreProf'].forEach((id) => { $(id).addEventListener('change', sync); $(id).addEventListener('input', sync); });
+    $('#netDn').value = state.net.dn; $('#murW').value = state.st.w.mur; $('#poutreW').value = state.st.w.poutre;
+    setMode(state.mode);
+  }
+
+  /* --- Bibliothèque d'équipements et de poteaux --- */
+  function thumb(k) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '-0.62 -0.62 1.24 1.24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'sym-svg');
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('transform', 'scale(1,-1)'); g.setAttribute('fill', 'none'); g.setAttribute('stroke', 'currentColor');
+    g.setAttribute('stroke-width', '0.07'); g.setAttribute('stroke-linejoin', 'round'); g.setAttribute('stroke-linecap', 'round');
+    for (const e of Sym.world({ k, c: [0, 0], s: 1, rot: 0 })) {
+      let n;
+      if (e.type === 'line') { n = document.createElementNS(NS, 'line'); n.setAttribute('x1', e.a[0]); n.setAttribute('y1', e.a[1]); n.setAttribute('x2', e.b[0]); n.setAttribute('y2', e.b[1]); }
+      else if (e.type === 'circle') { n = document.createElementNS(NS, 'circle'); n.setAttribute('cx', e.c[0]); n.setAttribute('cy', e.c[1]); n.setAttribute('r', e.r); }
+      else { n = document.createElementNS(NS, e.closed ? 'polygon' : 'polyline'); n.setAttribute('points', e.pts.map((q) => q.join(',')).join(' ')); }
+      g.append(n);
+    }
+    svg.append(g);
+    return svg;
+  }
+
+  function renderLib() {
+    const grid = $('#symGrid');
+    if (!grid.childNodes.length) {
+      for (const [gid, gname] of Object.entries(SYM_GROUPS)) {
+        grid.append(el('p', { class: 'sym-g' }, gname));
+        const list = el('div', { class: 'sym-list' });
+        for (const [k, def] of Object.entries(SYMBOLS)) {
+          if (def.group !== gid) continue;
+          const b = el('button', { type: 'button', class: 'sym-btn', 'data-k': k, title: `${def.label} (${def.size} mm)`, 'aria-label': def.label, 'aria-pressed': 'false' });
+          b.append(thumb(k), el('span', {}, def.label));
+          b.addEventListener('click', () => {
+            state.sym.k = k; state.sym.s = def.size; state.sym.tag = '';
+            Tools.setTool('sym'); renderLib();
+          });
+          list.append(b);
+        }
+        grid.append(list);
+      }
+    }
+    grid.querySelectorAll('.sym-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === state.sym.k && Tools.current() === 'sym')));
+    const set = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
+    set('#symS', state.sym.s); set('#symRot', state.sym.rot); set('#symTag', state.sym.tag);
+  }
+
+  function bindLib() {
+    const sync = () => {
+      const s = Number($('#symS').value), r = Number($('#symRot').value);
+      if (Number.isFinite(s) && s >= SYM_MIN && s <= SYM_MAX) state.sym.s = s;
+      if (Number.isFinite(r)) state.sym.rot = ((r % 360) + 360) % 360;
+      state.sym.tag = $('#symTag').value.trim().slice(0, 30);
+      Canvas2D.requestDraw();
+    };
+    ['#symS', '#symRot', '#symTag'].forEach((id) => { $(id).addEventListener('input', sync); $(id).addEventListener('change', sync); });
+    renderLib();
+  }
+
+  /* --- Structure : mur ou poutre appliqué à la sélection --- */
+  function stForm(objs) {
+    const ids = new Set(objs.map((o) => o.id));
+    const cur = objs.every((o) => o.st && o.st.kind === objs[0].st?.kind) ? objs[0].st : null;
+    const kind = el('select', { 'aria-label': 'Type de structure' }, ...Object.entries(ST_KINDS).map(([k, v]) => el('option', { value: k, selected: (cur ? cur.kind : 'mur') === k }, v.label)));
+    const w = el('input', { class: 'fld', type: 'number', min: 1, max: ST_W_MAX, step: 'any', 'aria-label': 'Épaisseur ou largeur en millimètres', value: cur ? cur.w : ST_KINDS.mur.wDef });
+    const prof = el('input', { class: 'fld', type: 'text', maxlength: 30, 'aria-label': 'Matériau ou profilé', value: cur ? cur.prof : '' });
+    const tag = el('input', { class: 'fld', type: 'text', maxlength: 30, 'aria-label': 'Repère de structure', value: objs.length === 1 ? (objs[0].st?.tag || '') : '', disabled: objs.length > 1, placeholder: objs.length > 1 ? '(un seul objet)' : 'ex. M1' });
+    const lw = el('label', { class: 'lbl' }, ST_KINDS[kind.value].wLabel, w), lp = el('label', { class: 'lbl' }, ST_KINDS[kind.value].pLabel, prof);
+    kind.addEventListener('change', () => {
+      const k = ST_KINDS[kind.value];
+      lw.firstChild.nodeValue = k.wLabel; lp.firstChild.nodeValue = k.pLabel; w.value = k.wDef;
+      prof.setAttribute('list', kind.value === 'mur' ? 'stMur' : 'stPoutre');
+    });
+    prof.setAttribute('list', kind.value === 'mur' ? 'stMur' : 'stPoutre');
+    const apply = el('button', { type: 'button', class: 'btn wide' }, 'Appliquer comme structure');
+    apply.addEventListener('click', () => {
+      const c = cleanSt({ kind: kind.value, w: Number(w.value), prof: prof.value, tag: objs.length === 1 ? tag.value : '' });
+      if (!c) { Status.msg(`Largeur invalide : entrez une valeur entre 1 et ${ST_W_MAX} mm.`, 6000); return; }
+      Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) { o.st = { ...c, tag: objs.length === 1 ? c.tag : (o.st?.tag || '') }; delete o.net; } });
+    });
+    const box = el('div', { class: 'netbox' }, el('b', {}, 'Structure'), el('label', { class: 'lbl' }, 'Type', kind), lw, lp, el('label', { class: 'lbl' }, 'Repère', tag), apply);
+    if (objs.some((o) => o.st)) {
+      const rm = el('button', { type: 'button', class: 'btn wide' }, 'Retirer la structure');
+      rm.addEventListener('click', () => Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) delete o.st; }));
+      box.append(rm);
+    }
+    return box;
+  }
+
+  /* --- Équipement sélectionné : type, taille, rotation, repère (appliqués immédiatement) --- */
+  function symForm(o) {
+    const id = o.id;
+    const patch = (f) => Doc.mutate((d) => { const x = d.objects.find((y) => y.id === id); if (x) f(x); });
+    const kind = el('select', { 'aria-label': 'Type de symbole' }, ...Object.entries(SYMBOLS).map(([k, v]) => el('option', { value: k, selected: k === o.k }, v.label)));
+    kind.addEventListener('change', () => patch((x) => { x.k = kind.value; }));
+    const num = (label, key, min, max, step) => {
+      const i = el('input', { class: 'fld', type: 'number', min, max, step, 'aria-label': label, value: o[key] });
+      i.addEventListener('change', () => { const v = Number(i.value); if (!Number.isFinite(v) || v < min || v > max) { i.value = o[key]; Status.msg(`${label} : valeur entre ${min} et ${max}.`, 5000); return; } patch((x) => { x[key] = key === 'rot' ? ((v % 360) + 360) % 360 : v; }); });
+      return i;
+    };
+    const tag = el('input', { class: 'fld', type: 'text', maxlength: 30, 'aria-label': 'Repère', value: o.tag || '' });
+    tag.addEventListener('change', () => patch((x) => { x.tag = tag.value.trim().slice(0, 30); }));
+    return el('div', { class: 'netbox' }, el('b', {}, 'Équipement'), el('label', { class: 'lbl' }, 'Type', kind),
+      el('div', { class: 'row2b' }, el('label', { class: 'lbl' }, 'Taille (mm)', num('Taille en millimètres', 's', SYM_MIN, SYM_MAX, 'any')), el('label', { class: 'lbl' }, 'Rotation (°)', num('Rotation en degrés', 'rot', 0, 360, 15))),
+      el('label', { class: 'lbl' }, 'Repère', tag));
   }
 
   /* --- Propriétés de la sélection --- */
@@ -2448,12 +2905,15 @@ const UI = (() => {
       const ar = Geo.area(o);
       if (ar !== null) dl.append(...kv('Surface', ar.toFixed(3) + ' m²'));
       if (o.type === 'text') dl.append(...kv('Texte', o.text));
+      if (o.type === 'sym') dl.append(...kv('Symbole', SYMBOLS[o.k].label), ...kv('Taille', fmt(o.s) + ' mm'), ...kv('Rotation', o.rot + ' °'), ...(o.tag ? kv('Repère', o.tag) : []));
+      if (o.st) dl.append(...kv(ST_KINDS[o.st.kind].label, `${o.st.w} mm${o.st.prof ? ' · ' + o.st.prof : ''}${o.st.tag ? ' · ' + o.st.tag : ''}`));
       if (o.net) dl.append(...kv('Réseau', `DN${o.net.dn}${o.net.mat ? ' · ' + o.net.mat : ''}${o.net.tag ? ' · ' + o.net.tag : ''}`));
     } else {
       dl.append(...kv('Objets', String(objs.length)));
     }
     box.append(dl);
-    if (objs.every((o) => o.type === 'line' || o.type === 'poly')) box.append(netForm(objs));
+    if (objs.every((o) => o.type === 'line' || o.type === 'poly')) { box.append(netForm(objs)); box.append(stForm(objs)); }
+    if (objs.length === 1 && objs[0].type === 'sym') box.append(symForm(objs[0]));
     const sel = el('select', { 'aria-label': 'Calque des objets sélectionnés' });
     const same = objs.every((o) => o.layer === objs[0].layer);
     if (!same) sel.append(el('option', { value: '' }, '— plusieurs calques —'));
@@ -2503,7 +2963,9 @@ const UI = (() => {
 
   function init() {
     bindCmd();
-    bindNetDefaults();
+    bindSections();
+    bindModeFields();
+    bindLib();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
     $('#theme').addEventListener('click', () => { Theme.toggle(); Canvas2D.draw(); });
     $('#undo').addEventListener('click', () => Doc.undo());
@@ -2533,7 +2995,8 @@ const UI = (() => {
     Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); });
     Tools.onChange((reason) => {
       if (reason === 'selection') renderProps();
-      else if (reason === 'tool') refreshTools();
+      else if (reason === 'tool') { refreshTools(); renderLib(); }
+      else if (reason === 'sym') renderLib();
       else if (reason === 'mode') refreshModes();
     });
     renderLayers(); renderProps(); refreshChrome(); refreshTools(); refreshModes();

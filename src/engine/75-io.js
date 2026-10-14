@@ -36,7 +36,14 @@ const IO = (() => {
 
   /* Objets visibles, avec leur calque. */
   function visibleObjects() {
-    return Doc.get().objects.filter((o) => { const l = Doc.layer(o.layer); return l && l.visible; });
+    const out = [];
+    for (const o of Doc.get().objects) {
+      const l = Doc.layer(o.layer);
+      if (!l || !l.visible) continue;
+      if (Sym.isComposite(o)) for (const e of Sym.expand(o)) out.push({ ...e, layer: o.layer });   /* symboles, murs, poutres : éléments vectoriels simples */
+      else out.push(o);
+    }
+    return out;
   }
 
   /* Cote éclatée : lignes (repère monde) + libellé lisible (angle en degrés, jamais à l'envers). */
@@ -91,7 +98,7 @@ const IO = (() => {
         if (o.type === 'line') g.push(line(o.a, o.b));
         else if (o.type === 'poly') g.push(`<${o.closed ? 'polygon' : 'polyline'} points="${o.pts.map((p) => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>`);
         else if (o.type === 'circle') g.push(`<circle cx="${X(o.c[0])}" cy="${Y(o.c[1])}" r="${X(o.r)}"/>`);
-        else if (o.type === 'text') g.push(`<text x="${X(o.p[0])}" y="${Y(o.p[1])}" font-size="${o.h}" fill="${l.color}" stroke="none">${xmlEsc(o.text)}</text>`);
+        else if (o.type === 'text') g.push(`<text x="${X(o.p[0])}" y="${Y(o.p[1])}"${o.deg ? ` transform="rotate(${+(-o.deg).toFixed(3)} ${X(o.p[0])} ${Y(o.p[1])})"` : ''} font-size="${o.h}" fill="${l.color}" stroke="none">${xmlEsc(o.text)}</text>`);
         else if (o.type === 'dim') {
           const d = dimExplode(o);
           for (const [a, b] of d.lines) g.push(line(a, b));
@@ -167,7 +174,7 @@ const IO = (() => {
           const wd = str.length * nl.h * 0.6, off = o.net.dn / 2 + nl.h * 0.25;
           text(ly, [nl.mid[0] - u[0] * wd / 2 + up[0] * off, nl.mid[1] - u[1] * wd / 2 + up[1] * off], nl.h, str, nl.deg);
         }
-      } else if (o.type === 'text') text(ly, o.p, o.h, o.text, 0);
+      } else if (o.type === 'text') text(ly, o.p, o.h, o.text, o.deg || 0);
       else if (o.type === 'dim') {
         const d = dimExplode(o);
         for (const [a, b] of d.lines) line(ly, a, b);

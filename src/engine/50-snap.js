@@ -22,7 +22,7 @@ const Snap = {
       else if (o.type === 'poly') {
         ends.push(...o.pts);
         for (const [a, b] of Geo.segments(o)) { mids.push(G.mid(a, b)); segs.push([a, b]); }
-      } else if (o.type === 'circle') centers.push(o.c);
+      } else if (o.type === 'circle' || o.type === 'sym') centers.push(o.c);
     }
     const nearest = (list) => {
       let best = null, bd = tl;

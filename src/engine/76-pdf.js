@@ -118,7 +118,7 @@ const PDF = (() => {
         if (o.type === 'line') P.line(T(o.a), T(o.b));
         else if (o.type === 'poly') P.path(o.pts.map(T), !!o.closed);
         else if (o.type === 'circle') P.circle(T(o.c), o.r / N);
-        else if (o.type === 'text') P.text(...T(o.p), o.text, o.h / N);
+        else if (o.type === 'text') P.text(...T(o.p), o.text, o.h / N, o.deg ? { deg: o.deg } : undefined);
         else if (o.type === 'dim') {
           const d = IO.dimExplode(o);
           P.width(0.18);
@@ -141,11 +141,13 @@ const PDF = (() => {
   /* --- Pages de nomenclature --- */
   function bomPages(sheet, name, PW, PH) {
     const b = BOM.compute();
-    if (!b.nets.length && !b.others.length) return [];
+    if (BOM.isEmpty(b)) return [];
     const aw = PW - 2 * (MARGIN + 5);
     const specs = {
       net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
       other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
+      sym: { head: BOM.SYM_HEAD, num: BOM.SYM_NUM, frac: [0.26, 0.26, 0.14, 0.22, 0.12] },
+      st: { head: BOM.ST_HEAD, num: BOM.ST_NUM, frac: [0.20, 0.10, 0.22, 0.11, 0.17, 0.09, 0.11] },
     };
     const items = [];
     if (b.nets.length) {
@@ -153,6 +155,16 @@ const PDF = (() => {
       b.nets.forEach((r) => items.push({ t: 'row', s: specs.net, cells: BOM.netRow(r) }));
       const t = BOM.totals(b);
       items.push({ t: 'row', s: specs.net, bold: true, cells: ['Total', '', '', '', String(t.netSegments), BOM.f2(t.netLength)] });
+    }
+    if (b.syms.length) {
+      items.push({ t: 'title', text: 'Nomenclature : équipements et poteaux' }, { t: 'head', s: specs.sym });
+      b.syms.forEach((r) => items.push({ t: 'row', s: specs.sym, cells: BOM.symRow(r) }));
+      items.push({ t: 'row', s: specs.sym, bold: true, cells: ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))] });
+    }
+    if (b.structs.length) {
+      items.push({ t: 'title', text: 'Nomenclature : structures (murs et poutres)' }, { t: 'head', s: specs.st });
+      b.structs.forEach((r) => items.push({ t: 'row', s: specs.st, cells: BOM.stRow(r) }));
+      items.push({ t: 'row', s: specs.st, bold: true, cells: ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), BOM.f2(b.structs.reduce((a, r) => a + r.length, 0))] });
     }
     if (b.others.length) {
       items.push({ t: 'title', text: 'Nomenclature : autres éléments par calque' }, { t: 'head', s: specs.other });

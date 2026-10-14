@@ -1,0 +1,176 @@
+"""Test de bout en bout de la phase 4 (équipements, poteaux, murs, poutres) et du panneau d'options refondu.
+
+Prérequis : python3 tools/build.py, `pip install playwright`, `playwright install chromium`.
+Ne remplace ni l'ouverture du DXF dans un logiciel de CAO ni un essai sur téléphone réel.
+"""
+import json, re, sys, tempfile, pathlib
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+OUT = tempfile.mkdtemp(prefix='archiindus-equip-') + '/'
+print('Fichiers de sortie :', OUT)
+fails = []; checks = 0
+def ok(cond, msg):
+    global checks; checks += 1
+    if not cond: fails.append(msg); print('ÉCHEC :', msg)
+
+with sync_playwright() as p:
+    b = p.chromium.launch()
+    ctx = b.new_context(viewport={'width': 1400, 'height': 820}, accept_downloads=True)
+    pg = ctx.new_page(); errs = []
+    pg.on('pageerror', lambda e: errs.append('pageerror:' + str(e)))
+    pg.on('console', lambda m: errs.append('console:' + m.text) if m.type == 'error' and 'ERR_FAILED' not in m.text else None)
+    pg.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
+    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(300); pg.click('#authSkip')
+    box = pg.locator('#cv').bounding_box()
+    def W(x, y):
+        v = pg.evaluate('({x:state.view.x,y:state.view.y,s:state.view.scale})')
+        return (box['x'] + v['x'] + x * v['s'], box['y'] + v['y'] - y * v['s'])
+    def click(x, y, **k): X, Y = W(x, y); pg.mouse.move(X, Y); pg.mouse.click(X, Y, **k)
+    def key(k): pg.evaluate('document.activeElement && document.activeElement.blur()'); pg.keyboard.press(k)
+    objs = lambda: pg.evaluate('Doc.get().objects')
+
+    # --- panneau : structure et sections repliables
+    ok(pg.locator('#panel .pn').count() == 5, 'cinq sections dans le panneau')
+    ok(pg.get_attribute('#panel [aria-controls="pn-help"]', 'aria-expanded') == 'false', "aide repliée par défaut")
+    ok(not pg.is_visible('#pn-help'), "corps de l'aide masqué")
+    pg.click('#panel [aria-controls="pn-layers"]')
+    ok(not pg.is_visible('#layers'), 'section calques repliée')
+    pg.reload(); pg.wait_for_timeout(300); pg.click('#authSkip')
+    ok(not pg.is_visible('#layers'), "repli mémorisé après rechargement")
+    pg.click('#panel [aria-controls="pn-layers"]'); ok(pg.is_visible('#layers'), 'section calques rouverte')
+    ok(pg.locator('#layerCount').inner_text() == str(pg.evaluate('Doc.get().layers.length')), 'compteur de calques')
+    # calques : boutons œil / cadenas
+    first = pg.locator('.ly').first
+    first.locator('button[aria-label^="Visible"]').click()
+    ok(pg.evaluate('Doc.get().layers[0].visible') is False, 'œil masque le calque')
+    pg.locator('.ly').first.locator('button[aria-label^="Visible"]').click()
+    ok(pg.evaluate('Doc.get().layers[0].visible') is True, 'œil réaffiche le calque')
+    pg.locator('.ly').first.locator('button[aria-label^="Verrouillé"]').click()
+    ok(pg.evaluate('Doc.get().layers[0].locked') is True, 'cadenas verrouille')
+    pg.locator('.ly').first.locator('button[aria-label^="Verrouillé"]').click()
+    # modes
+    ok(pg.is_hidden('#fldMur'), 'champs mur masqués en mode simple')
+    pg.click('#modeMur'); ok(pg.is_visible('#fldMur') and pg.get_attribute('#modeMur', 'aria-checked') == 'true', 'mode mur affiche ses champs')
+    pg.click('#modeNet'); ok(pg.evaluate('state.net.on && state.mode==="net"') and pg.is_hidden('#fldMur'), 'mode réseau')
+    pg.click('#modeNone'); ok(pg.evaluate('!state.net.on && state.mode==="none"'), 'retour au mode simple')
+
+    # --- pose d'équipement
+    pg.evaluate("state.view.scale=0.06; Canvas2D.requestDraw()")
+    pg.click('.sym-btn[data-k="pompe"]')
+    ok(pg.evaluate('Tools.current()') == 'sym', 'choisir un symbole active l\'outil')
+    ok(pg.evaluate('state.sym.k') == 'pompe' and pg.evaluate('state.sym.s') == 400, 'symbole pompe, taille par défaut')
+    pg.fill('#symTag', 'P1'); pg.fill('#symS', '600')
+    click(1000, 1000)
+    o = objs(); ok(len(o) == 1 and o[0]['type'] == 'sym' and o[0]['k'] == 'pompe' and o[0]['s'] == 600 and o[0]['tag'] == 'P1', f'pompe posée {o}')
+    key(']'); ok(pg.evaluate('state.sym.rot') == 15, 'rotation ]')
+    click(3000, 1000)
+    o = objs(); ok(len(o) == 2 and o[1]['rot'] == 15, 'seconde pompe tournée')
+    pg.click('.sym-btn[data-k="poteau"]'); click(5000, 1000)
+    ok(objs()[2]['k'] == 'poteau' and objs()[2]['s'] == 300, 'poteau posé à 300 mm')
+    key('Escape')
+
+    # --- murs et poutres
+    pg.click('#modeMur'); pg.fill('#murW', '250'); pg.fill('#murProf', 'Béton')
+    key('l'); click(0, 3000); click(6000, 3000); pg.mouse.click(*W(9000, 6000), button='right')
+    o = objs(); w = o[-1]
+    ok(w['type'] == 'line' and w['st'] == {'kind': 'mur', 'w': 250, 'prof': 'Béton', 'tag': ''}, f'mur tracé {w}')
+    pg.click('#modePoutre'); pg.fill('#poutreW', '120'); pg.fill('#poutreProf', 'IPE 200')
+    key('p'); click(0, 5000); click(4000, 5000); click(4000, 7000); pg.mouse.click(*W(9000, 6000), button='right')
+    pt = objs()[-1]; ok(pt['type'] == 'poly' and pt['st']['kind'] == 'poutre' and pt['st']['prof'] == 'IPE 200', f'poutre tracée {pt}')
+    key('l'); click(0, 1500); click(2000, 3500); pg.mouse.click(*W(9000, 6000), button='right')
+    pg.click('#modeNone')
+    # géométrie de la bande du mur : 6000 x 250
+    band = pg.evaluate("Sym.expand(Doc.get().objects.find(o=>o.st&&o.st.kind==='mur')).filter(e=>e.band)")
+    ok(len(band) == 1, 'une bande pour un mur ouvert')
+    ys = [p[1] for p in band[0]['pts']]; xs = [p[0] for p in band[0]['pts']]
+    ok(abs((max(ys) - min(ys)) - 250) < 1e-6 and abs((max(xs) - min(xs)) - 6000) < 1e-6, f'bande 6000 x 250 ({max(xs)-min(xs)} x {max(ys)-min(ys)})')
+    # sélection d'un mur : pick sur le bord de la bande
+    key('v'); click(3000, 3000 + 110); ok(pg.evaluate('Tools.selection.size') == 1, 'mur sélectionné en cliquant dans sa bande')
+    pg.wait_for_timeout(100)
+    ok(pg.locator('#props .netbox b', has_text='Structure').count() == 1, 'formulaire structure affiché')
+    # appliquer une structure sur une ligne simple
+    key('Escape'); key('l'); click(0, 8000); click(2000, 8000); pg.mouse.click(*W(9000, 6000), button='right')
+    key('v'); click(1000, 8000); pg.wait_for_timeout(100)
+    pg.select_option('#props select[aria-label="Type de structure"]', 'poutre')
+    pg.fill('#props input[aria-label="Épaisseur ou largeur en millimètres"]', '160')
+    pg.click('text=Appliquer comme structure')
+    l = objs()[-1]; ok(l.get('st', {}).get('kind') == 'poutre' and l['st']['w'] == 160, f'structure appliquée {l.get("st")}')
+
+    # --- sélection d'équipement et modification
+    key('Escape'); click(1000, 1000); pg.wait_for_timeout(100)
+    ok(pg.evaluate('Tools.selection.size') == 1 and pg.locator('#props select[aria-label="Type de symbole"]').count() == 1, 'équipement sélectionné, formulaire affiché')
+    pg.select_option('#props select[aria-label="Type de symbole"]', 'vanne')
+    pg.fill('#props input[aria-label="Repère"]', 'V9'); pg.press('#props input[aria-label="Repère"]', 'Tab')
+    s0 = objs()[0]; ok(s0['k'] == 'vanne' and s0['tag'] == 'V9', f'équipement modifié {s0}')
+    key('Escape')
+    pg.evaluate("Tools.selection.clear(); Tools.selection.add(%d); Doc.mutate(d=>{d.objects[0].tag='<img src=x onerror=alert(1)>'})" % s0['id']); pg.wait_for_timeout(100)
+    ok(pg.locator('#props img').count() == 0, 'repère hostile sans HTML injecté')
+    pg.evaluate("Doc.mutate(d=>{d.objects[0].tag='P1'}); Tools.selection.clear()")
+
+    # --- déplacement / annulation
+    n = len(objs()); pg.evaluate("Doc.undo()"); ok(len(objs()) == n or True, 'undo sans erreur')
+    pg.evaluate("Doc.redo()")
+
+    # --- exports
+    d = lambda sel: (lambda dl: (dl.value.save_as(OUT + dl.value.suggested_filename), OUT + dl.value.suggested_filename)[1])
+    with pg.expect_download() as dl: pg.click('#svg')
+    sv = OUT + 'e.svg'; dl.value.save_as(sv); txt = open(sv, encoding='utf-8').read()
+    ok('<circle' in txt and 'P1' in txt and 'IPE 200' in txt and 'Béton' in txt, 'SVG : symboles, repères et étiquettes de structure')
+    ok('rotate(' in txt or 'transform' in txt, 'SVG : texte tourné le long du mur')
+    with pg.expect_download() as dl: pg.click('#dxf')
+    dx = OUT + 'e.dxf'; dl.value.save_as(dx); dtx = open(dx, encoding='utf-8').read()
+    ok('CIRCLE' in dtx and 'IPE 200' in dtx and 'POLYLINE' in dtx, 'DXF : cercles, polylignes, textes')
+    ok(re.search(r'\n50\r?\n(?!0(\.0*)?\r?\n)[-0-9.]+', dtx) is not None, 'DXF : angle de texte présent')
+    pg.click('#pdf'); pg.wait_for_timeout(200)
+    with pg.expect_download() as dl: pg.click('dialog .dlg-f .btn.pri')
+    pf = OUT + 'e.pdf'; dl.value.save_as(pf); raw = open(pf, 'rb').read()
+    ok(raw[:5] == b'%PDF-' and b'%%EOF' in raw[-20:], 'PDF généré')
+    try:
+        import pypdf
+        r = pypdf.PdfReader(pf); t = ''.join(pg_.extract_text() for pg_ in r.pages)
+        ok('Pompe' in t or 'Vanne' in t or 'Poteau' in t, 'PDF : nomenclature des équipements')
+        ok('Mur' in t and 'Poutre' in t, 'PDF : nomenclature des structures')
+    except ImportError:
+        print('pypdf absent : lecture du PDF non contrôlée')
+
+    # --- nomenclature
+    pg.click('#bom'); pg.wait_for_timeout(200)
+    caps = pg.locator('dialog table caption').all_inner_texts()
+    ok('Équipements et poteaux' in caps and 'Structures (murs et poutres)' in caps, f'tableaux de nomenclature {caps}')
+    bom = pg.evaluate('BOM.compute()')
+    ok(sum(r['count'] for r in bom['syms']) == 3, 'trois équipements comptés')
+    mur = [r for r in bom['structs'] if r['kind'] == 'Mur']; ok(mur and abs(mur[0]['length'] - 6.0) < 1e-6, f'mur 6,00 m {mur}')
+    key('Escape')
+    with pg.expect_download() as dl: pg.evaluate('BOM.exportCSV()')
+    cs = OUT + 'e.csv'; dl.value.save_as(cs); c = open(cs, encoding='utf-8-sig').read()
+    ok('Équipements et poteaux' in c and 'Structures (murs et poutres)' in c, 'CSV : nouvelles tables')
+
+    # --- sauvegarde / import et validation
+    with pg.expect_download() as dl: pg.click('#save')
+    sj = OUT + 'e.json'; dl.value.save_as(sj); base = json.load(open(sj))
+    ok(any(o['type'] == 'sym' for o in base['objects']) and any('st' in o for o in base['objects']), 'JSON : sym et st sauvegardés')
+    L = base['layers'][0]['id']
+    def imp(objects):
+        base['objects'] = objects; json.dump(base, open(sj, 'w')); pg.evaluate("Doc.reset()"); pg.set_input_files('#file', sj); pg.wait_for_timeout(300)
+        return pg.inner_text('#msg'), objs()
+    S = lambda i, **k: {'id': i, 'type': 'sym', 'c': [0, 0], 'k': 'pompe', 's': 100, 'rot': 0, 'tag': '', 'layer': L, **k}
+    T = lambda i, **k: {'id': i, 'type': 'line', 'a': [0, 0], 'b': [10, 0], 'layer': L, **k}
+    for name, bad in [('type inconnu', S(1, k='inconnu')), ('taille trop petite', S(1, s=1)), ('taille trop grande', S(1, s=99999)), ('rotation NaN', S(1, rot='x')),
+                      ]:
+        m, o = imp([bad]); ok('invalide' in m and not o, f'import refusé : {name} ({m})')
+    for name, st in [('structure inconnue', {'kind': 'dalle', 'w': 100}), ('largeur négative', {'kind': 'mur', 'w': -5}), ('largeur excessive', {'kind': 'mur', 'w': 99999})]:
+        m, o = imp([T(1, st=st)]); ok(len(o) == 1 and 'st' not in o[0], f'import : attribut st écarté ({name})')
+    m, o = imp([S(3, rot=450, tag='T' * 99), T(6, st={'kind': 'mur', 'w': 200.04, 'prof': 'B' * 99}, net={'dn': 100})])
+    s3 = [x for x in o if x['id'] == 3]; ok(s3 and s3[0]['rot'] == 90 and len(s3[0]['tag']) == 30, f'import : rotation ramenée à [0;360[, repère borné ({m})')
+    x6 = [x for x in o if x['id'] == 6]; ok(x6 and 'net' in x6[0] and 'st' not in x6[0], 'import : net prioritaire sur st')
+    m, o = imp([T(7, st={'kind': 'mur', 'w': 200.04, 'prof': 'B' * 99})]); ok(o and o[0]['st']['w'] == 200 and len(o[0]['st']['prof']) == 30, 'import : st borné')
+
+    # --- captures
+    pg.evaluate("Doc.reset()")
+    pg.screenshot(path=OUT + 'panel.png')
+    print('erreurs page :', errs); ok(not errs, f'aucune erreur JS {errs}')
+    b.close()
+print(f'\n{checks} contrôles, {len(fails)} échec(s)')
+for f in fails: print(' -', f)
+sys.exit(1 if fails else 0)

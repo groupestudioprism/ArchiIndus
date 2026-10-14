@@ -30,6 +30,7 @@
     <button class="tool" type="button" data-tool="circle" title="Cercle (C)">Cercle</button>
     <button class="tool" type="button" data-tool="dim" title="Cote (D)">Cote</button>
     <button class="tool" type="button" data-tool="text" title="Texte (T)">Texte</button>
+    <button class="tool" type="button" data-tool="sym" title="Équipements et poteaux (E)">Équip.</button>
     <button class="tool" type="button" data-tool="move" title="Déplacer (M)">Dépl.</button>
     <button class="tool" type="button" data-tool="copy" title="Copier (K)">Copier</button>
     <button class="tool" type="button" data-tool="pan" title="Main : déplacer la vue (H)">Main</button>
@@ -43,23 +44,64 @@
     <div id="hint"></div>
   </main>
 
-  <aside id="panel" aria-label="Panneau">
-    <h2>Calques</h2>
-    <p class="mut small">Rond = calque actif · 1re case = visible · 2e case = verrouillé</p>
-    <div id="layers"></div>
-    <button id="addLayer" class="btn wide" type="button">+ Calque</button>
-    <h2>Réseau</h2>
-    <label class="chk"><input id="netOn" type="checkbox"> Tracer en réseau (lignes et polylignes)</label>
-    <div class="row2">
-      <label class="lbl">DN (mm)<input id="netDn" class="fld" type="number" min="1" max="5000" step="any" value="100"></label>
-      <label class="lbl">Matériau<input id="netMat" class="fld" type="text" list="netMats" maxlength="30"></label>
-    </div>
-    <datalist id="netMats"></datalist>
-    <h2>Sélection</h2>
-    <div id="props"></div>
-    <h2>Raccourcis</h2>
-    <p class="mut small">V L P R C D T M K H : outils · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
-    <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud » (le cloud n'est utilisable qu'une fois ses règles de sécurité publiées).</p>
+  <aside id="panel" aria-label="Panneau d'options">
+    <section class="pn" data-sec="layers">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-layers"><span class="pn-t">Calques</span><span class="pn-n" id="layerCount"></span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-layers">
+        <div id="layers"></div>
+        <button id="addLayer" class="btn wide" type="button">+ Calque</button>
+      </div>
+    </section>
+    <section class="pn" data-sec="draw">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-draw"><span class="pn-t">Tracé</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-draw">
+        <div class="seg" role="radiogroup" aria-label="Mode de tracé des lignes et polylignes">
+          <button type="button" role="radio" id="modeNone" data-mode="none" aria-checked="true">Simple</button>
+          <button type="button" role="radio" id="modeNet" data-mode="net" aria-checked="false">Réseau</button>
+          <button type="button" role="radio" id="modeMur" data-mode="mur" aria-checked="false">Mur</button>
+          <button type="button" role="radio" id="modePoutre" data-mode="poutre" aria-checked="false">Poutre</button>
+        </div>
+        <p class="pn-hint" id="modeHint">Les lignes et polylignes sont tracées sans attribut.</p>
+        <div class="row2" id="fldNet" hidden>
+          <label class="lbl">DN (mm)<input id="netDn" class="fld" type="number" min="1" max="5000" step="any" value="100"></label>
+          <label class="lbl">Matériau<input id="netMat" class="fld" type="text" list="netMats" maxlength="30"></label>
+        </div>
+        <div class="row2" id="fldMur" hidden>
+          <label class="lbl">Épaisseur (mm)<input id="murW" class="fld" type="number" min="1" max="5000" step="any" value="200"></label>
+          <label class="lbl">Matériau<input id="murProf" class="fld" type="text" list="stMur" maxlength="30"></label>
+        </div>
+        <div class="row2" id="fldPoutre" hidden>
+          <label class="lbl">Largeur (mm)<input id="poutreW" class="fld" type="number" min="1" max="5000" step="any" value="150"></label>
+          <label class="lbl">Profilé<input id="poutreProf" class="fld" type="text" list="stPoutre" maxlength="30"></label>
+        </div>
+        <datalist id="netMats"></datalist><datalist id="stMur"></datalist><datalist id="stPoutre"></datalist>
+      </div>
+    </section>
+    <section class="pn" data-sec="lib">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-lib"><span class="pn-t">Équipements et structure</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-lib">
+        <div id="symGrid"></div>
+        <div class="row3">
+          <label class="lbl">Taille (mm)<input id="symS" class="fld" type="number" min="10" max="5000" step="any" value="400"></label>
+          <label class="lbl">Rotation (°)<input id="symRot" class="fld" type="number" min="0" max="360" step="15" value="0"></label>
+          <label class="lbl">Repère<input id="symTag" class="fld" type="text" maxlength="30" placeholder="ex. P1"></label>
+        </div>
+        <p class="pn-hint">Choisir un symbole active l'outil Équipements (E) : un clic pose le symbole. [ et ] tournent de 15°.</p>
+      </div>
+    </section>
+    <section class="pn" data-sec="sel">
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-sel"><span class="pn-t">Sélection</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-sel">
+        <div id="props"></div>
+      </div>
+    </section>
+    <section class="pn" data-sec="help">
+      <h2 class="pn-h"><button type="button" aria-expanded="false" aria-controls="pn-help"><span class="pn-t">Aide et raccourcis</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <div class="pn-b" id="pn-help">
+        <p class="mut small">Outils : V L P R C D T E M K H · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
+        <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud ».</p>
+      </div>
+    </section>
   </aside>
 
   <footer id="status">

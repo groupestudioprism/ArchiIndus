@@ -1,5 +1,7 @@
 /* Nomenclature : quantités calculées à partir des objets des calques VISIBLES (comme les exports SVG, DXF et PDF).
    - Réseaux (objets avec attribut net) : regroupés par calque, matériau et DN ; longueurs en mètres, tronçons = segments.
+   - Équipements et poteaux (objets sym) : par calque, type et dimension, avec nombre et repères.
+   - Structures (murs et poutres, attribut st) : par calque, type, profilé ou matériau et largeur ; longueurs en mètres, tronçons = segments.
    - Autres éléments : par calque, lignes et polylignes (nombre et longueur), cercles, surface des contours fermés.
    Les cotes et les textes ne sont pas comptés. */
 const BOM = (() => {
@@ -8,7 +10,7 @@ const BOM = (() => {
 
   function compute() {
     const d = Doc.get();
-    const nets = new Map(), others = new Map();
+    const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map();
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
@@ -20,6 +22,20 @@ const BOM = (() => {
         r.segments += Geo.segments(o).length;
         r.length += (Geo.length(o) || 0) / 1000;
         if (o.net.tag) r.tags.add(o.net.tag);
+      } else if (o.type === 'sym') {
+        const key = `${l.id}|${o.k}|${o.s}`;
+        let r = syms.get(key);
+        if (!r) { r = { layer: l.name, group: l.group, label: SYMBOLS[o.k].label, size: o.s, count: 0, tags: new Set() }; syms.set(key, r); }
+        r.count++;
+        if (o.tag) r.tags.add(o.tag);
+      } else if (o.st) {
+        const key = `${l.id}|${o.st.kind}|${o.st.prof}|${o.st.w}`;
+        let r = structs.get(key);
+        if (!r) { r = { layer: l.name, group: l.group, kind: ST_KINDS[o.st.kind].label, prof: o.st.prof, w: o.st.w, objects: 0, segments: 0, length: 0, tags: new Set() }; structs.set(key, r); }
+        r.objects++;
+        r.segments += Geo.segments(o).length;
+        r.length += (Geo.length(o) || 0) / 1000;
+        if (o.st.tag) r.tags.add(o.st.tag);
       } else if (o.type === 'line' || o.type === 'poly' || o.type === 'circle') {
         let r = others.get(l.id);
         if (!r) { r = { layer: l.name, group: l.group, lines: 0, circles: 0, length: 0, area: 0 }; others.set(l.id, r); }
@@ -31,6 +47,8 @@ const BOM = (() => {
     const byGroup = (a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.layer.localeCompare(b.layer, 'fr');
     return {
       nets: [...nets.values()].sort((a, b) => byGroup(a, b) || b.dn - a.dn || a.mat.localeCompare(b.mat, 'fr')).map((r) => ({ ...r, tags: [...r.tags].sort() })),
+      syms: [...syms.values()].sort((a, b) => byGroup(a, b) || a.label.localeCompare(b.label, 'fr') || a.size - b.size).map((r) => ({ ...r, tags: [...r.tags].sort() })),
+      structs: [...structs.values()].sort((a, b) => byGroup(a, b) || a.kind.localeCompare(b.kind, 'fr') || a.prof.localeCompare(b.prof, 'fr') || a.w - b.w).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       others: [...others.values()].sort(byGroup),
     };
   }
@@ -39,6 +57,11 @@ const BOM = (() => {
 
   function netRow(r) { return [r.layer, r.mat || '—', String(r.dn), r.tags.join(', ') || '—', String(r.segments), f2(r.length)]; }
   function otherRow(r) { return [r.layer, GROUP_NAME[r.group] || r.group, String(r.lines), String(r.circles), f2(r.length), f2(r.area)]; }
+  const symRow = (r) => [r.layer, r.label, String(r.size), r.tags.join(', ') || '—', String(r.count)];
+  const stRow = (r) => [r.layer, r.kind, r.prof || '—', String(r.w), r.tags.join(', ') || '—', String(r.segments), f2(r.length)];
+  const SYM_HEAD = ['Calque', 'Type', 'Dimension (mm)', 'Repères', 'Quantité'], SYM_NUM = [2, 4];
+  const ST_HEAD = ['Calque', 'Type', 'Profilé / matériau', 'Largeur (mm)', 'Repères', 'Tronçons', 'Longueur (m)'], ST_NUM = [3, 5, 6];
+  const isEmpty = (b) => !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
   const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
   const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
   const NET_NUM = [2, 4, 5], OTHER_NUM = [2, 3, 4, 5];
@@ -58,7 +81,7 @@ const BOM = (() => {
   function show() {
     const b = compute();
     const body = el('div');
-    if (!b.nets.length && !b.others.length) {
+    if (isEmpty(b)) {
       body.append(el('p', { class: 'mut' }, 'Rien à compter : le dessin est vide ou tous les calques sont masqués.'));
     } else {
       body.append(el('p', { class: 'mut small' }, 'Calques visibles uniquement. Les cotes et les textes ne sont pas comptés. Longueurs mesurées sur le dessin (mm → m), sans coefficient de coupe ni raccords.'));
@@ -66,6 +89,8 @@ const BOM = (() => {
         const t = totals(b);
         body.append(table('Réseaux', NET_HEAD, b.nets.map(netRow), NET_NUM, ['Total', '', '', '', String(t.netSegments), f2(t.netLength)]));
       } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
+      if (b.syms.length) body.append(table('Équipements et poteaux', SYM_HEAD, b.syms.map(symRow), SYM_NUM, ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))]));
+      if (b.structs.length) body.append(table('Structures (murs et poutres)', ST_HEAD, b.structs.map(stRow), ST_NUM, ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), f2(b.structs.reduce((a, r) => a + r.length, 0))]));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
     Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { exportCSV(); return false; } }]);
@@ -74,7 +99,7 @@ const BOM = (() => {
   /* CSV pour Excel en français : séparateur « ; », virgule décimale, UTF-8 avec BOM. */
   function exportCSV() {
     const b = compute();
-    if (!b.nets.length && !b.others.length) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
+    if (isEmpty(b)) { Status.msg('Rien à exporter : le dessin est vide ou tous les calques sont masqués.'); return; }
     const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
     const lines = [];
     if (b.nets.length) {
@@ -82,6 +107,16 @@ const BOM = (() => {
       for (const r of b.nets) lines.push(netRow(r).map(q).join(';'));
       const t = totals(b);
       lines.push(['Total', '', '', '', t.netSegments, f2(t.netLength)].map(q).join(';'), '');
+    }
+    if (b.syms.length) {
+      lines.push(q('Équipements et poteaux'), SYM_HEAD.map(q).join(';'));
+      for (const r of b.syms) lines.push(symRow(r).map(q).join(';'));
+      lines.push(['Total', '', '', '', b.syms.reduce((a, r) => a + r.count, 0)].map(q).join(';'), '');
+    }
+    if (b.structs.length) {
+      lines.push(q('Structures (murs et poutres)'), ST_HEAD.map(q).join(';'));
+      for (const r of b.structs) lines.push(stRow(r).map(q).join(';'));
+      lines.push(['Total', '', '', '', '', b.structs.reduce((a, r) => a + r.segments, 0), f2(b.structs.reduce((a, r) => a + r.length, 0))].map(q).join(';'), '');
     }
     if (b.others.length) {
       lines.push(q('Autres éléments par calque'), OTHER_HEAD.map(q).join(';'));
@@ -91,5 +126,5 @@ const BOM = (() => {
     Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
   }
 
-  return { compute, show, exportCSV, netRow, otherRow, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+  return { compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
 })();

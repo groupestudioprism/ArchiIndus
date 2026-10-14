@@ -97,6 +97,8 @@ const Doc = (() => {
     for (const l of layers) if (!l.id) l.id = ++maxL;
     const layerIds = new Set(layers.map((l) => l.id));
 
+    /* Réseau (net) ou structure (st) : un seul des deux ; le réseau l'emporte. */
+    const attrs = (o, out) => { const nt = cleanNet(o.net); if (nt) out.net = nt; else { const sc = cleanSt(o.st); if (sc) out.st = sc; } };
     const objects = [];
     const seenO = new Set();
     let maxO = 0;
@@ -105,14 +107,15 @@ const Doc = (() => {
       if (!o || typeof o !== 'object') bad(where + '.');
       const out = { type: o.type };
       switch (o.type) {
-        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); { const nt = cleanNet(o.net); if (nt) out.net = nt; } break;
+        case 'line': out.a = pt(o.a); out.b = pt(o.b); if (!out.a || !out.b) bad(where + ' (ligne).'); attrs(o, out); break;
         case 'poly':
           if (!Array.isArray(o.pts) || o.pts.length < 2 || o.pts.length > 100000) bad(where + ' (polyligne).');
           out.pts = o.pts.map(pt);
           if (out.pts.some((p) => !p)) bad(where + ' (polyligne).');
           out.closed = o.closed === true;
-          { const nt = cleanNet(o.net); if (nt) out.net = nt; }
+          attrs(o, out);
           break;
+        case 'sym': { out.c = pt(o.c); const cs = cleanSym(o); if (!out.c || !cs) bad(where + ' (symbole).'); Object.assign(out, cs); break; }
         case 'circle': out.c = pt(o.c); out.r = o.r; if (!out.c || !num(out.r) || !(out.r > 0)) bad(where + ' (cercle).'); break;
         case 'dim': out.a = pt(o.a); out.b = pt(o.b); out.off = o.off; out.h = num(o.h) && o.h > 0 ? o.h : 150; if (!out.a || !out.b || !num(out.off)) bad(where + ' (cote).'); break;
         case 'text':
@@ -159,9 +162,9 @@ const Doc = (() => {
     /* À appeler dans mutate : ajoute un objet sur le calque actif. */
     add(o) {
       o.id = data.nextId++; o.layer = data.active;
-      if (state.net.on && (o.type === 'line' || (o.type === 'poly' && !o.closed))) {
-        const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' });
-        if (nt) o.net = nt;
+      if (state.mode !== 'none' && (o.type === 'line' || (o.type === 'poly' && (!o.closed || state.mode !== 'net')))) {
+        if (state.mode === 'net') { const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' }); if (nt) o.net = nt; }
+        else { const k = state.mode, sc = cleanSt({ kind: k, w: state.st.w[k], prof: state.st.prof[k], tag: '' }); if (sc) o.st = sc; }
       }
       data.objects.push(o);
       return o;

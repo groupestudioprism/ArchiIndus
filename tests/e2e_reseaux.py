@@ -33,12 +33,12 @@ with sync_playwright() as p:
 
     # --- tracé en réseau depuis le panneau
     pg.evaluate("Doc.mutate(d=>{d.active=2})")
-    pg.check('#netOn'); pg.fill('#netDn', '160'); pg.fill('#netMat', 'PEHD'); pg.press('#netMat', 'Tab')
+    pg.click('#modeNet'); pg.fill('#netDn', '160'); pg.fill('#netMat', 'PEHD'); pg.press('#netMat', 'Tab')
     ok(pg.evaluate('state.net.on && state.net.dn===160 && state.net.mat==="PEHD"'), 'réglages de tracé en réseau pris en compte')
     pg.keyboard.press('Escape')
     pg.keyboard.press('l'); click(0, 0); click(6000, 0); pg.mouse.click(*W(9000, 5000), button='right')
     o = objs(); ok(len(o) == 1 and o[0].get('net') == {'dn': 160, 'mat': 'PEHD', 'tag': ''}, f'ligne tracée avec net {o}')
-    pg.uncheck('#netOn')
+    pg.click('#modeNone')
     ok(pg.evaluate('state.net.on') is False, 'tracé en réseau désactivé')
     pg.keyboard.press('l'); click(0, 2000); click(3000, 2000); pg.mouse.click(*W(9000, 5000), button='right')
     o = objs(); ok(len(o) == 2 and 'net' not in o[1], 'ligne suivante sans net')

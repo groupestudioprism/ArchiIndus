@@ -6,6 +6,11 @@ const state = {
   snap: { on: true, ortho: false },
   /* Tracé en réseau : si `on`, les lignes et polylignes ouvertes créées reçoivent {dn, mat} (voir Doc.add). */
   net: { on: false, dn: 100, mat: '' },
+  /* Mode de tracé des lignes et polylignes : 'none' | 'net' (réseau) | 'mur' | 'poutre' (attribut st). net.on reste égal à (mode === 'net'). */
+  mode: 'none',
+  st: { w: { mur: 200, poutre: 150 }, prof: { mur: '', poutre: '' } },
+  /* Symbole à poser (outil « Équipements ») : voir SYMBOLS. */
+  sym: { k: 'pompe', s: 400, rot: 0, tag: '' },
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };

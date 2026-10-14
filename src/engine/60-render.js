@@ -83,9 +83,22 @@ const Render = (() => {
     ctx.restore();
   }
 
+  /* Symboles, murs et poutres : dessinés à partir de leurs éléments vectoriels (Sym.expand), bande de structure légèrement teintée. */
+  function drawComposite(ctx, o, col, lw) {
+    for (const e of Sym.expand(o)) {
+      if (e.band) {
+        ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = col; ctx.beginPath();
+        e.pts.forEach((p, i) => { const s = Canvas2D.toScreen(p); if (i) ctx.lineTo(s[0], s[1]); else ctx.moveTo(s[0], s[1]); });
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+      drawObject(ctx, e, col, e.type === 'text' ? lw : Math.max(1, lw - (o.type === 'sym' ? 0.2 : 0.3)));
+    }
+  }
+
   function drawObject(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+    if (Sym.isComposite(o)) { drawComposite(ctx, o, col, lw); return; }
     switch (o.type) {
       case 'line': if (o.net) netHalo(ctx, [o.a, o.b], false, o); strokePath(ctx, [o.a, o.b], false); if (o.net) netLabel(ctx, o, col); break;
       case 'poly': if (o.net) netHalo(ctx, o.pts, o.closed, o); strokePath(ctx, o.pts, o.closed); if (o.net) netLabel(ctx, o, col); break;
@@ -99,7 +112,8 @@ const Render = (() => {
         const p = S(o.p);
         ctx.font = `500 ${clamp(o.h * state.view.scale, 9, 400)}px Inter, system-ui, sans-serif`;
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText(o.text, p[0], p[1]);
+        if (o.deg) { ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(-o.deg * Math.PI / 180); ctx.fillText(o.text, 0, 0); ctx.restore(); }
+        else ctx.fillText(o.text, p[0], p[1]);
         break;
       }
     }

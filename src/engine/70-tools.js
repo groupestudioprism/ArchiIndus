@@ -3,7 +3,7 @@
 const Tools = (() => {
   const selection = new Set();
   const listeners = [];
-  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', move: 'Déplacer', copy: 'Copier', pan: 'Main' };
+  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', sym: 'Équipement', move: 'Déplacer', copy: 'Copier', pan: 'Main' };
   const HINTS = {
     select: 'Cliquer un objet, ou glisser pour une fenêtre (gauche → droite : objets entiers ; droite → gauche : objets touchés). Maj : ajouter.',
     line: 'Cliquer le point de départ, puis les points suivants. Clic droit ou Échap pour terminer. Taper une longueur (ex. 1500 ou 1500<45) puis Entrée.',
@@ -12,11 +12,12 @@ const Tools = (() => {
     circle: 'Cliquer le centre, puis un point du cercle (ou taper le rayon).',
     dim: 'Cliquer les deux points à coter, puis la position de la ligne de cote.',
     text: 'Cliquer l\'emplacement du texte, taper, Entrée pour valider.',
+    sym: 'Choisir un symbole dans la bibliothèque du panneau, cliquer pour le poser. [ et ] : tourner de 15° · Échap : terminer.',
     move: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis le point d\'arrivée.',
     copy: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis chaque point d\'arrivée. Échap pour finir.',
     pan: 'Glisser pour déplacer la vue (aussi : barre d\'espace ou molette enfoncée).',
   };
-  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', m: 'move', k: 'copy', h: 'pan' };
+  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', e: 'sym', m: 'move', k: 'copy', h: 'pan' };
   const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy'];
 
   let tool = 'select';
@@ -124,6 +125,13 @@ const Tools = (() => {
         if (!canCreate()) return;
         askText(p);
         break;
+      case 'sym': {
+        if (!canCreate()) return;
+        const cs = cleanSym({ ...state.sym });
+        if (!cs) { Status.msg(`Dimension invalide : entrez une taille entre ${SYM_MIN} et ${SYM_MAX} mm.`, 6000); return; }
+        addObj({ type: 'sym', c: p, ...cs });
+        break;
+      }
       case 'move': case 'copy': {
         if (!selection.size) { Status.msg('Sélectionnez d\'abord des objets avec l\'outil Sélection (V).'); return; }
         if (!pts.length) { pts = [p]; return; }
@@ -363,6 +371,11 @@ const Tools = (() => {
       ctx.restore();
       return;
     }
+    if (tool === 'sym' && cur) {
+      const cs = cleanSym({ ...state.sym });
+      if (cs) { ctx.setLineDash([]); ctx.globalAlpha = 0.75; Render.drawObject(ctx, { type: 'sym', c: cur.p, ...cs, tag: '' }, css('--accent'), 1.6); }
+      ctx.restore(); return;
+    }
     if (!cur || !pts.length) { ctx.restore(); return; }
     const c = cur.p;
     ctx.strokeStyle = css('--accent');
@@ -436,6 +449,7 @@ const Tools = (() => {
     if (k === 'F8') { e.preventDefault(); toggleOrtho(); return; }
     if (k === 'F3') { e.preventDefault(); toggleSnap(); return; }
     if (low === 'c' && tool === 'poly' && pts.length >= 3) { finishPoly(true); Canvas2D.requestDraw(); return; }
+    if (tool === 'sym' && (k === '[' || k === ']')) { state.sym.rot = (state.sym.rot + (k === ']' ? 15 : -15) + 360) % 360; notify('sym'); return; }
     if (low === 'z') { Canvas2D.zoomExtents(); return; }
     if (KEYS[low]) { setTool(KEYS[low]); return; }
     if (wantsTyping() && /^[0-9.,<;]$/.test(k)) { e.preventDefault(); UI.focusCmd(k); }

@@ -1,5 +1,5 @@
 /* Géométrie 2D. Un point est [x, y] en millimètres.
-   Objets : line {a,b} · poly {pts,closed} · circle {c,r} · dim {a,b,off,h} · text {p,text,h}. */
+   Objets : line {a,b} · poly {pts,closed} · circle {c,r} · dim {a,b,off,h} · text {p,text,h} · sym {c,k,s,rot,tag}. */
 const G = {
   dist: (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]),
   mid: (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
@@ -57,10 +57,12 @@ const Geo = {
     else if (o.type === 'poly') pts = o.pts;
     else if (o.type === 'circle') pts = [[o.c[0] - o.r, o.c[1] - o.r], [o.c[0] + o.r, o.c[1] + o.r]];
     else if (o.type === 'dim') { const g = Geo.dimGeom(o); pts = [o.a, o.b, g.p1, g.p2]; }
+    else if (o.type === 'sym') { const r = o.s * 0.71; pts = [[o.c[0] - r, o.c[1] - r], [o.c[0] + r, o.c[1] + r]]; }
     else pts = [o.p, [o.p[0] + Geo.textWidth(o), o.p[1] + o.h]];
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
-    return [x0, y0, x1, y1];
+    const pad = o.st ? o.st.w / 2 * 3 : 0;   /* demi-largeur, angles vifs coupés à 3 × */
+    return [x0 - pad, y0 - pad, x1 + pad, y1 + pad];
   },
 
   /* Distance d'un point à un objet (mm). */
@@ -70,9 +72,10 @@ const Geo = {
         let d = Infinity;
         for (const [a, b] of Geo.segments(o)) d = Math.min(d, G.distPtSeg(p, a, b));
         if (o.type === 'poly' && o.pts.length === 1) d = G.dist(p, o.pts[0]);
-        return d;
+        return o.st ? Math.max(0, d - o.st.w / 2) : d;
       }
       case 'circle': return Math.abs(G.dist(p, o.c) - o.r);
+      case 'sym': return Math.max(0, G.dist(p, o.c) - o.s * 0.5);
       case 'dim': {
         const g = Geo.dimGeom(o);
         return Math.min(G.distPtSeg(p, g.p1, g.p2), G.distPtSeg(p, o.a, g.p1), G.distPtSeg(p, o.b, g.p2));
@@ -90,7 +93,7 @@ const Geo = {
     const mv = (p) => { p[0] += dx; p[1] += dy; };
     if (o.type === 'line' || o.type === 'dim') { mv(o.a); mv(o.b); }
     else if (o.type === 'poly') o.pts.forEach(mv);
-    else if (o.type === 'circle') mv(o.c);
+    else if (o.type === 'circle' || o.type === 'sym') mv(o.c);
     else if (o.type === 'text') mv(o.p);
     return o;
   },
