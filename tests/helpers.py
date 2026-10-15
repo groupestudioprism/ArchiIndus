@@ -103,6 +103,17 @@ BYPASS = """() => { document.getElementById('auth').hidden = true; document.getE
   window.SPAccess = Object.freeze({level:'admin', canSave:true, canExport:true}); }"""
 
 
+def reload_project(pg):
+    """Recharge la page comme un utilisateur. Le projet vit dans le cloud (aucune copie dans le navigateur, comme ARCHIPLAN) :
+    après rechargement le dessin doit être vide ; le test rouvre alors le projet comme le ferait l'accueil (APModel.load).
+    Renvoie True si le rechargement n'a ramené aucun ancien dessin."""
+    saved = pg.evaluate('JSON.stringify(Doc.get())')
+    enter(pg, reload=True)
+    empty = pg.evaluate('Doc.get().objects.length === 0 && localStorage.getItem("ai.doc.v1") === null')
+    pg.evaluate('(s) => window.APModel.load(JSON.parse(s))', saved)
+    return empty
+
+
 def enter(pg, reload=False, url=None):
     """Ouvre (ou recharge) la démo autonome et contourne l'écran de compte (testé par e2e_compte.py)."""
     if reload:

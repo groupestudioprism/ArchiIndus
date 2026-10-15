@@ -8,7 +8,7 @@ import json, re, shutil, subprocess, sys, tempfile, pathlib, xml.etree.ElementTr
 from playwright.sync_api import sync_playwright
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from helpers import enter
+from helpers import enter, reload_project
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = tempfile.mkdtemp(prefix='archiindus-reseaux-') + '/'
@@ -139,8 +139,8 @@ with sync_playwright() as p:
         print('Rendu PDF :', sorted(f.name for f in pathlib.Path(OUT).glob('pdf*.png')))
 
     # --- persistance et import validé
-    pg.wait_for_timeout(700); enter(pg, reload=True)
-    ok(objs()[0].get('net', {}).get('tag') == 'EP-01', 'réseau restauré après rechargement')
+    pg.wait_for_timeout(700); ok(reload_project(pg), 'rechargement : aucune copie locale du dessin')
+    ok(objs()[0].get('net', {}).get('tag') == 'EP-01', 'réseau rouvert intact')
     bad = OUT + 'bad.json'
     base = pg.evaluate('JSON.parse(JSON.stringify(Doc.get()))')
     base['objects'] = [{'id': 1, 'type': 'line', 'a': [0, 0], 'b': [10, 0], 'layer': 1, 'net': {'dn': -5, 'mat': 'x'}},

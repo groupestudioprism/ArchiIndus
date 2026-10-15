@@ -422,8 +422,8 @@ const UI = (() => {
     if (document.activeElement !== pn) pn.value = Doc.get().name;
     const s = Doc.saveState();
     $('#saved').hidden = !!window.APCloudActive;
-    $('#saved').textContent = s === 'saved' ? 'enregistré dans ce navigateur' : s === 'pending' ? 'enregistrement…' : 'enregistrement local impossible';
-    $('#saved').classList.toggle('err', s === 'error');
+    $('#saved').textContent = 'non enregistré (exemple ou projet hors cloud)';
+    void s;
     document.title = `${Doc.get().name} · ARCHIINDUS`;
   }
 

@@ -7,7 +7,7 @@ import json, re, sys, tempfile, pathlib
 from playwright.sync_api import sync_playwright
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from helpers import enter
+from helpers import enter, reload_project
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = tempfile.mkdtemp(prefix='archiindus-equip-') + '/'
@@ -41,7 +41,7 @@ with sync_playwright() as p:
     ok(not pg.is_visible('#pn-help'), "corps de l'aide masqué")
     pg.click('#panel [aria-controls="pn-layers"]')
     ok(not pg.is_visible('#layers'), 'section calques repliée')
-    enter(pg, reload=True)
+    reload_project(pg)
     ok(not pg.is_visible('#layers'), "repli mémorisé après rechargement")
     pg.click('#panel [aria-controls="pn-layers"]'); ok(pg.is_visible('#layers'), 'section calques rouverte')
     ok(pg.locator('#layerCount').inner_text() == str(pg.evaluate('Doc.get().layers.length')), 'compteur de calques')
@@ -182,7 +182,7 @@ with sync_playwright() as p:
     ok(pg.locator('details.ly-other').count() == 1, 'autres métiers repliés')
     pg.click('#rt-trade'); pg.select_option('#tradeSel', 'all'); pg.wait_for_timeout(100)
     ok(pg.locator('.sym-btn').count() == 20 and pg.is_visible('#modeNet') and pg.is_visible('#modeMur'), 'tous les métiers : tout est visible')
-    enter(pg, reload=True)
+    reload_project(pg)
     # --- paramètres du projet
     fmenu('#settings'); pg.wait_for_selector('dialog[open]')
     pg.fill('dialog input[aria-label="Client"]', 'ACME'); pg.fill('dialog input[aria-label="Nom du projet"]', 'Usine test')

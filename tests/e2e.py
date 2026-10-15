@@ -10,7 +10,7 @@ import json, re, sys, xml.etree.ElementTree as ET
 from playwright.sync_api import sync_playwright
 import pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from helpers import enter
+from helpers import enter, reload_project
 import pathlib, tempfile
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 OUT=tempfile.mkdtemp(prefix='archiindus-e2e-')+'/'
@@ -103,8 +103,8 @@ with sync_playwright() as p:
     pg.keyboard.press('z'); pg.click('#theme'); pg.wait_for_timeout(150); pg.screenshot(path=OUT+'e2e_dark.png'); pg.click('#theme'); pg.wait_for_timeout(150); pg.screenshot(path=OUT+'e2e_light.png')
     total=n()
     # --- enregistrement local + rechargement
-    pg.wait_for_timeout(800); ok(pg.inner_text('#saved').startswith('enregistré'),f"état d'enregistrement {pg.inner_text('#saved')}")
-    enter(pg, reload=True); ok(n()==total,f'restauration après rechargement {n()} / {total}')
+    pg.wait_for_timeout(800); ok(reload_project(pg), 'rechargement : aucune copie locale du dessin (le projet vit dans le cloud)')
+    ok(n()==total,f'projet rouvert intact {n()} / {total}')
     # --- export / import JSON
     with pg.expect_download() as d: fmenu('#save')
     path=OUT+'sortie.archiindus.json'; d.value.save_as(path)

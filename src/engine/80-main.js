@@ -3,7 +3,6 @@
    puis ouvre un projet dans le dessin par le pont window.APModel ci-dessous. */
 document.addEventListener('DOMContentLoaded', () => {
   Tools.init();
-  Doc.loadStored();
   UI.init();
   Canvas2D.init();
   Cad.init();

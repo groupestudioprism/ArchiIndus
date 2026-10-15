@@ -55,10 +55,9 @@ const Doc = (() => {
   function schedule() {
     saveState = 'pending';
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      try { localStorage.setItem(KEY, snap()); saveState = 'saved'; } catch (e) { saveState = 'error'; }
-      emit('save');
-    }, 500);
+    /* Le projet vit dans le cloud Studio Prism (src/js/cloud.js, comme ARCHIPLAN et ARCHITRAFIC) : plus de copie dans ce navigateur.
+       Une ancienne copie locale (ai.doc.v1, version sans compte) reste proposée une fois à l'accueil, « Enregistrer dans le cloud ». */
+    timer = setTimeout(() => { saveState = 'saved'; emit('save'); }, 500);
   }
 
   function changed() { schedule(); emit('change'); }
