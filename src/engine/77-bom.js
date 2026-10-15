@@ -126,7 +126,7 @@ const BOM = (() => {
       if (b.techs.length) body.append(table('Propriétés techniques renseignées', TECH_HEAD, b.techs.map(techRow), TECH_NUM));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
-    Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { exportCSV(); return false; } }]);
+    Dlg.open('Nomenclature', body, [{ label: 'Exporter CSV', run: () => { if (Lic.need()) exportCSV(); return false; } }]);
   }
 
   /* CSV pour Excel en français : séparateur « ; », virgule décimale, UTF-8 avec BOM. */

@@ -1,4 +1,4 @@
-/* Page de connexion et accueil : reprend auth.css et home.css d'ArchiPlan (relevé le 2026-10-14), adapté aux jetons ArchiIndus. */
+/* Compte Studio Prism et accueil : auth.css + home.css d'ArchiPlan (dépôt archiplan, relevés le 2026-10-15), puis ajustements ArchiIndus. */
 /* ===== Compte Studio Prism : connexion, fiche client, code PIN — écran volontairement clair, comme le logo ===== */
 #auth[hidden]{display:none!important}
 #auth{position:fixed;inset:0;z-index:55;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#FFFFFF;color:#0F1B33;color-scheme:light;font-family:var(--f-body);overflow:auto}
@@ -55,10 +55,47 @@
 .ap-or{display:flex;align-items:center;gap:12px;font-size:12px;color:#7A8499}
 .ap-or::before,.ap-or::after{content:"";flex:1;border-top:1px solid #DDE5EA}
 .ap-mode{margin:4px 0 0;font:11.5px/1.5 var(--f-mono);color:#7A8499;text-align:center}
+.ap-list{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px;color:#3C4863}
+.ap-list li{display:grid;grid-template-columns:20px 1fr;gap:10px;line-height:1.45}
+.ap-list li::before{content:"";width:7px;height:7px;margin:6px 0 0 4px;border:2px solid #03A2AC;transform:rotate(45deg)}
 /* étapes de l'inscription, dessinées comme une ligne de cote */
+.ap-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);position:relative}
+.ap-steps::before{content:"";position:absolute;left:12px;right:12px;top:11px;border-top:1px solid #9AABBC}
+.ap-steps li{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;font:500 10.5px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:#7A8499}
+.ap-steps li:first-child{align-items:flex-start}.ap-steps li:last-child{align-items:flex-end}
+.ap-steps i{display:grid;place-items:center;width:22px;height:22px;background:#fff;border:1px solid #9AABBC;transform:rotate(45deg);font-style:normal}
+.ap-steps i b{transform:rotate(-45deg);font-size:10.5px;font-weight:600}
+.ap-steps li.cur{color:#071A45}.ap-steps li.cur i{border-color:#03A2AC;background:#03A2AC;color:#fff}
+.ap-steps li.done{color:#0A5E8E}.ap-steps li.done i{border-color:#0A5E8E;background:#0A5E8E;color:#fff}
 /* code PIN */
+.ap-center{text-align:center;display:grid;gap:10px;justify-items:center}
+.ap-center .ap-sub{margin:0}
+.ap-avatar{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#071A45;color:#fff;font:700 22px "Montserrat",var(--f-display)}
+.ap-dots{display:flex;justify-content:center;gap:14px;margin:4px 0}
+.ap-dots i{width:14px;height:14px;border-radius:50%;border:1.5px solid #9AABBC;transition:background .12s,border-color .12s}
+.ap-dots i.on{background:#071A45;border-color:#071A45}
+.ap-dots.shake{animation:ap-shake .38s}
+.ap-pin-err{text-align:center}
+.ap-pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px 22px;justify-content:center}
+.ap-pad button{width:72px;height:72px;border-radius:50%;border:1px solid #DDE5EA;background:#F7F9FB;color:#071A45;font:600 24px "Montserrat",var(--f-display)}
+.ap-pad button:hover{background:#EEF3F7}
+.ap-pad button:active{background:#071A45;color:#fff}
+.ap-pad button[data-k="del"]{font-size:20px;border-color:transparent;background:transparent}
+@keyframes ap-shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 .ap-spin{width:28px;height:28px;border-radius:50%;border:3px solid #DDE5EA;border-top-color:#0A5E8E;animation:ap-rot .8s linear infinite}
 @keyframes ap-rot{to{transform:rotate(360deg)}}
+.ap-mail{border:1px solid #DDE5EA;border-radius:12px;overflow:hidden;font-size:13.5px}
+.ap-mail header{background:#F5F7F9;padding:10px 14px;border-bottom:1px solid #DDE5EA;font-size:12px;color:#4A5570;line-height:1.6}
+.ap-mail div{padding:14px;line-height:1.55;color:#26324D}
+.ap-mail .code{display:block;margin:8px 0;font:700 26px var(--f-mono);letter-spacing:.3em;color:#071A45}
+.ap-sec{display:grid;border-top:1px solid #DDE5EA}
+.ap-sec > div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:14px 0;border-bottom:1px solid #DDE5EA}
+.ap-sec b{font-size:14px;color:#071A45}
+.ap-sec p{margin:0;grid-column:1;font-size:13px;line-height:1.45;color:#56637C}
+.ap-sec .acts2{grid-row:1 / span 2;grid-column:2;display:flex;gap:6px}
+.ap-chip-btn{height:34px;padding:0 12px;border-radius:8px;border:1px solid #CBD6DF;background:#fff;color:#071A45;font-weight:600;font-size:13px}
+.ap-chip-btn:hover{border-color:#0A5E8E}
+.ap-chip-btn.danger{color:#B4372C}
 #auth :focus-visible{outline:2px solid #0A5E8E;outline-offset:2px}
 @media (max-width:860px){
   #auth{grid-template-columns:minmax(0,1fr);align-content:start}
@@ -71,7 +108,25 @@
 @media (max-width:380px){.ap-grid2{grid-template-columns:1fr}}
 @media (prefers-reduced-motion: reduce){.ap-dots.shake,.ap-spin{animation:none}}
 /* bouton et menu du compte dans l'app */
+.ap-key{margin:4px 0 14px;border:1px solid #DDE5EA;border-radius:10px;padding:10px 12px}
+.ap-key summary{cursor:pointer;font-weight:600;font-size:14px;color:#071A45}
+.ap-key form{margin-top:10px}
 
+/* inscription : particulier ou entreprise ; type de compte sur la fiche client */
+.ap-kind{border:0;padding:0;margin:0 0 14px}
+.ap-kind legend{font-weight:600;font-size:14px;margin-bottom:8px}
+.ap-kopt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid rgba(127,140,160,.35);border-radius:10px;margin-bottom:8px;cursor:pointer}
+.ap-kopt input{margin-top:3px}
+.ap-kopt b{display:block;font-size:14px}
+.ap-kopt small{display:block;opacity:.75;font-size:12.5px;line-height:1.4;margin-top:2px}
+.ap-kopt:has(input:checked){border-color:currentColor}
+.ap-acct{font-size:13.5px;padding:10px 12px;border-radius:10px;background:rgba(127,140,160,.12);margin:0 0 14px;line-height:1.5}
+.ap-acct .ap-link{margin-left:6px}
+
+/* inscription : entreprise → sur le site ; on masque le formulaire particulier */
+.ap-form.ap-co-mode > .ap-grid2, .ap-form.ap-co-mode > .ap-field, .ap-form.ap-co-mode > .ap-rules, .ap-form.ap-co-mode > .ap-check, .ap-form.ap-co-mode > button[type=submit], .ap-form.ap-co-mode > .ap-err{display:none}
+#ap-co .ap-btn{display:flex;align-items:center;justify-content:center;text-decoration:none;margin:10px 0}
+.dlg-row .ap-in{flex:1;min-width:180px}
 /* ===== Accueil cloud — habillage Studio Prism ===== */
 #home{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
 #home[hidden]{display:none!important}
@@ -182,6 +237,44 @@
 #homeMenu button.danger b,#userMenu button.danger b{color:var(--danger)}
 #homeMenu button[disabled]{opacity:.5;cursor:not-allowed}
 
+/* Dialogues */
+#apDlg{position:fixed;inset:0;z-index:70;background:rgb(7 17 42 / .5);backdrop-filter:blur(2px);display:grid;place-items:center;padding:16px}
+#apDlg[hidden]{display:none}
+.dlg-card{background:#fff;color:#0C1A3A;border-radius:16px;box-shadow:0 24px 70px rgb(5 15 40 / .35);width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:22px 22px 18px;}
+.dlg-card h3{margin:0 0 10px;font:700 18px "Montserrat",var(--f-display);color:#17191E}
+.dlg-p{color:#4B5563;font-size:13.5px;line-height:1.5;margin:0 0 12px}.dlg-p.small{font-size:12px;margin-top:8px}
+.dlg-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.dlg-acts .ap-btn{width:auto;padding:0 18px;height:42px}
+.ap-btn.danger{background:#B3261E;border-color:#B3261E}.ap-btn.danger:hover{background:#951C22}
+.dlg-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.dlg-row input,.dlg-row select{flex:1;min-width:140px;height:40px;border:1px solid #CBD6DF;border-radius:9px;padding:0 10px;font:inherit;font-size:14px;background:#fff;color:#0C1A3A}
+.dlg-row .ap-btn{width:auto;height:40px;padding:0 16px}
+.dlg-people{list-style:none;margin:8px 0;padding:0;border:1px solid #E1E8EE;border-radius:10px}
+.dlg-people li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid #E1E8EE;flex-wrap:wrap}
+.dlg-people li:first-child{border-top:0}.dlg-people li.none{color:#4B5563;font-size:13px}
+.dlg-people .av{width:28px;height:28px;border-radius:14px;background:#E9EBEE;color:#17191E;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.dlg-people .em{flex:1;min-width:140px;font-size:13.5px;overflow:hidden;text-overflow:ellipsis}
+.dlg-people select{height:32px;border:1px solid #CBD6DF;border-radius:7px;font:inherit;font-size:13px;background:#fff}
+.ap-link.danger{color:#B3261E}
+.dlg-sec{border-top:1px solid #E1E8EE;margin-top:14px;padding-top:12px}.dlg-sec>b{font-size:14px;color:#17191E}
+.dlg-list{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto}
+.dlg-list button{display:flex;align-items:center;gap:10px;border:1px solid transparent;background:transparent;border-radius:8px;padding:9px 10px;text-align:left;font:inherit;font-size:14px;color:#0C1A3A}
+.dlg-list button:hover{background:#EEF3F7}.dlg-list button.cur{border-color:#0877B9;background:#EEF6FB}
+.dlg-list svg{width:18px;height:18px;color:#0877B9;flex:none;fill:none;stroke:currentColor;stroke-width:2}
+
+/* Menus de compte (partagés avec l'éditeur) */
+#userBtn{border-radius:50%;width:34px;min-width:34px;height:34px;padding:0;background:var(--chip);border:1px solid var(--line);color:var(--ink);font:700 12px "Montserrat",var(--f-display);letter-spacing:.02em}
+.menu .who{padding:10px 10px 8px}
+.menu .who b{display:block;font-size:13.5px}
+.menu .who span{font-size:12px;color:var(--mut);word-break:break-all}
+#userMenu .lic{display:block;margin:6px 8px 2px;padding:6px 8px;border-radius:7px;font-size:12px;line-height:1.35;background:var(--bg)}
+#userMenu .lic.ok{color:#0B6B3A;background:#E7F6EE}#userMenu .lic.warn{color:#7A5200;background:#FFF6E0}
+.ap-lic{border:1px solid #CBD6DF;border-radius:10px;padding:12px 14px;margin:4px 0 16px;font-size:14px;line-height:1.5}
+.ap-lic b{display:block;font-size:15px;color:#17191E}.ap-lic.ok{border-color:#9BD3B4;background:#F2FBF6}.ap-lic.warn{border-color:#E0C27A;background:#FFFBF0}
+.ap-lic a{color:#0877B9}
+a.ap-link{text-decoration:none}
+.ap-slow{margin-top:14px;font-size:13px;color:#4B5563;text-align:center;line-height:1.5}
+.ap-slow .ap-btn{margin-top:12px}
 
 @media (max-width:980px){
   .h-hero{grid-template-columns:1fr;padding:26px 18px 28px}
@@ -211,7 +304,6 @@
 .ho-b:hover{border-color:var(--accent);color:var(--accent)}
 .ho-x{width:30px;height:30px;border:0;background:transparent;border-radius:8px;color:var(--mut);cursor:pointer}.ho-x:hover{background:var(--panel)}
 @media (max-width:700px){.h-offer{padding:0 14px}}
-
 
 /* ArchiIndus */
 #home{font-family:var(--f-body)}
@@ -243,3 +335,31 @@
 .hcard .hdots svg,.hfold .hdots svg{width:18px;height:18px}
 
 .h-top .brand{align-items:flex-start}
+/* éléments communs aux apps Studio Prism (repris d'app.css d'ArchiPlan) */
+#userBtn{border-radius:50%;width:34px;min-width:34px;height:34px;padding:0;background:var(--chip);border:1px solid var(--line);color:var(--ink);font:700 12px var(--f-display);display:grid;place-items:center}
+#licBadge{height:26px;padding:0 10px;border-radius:13px;border:1px solid #E0A526;background:#FFF6E0;color:#7A5200;font:700 11px var(--f-body);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
+#licBadge:hover{background:#FFEDC2}
+#licBadge[hidden],#userBtn[hidden]{display:none}
+.cs[hidden]{display:none}
+.cs.saved{color:var(--ok)}.cs.error,.cs.denied,.cs.big,.cs.quota{color:var(--danger)}.cs.ro{color:#7A5200;background:#FFF6E0}
+#toast{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2A2E35;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:90;max-width:min(560px,calc(100vw - 32px));text-align:center;box-shadow:var(--shadow)}
+#toast[hidden]{display:none}
+#home .ap-btn,#apDlg .ap-btn{background:var(--accent);border-color:var(--accent)}
+#home .ap-btn.alt,#apDlg .ap-btn.alt{background:#fff;color:var(--ink);border-color:var(--line)}
+#apDlg .ap-btn.danger{background:#B3261E;border-color:#B3261E}
+#projName{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* intro : le mot ARCHIINDUS se trace, puis la signature (logo texte, en attendant les fichiers du logo final) */
+#splash{position:fixed;inset:0;z-index:60;background:#F9FAFA;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding-inline:24px;transition:opacity .55s ease,visibility .55s}
+#splash.done{opacity:0;visibility:hidden}
+#splash .sp-grid{position:absolute;inset:0;background-image:linear-gradient(#0A5E8E14 1px,transparent 1px),linear-gradient(90deg,#0A5E8E14 1px,transparent 1px);background-size:24px 24px;-webkit-mask:radial-gradient(closest-side,#000 30%,transparent);mask:radial-gradient(closest-side,#000 30%,transparent);opacity:0;animation:sp-fade .5s ease .05s forwards}
+#splash .sp-word{position:relative;font:800 clamp(38px,8vw,72px)/1 var(--f-display);letter-spacing:.02em;color:#071B55;clip-path:inset(0 100% 0 0);animation:sp-right .9s cubic-bezier(.6,.05,.3,1) .2s forwards}
+#splash .sp-word span{background:linear-gradient(135deg,#071B55 0%,#0877B9 58%,#169999 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+#splash .sp-tag{position:relative;margin:0;font:600 12px var(--f-mono);letter-spacing:.2em;text-transform:uppercase;color:#56637C;opacity:0;animation:sp-fade .5s ease 1s forwards}
+#splash .sp-bar{position:relative;width:min(220px,60vw);height:2px;background:#DDE5EA;border-radius:2px;overflow:hidden;margin-top:18px;opacity:0;animation:sp-fade .4s ease 1.2s forwards}
+#splash .sp-bar i{display:block;height:100%;width:40%;background:linear-gradient(90deg,#044169,#03A2AC);border-radius:2px;animation:sp-slide 1.1s ease-in-out infinite}
+#splash .sp-msg{position:relative;margin:0;font-family:var(--f-mono);font-size:12px;color:#4A5570;text-align:center;max-width:36ch;opacity:0;animation:sp-fade .4s ease 1.2s forwards}
+#splash .sp-msg.err{color:#B4372C}
+@keyframes sp-right{to{clip-path:inset(0 0 0 0)}}
+@keyframes sp-fade{to{opacity:1}}
+@keyframes sp-slide{from{transform:translateX(-110%)}to{transform:translateX(260%)}}
+@media (prefers-reduced-motion: reduce){#splash .sp-grid,#splash .sp-word,#splash .sp-tag,#splash .sp-bar,#splash .sp-msg,#splash .sp-bar i{animation:none;clip-path:none;opacity:1}#splash{transition:none}}

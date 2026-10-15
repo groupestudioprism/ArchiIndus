@@ -13,8 +13,17 @@ const PLANES = {
   top: { label: 'Dessus', U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], axes: 'X · Y', norm: 'Z' },
   front: { label: 'Face', U: [1, 0, 0], V: [0, 0, 1], W: [0, -1, 0], axes: 'X · Z', norm: '−Y' },
   right: { label: 'Droite', U: [0, 1, 0], V: [0, 0, 1], W: [1, 0, 0], axes: 'Y · Z', norm: 'X' },
+  /* esquisse posée sur une face plane d'un corps (double-clic en 3D) : repère propre {o, u, n} */
+  custom: { label: 'Sur face', U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], axes: 'U · V', norm: 'face' },
 };
-const FEATURE_TYPES = { extrude: 'Bossage extrudé', revolve: 'Révolution' };
+const FEATURE_TYPES = { extrude: 'Bossage extrudé', cut: 'Enlèvement extrudé', revolve: 'Révolution', fillet: 'Congé', chamfer: 'Chanfrein', shell: 'Coque',
+  pattern: 'Répétition', mirror: 'Symétrie', pipe: 'Tuyauterie (balayage)' };
+/* Fonctions qui s'appuient sur une esquisse ; les autres modifient le corps (congé, chanfrein, coque) ou réutilisent une fonction. */
+const SKETCH_FEATURES = ['extrude', 'cut', 'revolve'];
+const EDGE_SEL = { all: 'Toutes les arêtes', vert: 'Arêtes verticales', horiz: 'Arêtes horizontales', top: 'Arêtes du dessus', bottom: 'Arêtes du dessous', topbottom: 'Dessus et dessous' };
+const FACE_SEL = { top: 'Face du dessus', bottom: 'Face du dessous', front: 'Face avant', back: 'Face arrière', left: 'Face gauche', right: 'Face droite' };
+/* Champs numériques pilotables par une formule (f.ex[champ] = texte de la formule) : [min, max]. */
+const FEATURE_NUM = { d: [0.001, 1e6], ang: [0.01, 360], r: [0.001, 1e5], t: [0.001, 1e5], n: [2, 500], step: [0.001, 1e7], off: [-1e7, 1e7], e: [0, 1e4], bend: [0, 1e5] };
 const MATE_TYPES = { '': 'Libre', fix: 'Fixe', sur: 'Posé sur', axe: 'Axe aligné (même centre en plan)', decal: 'Décalage' };
 
 /* Pièces paramétriques de la bibliothèque d'assemblage. p : paramètres (mm). geo(p) → solides locaux ; bb(p) → boîte locale [x0,y0,z0,x1,y1,z1]. */
@@ -62,18 +71,52 @@ const Model = (() => {
     for (const s of Array.isArray(raw.sketches) ? raw.sketches.slice(0, 500) : []) {
       if (!s || !Number.isInteger(s.id) || s.id <= 0 || seenS.has(s.id) || !PLANES[s.plane]) continue;
       seenS.add(s.id);
-      sketches.push({ id: s.id, name: str(s.name, 60) || `Esquisse ${s.id}`, plane: s.plane, off: num(s.off) && Math.abs(s.off) < 1e7 ? s.off : 0 });
+      const sk = { id: s.id, name: str(s.name, 60) || `Esquisse ${s.id}`, plane: s.plane, off: num(s.off) && Math.abs(s.off) < 1e7 ? s.off : 0 };
+      if (s.plane === 'custom') {
+        const v3 = (v) => Array.isArray(v) && v.length === 3 && v.every((x) => num(x) && Math.abs(x) < 1e8);
+        if (!v3(s.o) || !v3(s.u) || !v3(s.n)) { seenS.delete(s.id); continue; }
+        const nn = Math.hypot(...s.n), nu = Math.hypot(...s.u);
+        if (nn < 1e-9 || nu < 1e-9 || Math.abs(s.n[0] * s.u[0] + s.n[1] * s.u[1] + s.n[2] * s.u[2]) / nn / nu > 1e-6) { seenS.delete(s.id); continue; }
+        sk.o = s.o.slice(); sk.u = s.u.map((x) => x / nu); sk.n = s.n.map((x) => x / nn);
+        if (Number.isInteger(s.face)) sk.face = s.face;
+      }
+      sketches.push(sk);
     }
     for (const o of objects) if (o.sk !== undefined && !seenS.has(o.sk)) delete o.sk;
     const objIds = new Set(objects.map((o) => o.id));
     const seenF = new Set();
-    for (const f of Array.isArray(raw.features) ? raw.features.slice(0, 2000) : []) {
-      if (!f || !Number.isInteger(f.id) || f.id <= 0 || seenF.has(f.id) || !FEATURE_TYPES[f.type] || !seenS.has(f.sk)) continue;
-      seenF.add(f.id);
-      const out = { id: f.id, type: f.type, name: str(f.name, 60) || `${FEATURE_TYPES[f.type]} ${f.id}`, sk: f.sk,
-        d: num(f.d) && f.d > 0 && f.d <= 1e6 ? f.d : 1000, dir: ['+', '-', 'mid'].includes(f.dir) ? f.dir : '+',
+    const rawF = Array.isArray(raw.features) ? raw.features.slice(0, 2000) : [];
+    for (const f of rawF) if (f && Number.isInteger(f.id) && f.id > 0) seenF.add(f.id);
+    const okF = new Set();
+    for (const f of rawF) {
+      if (!f || !Number.isInteger(f.id) || f.id <= 0 || okF.has(f.id) || !FEATURE_TYPES[f.type]) continue;
+      if (SKETCH_FEATURES.includes(f.type) && !seenS.has(f.sk)) continue;
+      const out = { id: f.id, type: f.type, name: str(f.name, 60) || `${FEATURE_TYPES[f.type]} ${f.id}`,
         mat: cleanMatId(f.mat), layer: layerIds.has(f.layer) ? f.layer : firstLayer, hide: f.hide === true };
-      if (f.type === 'revolve') { out.ang = num(f.ang) && f.ang > 0 && f.ang <= 360 ? f.ang : 360; out.axis = Number.isInteger(f.axis) && objIds.has(f.axis) ? f.axis : 0; }
+      const nm = (k, def) => { const [a, b] = FEATURE_NUM[k]; return num(f[k]) && f[k] >= a && f[k] <= b ? f[k] : def; };
+      if (SKETCH_FEATURES.includes(f.type)) out.sk = f.sk;
+      if (f.type === 'extrude' || f.type === 'cut') { out.d = nm('d', 1000); out.dir = ['+', '-', 'mid'].includes(f.dir) ? f.dir : '+'; }
+      if (f.type === 'extrude' || f.type === 'revolve') out.newBody = f.newBody === true;
+      if (f.type === 'cut') out.through = f.through === true;
+      if (f.type === 'revolve') { out.ang = nm('ang', 360); out.axis = Number.isInteger(f.axis) && objIds.has(f.axis) ? f.axis : 0; out.op = f.op === 'cut' ? 'cut' : 'add'; }
+      if (f.type === 'fillet' || f.type === 'chamfer') { out.r = nm('r', 5); out.sel = EDGE_SEL[f.sel] ? f.sel : 'all'; out.target = Number.isInteger(f.target) && seenF.has(f.target) ? f.target : 0; }
+      if (f.type === 'shell') { out.t = nm('t', 5); out.face = FACE_SEL[f.face] ? f.face : 'top'; }
+      if (f.type === 'pattern') {
+        out.src = Number.isInteger(f.src) && okF.has(f.src) ? f.src : 0; out.kind = f.kind === 'circ' ? 'circ' : 'lin';
+        out.ax = ['x', 'y', 'z'].includes(f.ax) ? f.ax : 'x'; out.n = Math.round(nm('n', 3)); out.step = nm('step', 500); out.ang = nm('ang', 360); out.full = f.full !== false;
+        out.o = Array.isArray(f.o) && f.o.length === 3 && f.o.every((v) => num(v) && Math.abs(v) < 1e8) ? f.o.slice() : [0, 0, 0];
+      }
+      if (f.type === 'mirror') { out.src = Number.isInteger(f.src) && okF.has(f.src) ? f.src : 0; out.plane = ['YZ', 'XZ', 'XY'].includes(f.plane) ? f.plane : 'YZ'; out.off = nm('off', 0); }
+      if (f.type === 'pipe') {
+        out.obj = Number.isInteger(f.obj) && objIds.has(f.obj) ? f.obj : 0; out.r = nm('r', 50); out.e = nm('e', 0); out.bend = nm('bend', 0);
+        if (!out.obj) continue;
+      }
+      if (f.ex && typeof f.ex === 'object') {
+        const ex = {};
+        for (const [k, v] of Object.entries(f.ex)) if (FEATURE_NUM[k] && typeof v === 'string' && v.trim() && v.length <= 200) ex[k] = v.trim();
+        if (Object.keys(ex).length) out.ex = ex;
+      }
+      okF.add(f.id);
       features.push(out);
     }
     const seenC = new Set();
@@ -90,7 +133,14 @@ const Model = (() => {
     for (const c of comps) if (c.mate.t && c.mate.t !== 'fix' && !seenC.has(c.mate.ref)) c.mate = { t: '', ref: 0, d: [0, 0, 0] };
     const site = raw.site && num(raw.site.lat) && num(raw.site.lon) && Math.abs(raw.site.lat) <= 90 && Math.abs(raw.site.lon) <= 180
       ? { label: str(raw.site.label, 160), lat: raw.site.lat, lon: raw.site.lon, size: [500, 1000, 1600].includes(raw.site.size) ? raw.site.size : 500 } : null;
-    return { sketches, features, comps, site };
+    /* variables du projet (formules) */
+    const vars = [], seenV = new Set();
+    for (const v of Array.isArray(raw.vars) ? raw.vars.slice(0, 300) : []) {
+      if (!v || typeof v.n !== 'string' || !Expr.validName(v.n) || seenV.has(v.n) || typeof v.e !== 'string' || !v.e.trim() || v.e.length > 200) continue;
+      seenV.add(v.n); vars.push({ n: v.n, e: v.e.trim(), note: str(v.note, 80) });
+    }
+    const rollback = Number.isInteger(raw.rollback) && raw.rollback >= 0 && raw.rollback < features.length ? raw.rollback : null;
+    return { sketches, features, comps, site, vars, rollback };
   }
   function cleanPart(p) {
     const P = PARTS[p.t], out = { t: p.t };
@@ -116,6 +166,10 @@ const Model = (() => {
   const faded2D = (o) => !!state.sketch && o.sk !== state.sketch;
   /* Repère d'une esquisse : point (u, v) → (x, y, z) */
   function frame(s) {
+    if (s.plane === 'custom') {
+      const W = s.n, U = s.u, V = cross(W, U), t = add3(s.o, mul3(W, s.off));
+      return { U, V, W, t, to3: (u, v, w = 0) => add3(add3(add3(t, mul3(U, u)), mul3(V, v)), mul3(W, w)) };
+    }
     const P = PLANES[s.plane], t = mul3(P.W, s.off);
     return { U: P.U, V: P.V, W: P.W, t, to3: (u, v, w = 0) => add3(add3(add3(t, mul3(P.U, u)), mul3(P.V, v)), mul3(P.W, w)) };
   }
@@ -125,14 +179,14 @@ const Model = (() => {
     for (const o of Doc.get().objects) {
       if (o.sk !== skId || o.id === exclude) continue;
       if (o.type === 'poly' && o.closed && o.pts.length >= 3) out.push({ id: o.id, pts: o.pts.map((p) => [p[0], p[1]]) });
-      else if (o.type === 'circle') out.push({ id: o.id, pts: circle(o.c, o.r) });
+      else if (o.type === 'circle') out.push({ id: o.id, pts: circle(o.c, o.r), circle: { c: [o.c[0], o.c[1]], r: o.r } });
     }
     for (const l of out) { l.a = Math.abs(area2(l.pts)); if (area2(l.pts) < 0) l.pts.reverse(); }
     out.sort((a, b) => b.a - a.a);
     const regions = [];
     for (const l of out) {
       const host = regions.find((r) => inPoly(l.pts[0][0], l.pts[0][1], r.outer) && !r.holes.some((h) => inPoly(l.pts[0][0], l.pts[0][1], h)));
-      if (host) host.holes.push(l.pts.slice().reverse()); else regions.push({ outer: l.pts, holes: [], ids: [l.id] });
+      if (host) { host.holes.push(l.pts.slice().reverse()); host.holeLoops.push(l); } else regions.push({ outer: l.pts, holes: [], ids: [l.id], outerLoop: l, holeLoops: [] });
     }
     return regions;
   }
@@ -288,6 +342,75 @@ const Model = (() => {
     return partGeo(c.part).map((s) => ({ ...s, col, tf: { pos, rot: c.rot }, cid: c.id }));
   }
 
-  return { clean, cleanPart, sketch, planeOf, visible2D, faded2D, frame, loops, regionArea, regionCentroid, featureSolids, featureVolume,
+  /* ---------- formules : valeurs des champs pilotés par une expression ---------- */
+  function applyExpr(d) {
+    const errs = {};
+    if (!(d.vars || []).length && !(d.features || []).some((f) => f.ex)) { state.exprErr = errs; return errs; }
+    const { vals, errs: ve } = Expr.solve(d.vars || []);
+    for (const [n, m] of ve) errs['var:' + n] = m;
+    for (const f of d.features || []) {
+      if (!f.ex) continue;
+      for (const [k, txt] of Object.entries(f.ex)) {
+        try {
+          const v = Expr.evalText(txt, d.vars || []).v, [a, b] = FEATURE_NUM[k];
+          if (!(v >= a && v <= b)) throw new Error(`hors limites (${a} à ${b})`);
+          f[k] = k === 'n' ? Math.round(v) : v;
+        } catch (e) { errs[`f${f.id}:${k}`] = e.message; }
+      }
+    }
+    state.exprErr = errs;
+    return errs;
+  }
+  const varValues = (d) => Expr.solve(d.vars || []).vals;
+
+  /* ---------- entrée du noyau géométrique (Web Worker) ---------- */
+  const THROUGH = 1e5;   /* « à travers tout » : ±100 m */
+  function loopK(l) { return l.circle ? { circle: l.circle } : { pts: l.pts }; }
+  function regionsK(skId, exclude = 0) {
+    return loops(skId, exclude).map((r) => ({ outer: loopK(r.outerLoop), holes: r.holeLoops.map((h) => loopK(h)) }));
+  }
+  const frameK = (s) => { const F = frame(s); return { U: F.U, V: F.V, W: F.W, t: F.t }; };
+  /* Chemin 3D d'un réseau du plan (mm) : altitudes amont → aval interpolées (comme la vue 3D). */
+  function netPath(o) {
+    const pts = o.type === 'line' ? [o.a, o.b] : o.closed ? o.pts.concat([o.pts[0]]) : o.pts, pr = o.props || {};
+    const L = []; let tot = 0; for (let i = 1; i < pts.length; i++) tot += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    const hasZ = typeof pr.zi === 'number' && typeof pr.zf === 'number';
+    const zAt = (t) => (hasZ ? (pr.zi + (pr.zf - pr.zi) * t) * 1000 : typeof pr.depth === 'number' ? -pr.depth * 1000 : 0);
+    let acc = 0;
+    for (let i = 0; i < pts.length; i++) { if (i) acc += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); L.push([pts[i][0], pts[i][1], zAt(tot ? acc / tot : 0)]); }
+    return L;
+  }
+  /* Liste des fonctions pour le noyau, dans l'ordre de l'arbre, jusqu'à la barre de retour arrière. */
+  function kernelInput(d) {
+    const out = [], stop = d.rollback == null ? (d.features || []).length : d.rollback;
+    const AX = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
+    (d.features || []).slice(0, stop).forEach((f) => {
+      if (f.hide) return;
+      const base = { id: f.id, type: f.type, name: f.name, mat: f.mat, layer: f.layer };
+      if (f.type === 'extrude' || f.type === 'cut') {
+        const s = sketch(f.sk); if (!s) return;
+        let w0 = f.dir === '+' ? 0 : f.dir === '-' ? -f.d : -f.d / 2, w1 = w0 + f.d;
+        if (f.type === 'cut' && f.through) { w0 = f.dir === '+' ? 0 : -THROUGH; w1 = f.dir === '-' ? 0 : THROUGH; }
+        out.push({ ...base, regions: regionsK(f.sk), F: frameK(s), w0, w1, newBody: !!f.newBody });
+      } else if (f.type === 'revolve') {
+        const s = sketch(f.sk); if (!s) return;
+        const ax = d.objects.find((o) => o.id === f.axis && o.sk === f.sk && o.type === 'line'); if (!ax) { out.push({ ...base, regions: [] }); return; }
+        const F = frame(s), A2 = [ax.b[0] - ax.a[0], ax.b[1] - ax.a[1]], L = Math.hypot(A2[0], A2[1]) || 1;
+        const dir = add3(mul3(F.U, A2[0] / L), mul3(F.V, A2[1] / L));
+        out.push({ ...base, regions: regionsK(f.sk, ax.id), F: frameK(s), axisO: F.to3(ax.a[0], ax.a[1]), axisDir: dir, ang: f.ang, op: f.op, newBody: !!f.newBody });
+      } else if (f.type === 'fillet' || f.type === 'chamfer') out.push({ ...base, r: f.r, sel: f.sel, target: f.target });
+      else if (f.type === 'shell') out.push({ ...base, t: f.t, face: f.face });
+      else if (f.type === 'pattern') out.push({ ...base, src: f.src, kind: f.kind, dir: AX[f.ax], axis: AX[f.ax], o: f.o, n: f.n, step: f.step, ang: f.ang, full: f.full });
+      else if (f.type === 'mirror') { const k = { YZ: 0, XZ: 1, XY: 2 }[f.plane], o = [0, 0, 0]; o[k] = f.off; out.push({ ...base, src: f.src, plane: f.plane, o }); }
+      else if (f.type === 'pipe') {
+        const o = d.objects.find((x) => x.id === f.obj); if (!o) return;
+        const path = netPath(o); if (path.length < 2) return;
+        out.push({ ...base, path, r: f.r, ri: f.e > 0 ? f.r - f.e : 0, bend: f.bend, newBody: true });
+      }
+    });
+    return out;
+  }
+
+  return { clean, cleanPart, applyExpr, varValues, kernelInput, netPath, sketch, planeOf, visible2D, faded2D, frame, loops, regionArea, regionCentroid, featureSolids, featureVolume,
     partGeo, partBox, partVolume, resolve, worldBox, footprint, compSolids, area2 };
 })();

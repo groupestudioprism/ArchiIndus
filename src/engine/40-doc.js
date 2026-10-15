@@ -47,7 +47,7 @@ const Doc = (() => {
 
   function fresh() {
     const layers = LAYER_DEFAULTS.map((l, i) => ({ id: i + 1, name: l.name, color: l.color, group: l.group, visible: true, locked: false }));
-    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT }, sketches: [], features: [], comps: [], site: null, nextSk: 1, nextF: 1, nextC: 1 };
+    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT }, sketches: [], features: [], comps: [], site: null, vars: [], rollback: null, nextSk: 1, nextF: 1, nextC: 1 };
   }
 
   function emit(reason) { for (const f of subs) f(reason); }
@@ -138,7 +138,7 @@ const Doc = (() => {
     const M = Model.clean(raw, objects, layerIds, layers[0].id);
     const nx = (arr) => arr.reduce((m, x) => Math.max(m, x.id), 0) + 1;
 
-    return {
+    const out = {
       schemaVersion: 1,
       name: (typeof raw.name === 'string' ? raw.name.trim().slice(0, 80) : '') || 'Projet sans titre',
       units: 'mm',
@@ -147,9 +147,11 @@ const Doc = (() => {
       nextLayerId: maxL + 1,
       active: layerIds.has(raw.active) ? raw.active : layers[0].id,
       sheet: cleanSheet(raw.sheet),
-      sketches: M.sketches, features: M.features, comps: M.comps, site: M.site,
+      sketches: M.sketches, features: M.features, comps: M.comps, site: M.site, vars: M.vars, rollback: M.rollback,
       nextSk: nx(M.sketches), nextF: nx(M.features), nextC: nx(M.comps),
     };
+    Model.applyExpr(out);
+    return out;
   }
 
   return {

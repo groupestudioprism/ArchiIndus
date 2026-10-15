@@ -7,6 +7,9 @@ Rendu WebGL logiciel (SwiftShader). Les services IGN et Overpass ne sont pas con
 """
 import os, sys, json, math, struct, tempfile, pathlib, re
 from playwright.sync_api import sync_playwright
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from helpers import enter
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 THREE = pathlib.Path(os.environ.get('THREE_DIR', '/tmp/claude-0/three/node_modules/three'))
@@ -57,7 +60,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append('pageerror:' + str(e)))
     pg.on('console', lambda m: errs.append('console:' + m.text) if m.type == 'error' and 'ERR_FAILED' not in m.text and 'GPU stall' not in m.text else None)
     pg.route('**/*', serve)
-    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(500); pg.click('#authSkip')
+    enter(pg)
     pg.wait_for_function('window.Scene3D && window.Scene3D.ready', timeout=15000)
     E = pg.evaluate
     box = pg.locator('#cv').bounding_box()
@@ -68,7 +71,7 @@ with sync_playwright() as p:
     def key(k): E('document.activeElement && document.activeElement.blur()'); pg.keyboard.press(k)
 
     # ---------- ruban et arbre
-    ok(pg.locator('#ribbon [role="tab"]').count() == 8, 'ruban : 8 onglets')
+    ok(pg.locator('#ribbon [role="tab"]').count() == 9, 'ruban : 9 onglets')
     ok(pg.is_visible('#tree') and pg.locator('#treeBody .tr-row').count() >= 6, 'arbre de création visible (écran ≥ 1440 px)')
     pg.click('#treeBtn'); ok(not pg.is_visible('#tree'), 'arbre masqué par son bouton'); pg.click('#treeBtn'); ok(pg.is_visible('#tree'), 'arbre réaffiché')
     pg.click('#rt-mat'); ok(pg.is_visible('#rp-mat') and not pg.is_visible('#rp-sketch'), 'changement d\'onglet du ruban')
@@ -95,7 +98,7 @@ with sync_playwright() as p:
 
     # ---------- bossage extrudé
     pg.click('#rt-model'); pg.click('[data-cmd="ftExtrude"]'); pg.wait_for_selector('dialog[open]')
-    pg.fill('dialog input[aria-label="Profondeur en millimètres"]', '3000')
+    pg.fill('dialog input[aria-label="Profondeur (mm)"]', '3000')
     pg.select_option('dialog select[aria-label="Matériau"]', 'C25')
     pg.click('dialog .dlg-f .btn.pri'); pg.wait_for_timeout(500)
     f = E('Doc.get().features')
@@ -109,7 +112,7 @@ with sync_playwright() as p:
     pg.locator('#treeBody .tr-row', has_text='Bossage extrudé 1').click(); pg.wait_for_timeout(100)
     mtxt = re.sub(r'\s', '', pg.inner_text('#props')); mexp = int((4000 * 2000 - 24 * 500 ** 2 * math.sin(2 * math.pi / 48)) * 3000 / 1e9 * 2500)   # cercle → polygone de 48 côtés (comme la 3D)
     ok('Masse' in pg.inner_text('#props') and str(mexp) in mtxt, f'propriétés de la fonction : masse du béton {mexp} kg ({mtxt[-80:]})')
-    pg.fill('#props input[aria-label="Profondeur en millimètres"]', '1500'); pg.press('#props input[aria-label="Profondeur en millimètres"]', 'Tab'); pg.wait_for_timeout(100)
+    pg.fill('#props input[aria-label="Profondeur (mm)"]', '1500'); pg.press('#props input[aria-label="Profondeur (mm)"]', 'Tab'); pg.wait_for_timeout(100)
     ok(E('Doc.get().features[0].d') == 1500, 'profondeur modifiée depuis le panneau')
     E('Doc.undo()'); ok(E('Doc.get().features[0].d') == 3000, 'annuler la modification')
 
@@ -217,12 +220,12 @@ with sync_playwright() as p:
     with pg.expect_download() as dl_: pg.click('#save')
     sj = OUT + 'p.json'; dl_.value.save_as(sj); data = json.load(open(sj))
     ok(len(data['sketches']) == 2 and len(data['features']) == 2 and len(data['comps']) == 2 and data['site']['lon'] == LON, 'JSON : esquisses, fonctions, composants, site')
-    data['features'].append({'id': 99, 'type': 'cut', 'sk': 1}); data['features'].append({'id': 98, 'type': 'extrude', 'sk': 77})
+    data['features'].append({'id': 99, 'type': 'trou-noir', 'sk': 1}); data['features'].append({'id': 98, 'type': 'extrude', 'sk': 77})
     data['comps'].append({'id': 50, 'part': {'t': 'inconnu'}}); data['comps'].append({'id': 51, 'part': {'t': 'profil', 'prof': 'IPE 999', 'L': -5}, 'pos': [0, 0, 'x']})
     data['objects'][0]['sk'] = 555; data['site']['lat'] = 999
     json.dump(data, open(sj, 'w')); pg.set_input_files('#file', sj); pg.wait_for_timeout(400)
     d2 = E('Doc.get()')
-    ok(len(d2['features']) == 2 and len(d2['comps']) == 3, 'import : fonctions et composants invalides écartés')
+    ok(len(d2['features']) == 2 and len(d2['comps']) == 3, f"import : fonctions et composants invalides écartés {[f['type'] for f in d2['features']]} {len(d2['comps'])}")
     c51 = [x for x in d2['comps'] if x['id'] == 51][0]; ok(c51['part']['prof'] == 'HEA 200' and c51['part']['L'] == 6000 and c51['pos'] == [0, 0, 0], 'import : paramètres de pièce bornés')
     ok('sk' not in d2['objects'][0] and d2['site'] is None, 'import : esquisse inconnue et site invalide retirés')
 

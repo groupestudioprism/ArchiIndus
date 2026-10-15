@@ -78,6 +78,7 @@ const Canvas2D = (() => {
     ctx.globalAlpha = 1;
 
     Render.scene(ctx, w, h);
+    drawGesture();
     zoomEl.textContent = `1 m = ${Math.round(1000 * s)} px`;
   }
 
@@ -105,24 +106,70 @@ const Canvas2D = (() => {
     draw();
   }
 
+  /* ---- écran tactile : deux doigts = zoom + déplacement (l'outil en cours est suspendu) ---- */
+  const touches = new Map();
+  let pinch = null;
+  function pinchStart() {
+    const [p, q] = [...touches.values()];
+    pinch = { d: Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, m: [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], s: state.view.scale, vx: state.view.x, vy: state.view.y };
+    Tools.cancelDrag();
+  }
+  function pinchMove() {
+    const [p, q] = [...touches.values()];
+    const d = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    const s1 = clamp(pinch.s * d / pinch.d, VIEW_LIMITS.min, VIEW_LIMITS.max);
+    const w = [(pinch.m[0] - pinch.vx) / pinch.s, (pinch.vy - pinch.m[1]) / pinch.s];   /* point du dessin sous le centre initial */
+    state.view.scale = s1;
+    state.view.x = m[0] - w[0] * s1;
+    state.view.y = m[1] + w[1] * s1;
+    requestDraw();
+  }
+  /* ---- gestes de souris (clic droit glissé) : comme les gestes de SolidWorks ---- */
+  let gest = null;
+  const GESTURES = { n: ['fit', 'Tout voir'], s: ['select', 'Sélection'], w: ['line', 'Ligne'], e: ['rect', 'Rectangle'], nw: ['circle', 'Cercle'], ne: ['dim', 'Cote'], sw: ['poly', 'Polyligne'], se: ['trim', 'Ajuster'] };
+  function gestureDir(dx, dy) {
+    const a = Math.atan2(-dy, dx) * 180 / Math.PI, k = ['e', 'ne', 'n', 'nw', 'w', 'sw', 's', 'se'];
+    return k[((Math.round(a / 45) % 8) + 8) % 8];
+  }
+  function drawGesture() {
+    if (!gest || !gest.on) return;
+    const k = gestureDir(gest.x - gest.x0, gest.y - gest.y0), g = GESTURES[k];
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.strokeStyle = css('--accent'); ctx.lineWidth = 2; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(gest.x0, gest.y0); ctx.lineTo(gest.x, gest.y); ctx.stroke();
+    ctx.font = '600 12px Inter, sans-serif'; const t = g[1], w = ctx.measureText(t).width + 16;
+    ctx.fillStyle = css('--panel'); ctx.strokeStyle = css('--accent');
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(gest.x + 10, gest.y - 12, w, 24, 8) : ctx.rect(gest.x + 10, gest.y - 12, w, 24); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = css('--ink'); ctx.fillText(t, gest.x + 18, gest.y + 4);
+    ctx.restore();
+  }
+
   function onDown(e) {
+    if (e.pointerType === 'touch') {
+      touches.set(e.pointerId, local(e));
+      if (touches.size === 2) { pinchStart(); try { try { cv.setPointerCapture(e.pointerId); } catch (x) { /* pointeur déjà relâché */ } } catch (x) { /* capture refusée */ } return; }
+      if (touches.size > 2) return;
+    }
     const [sx, sy] = local(e);
     if (e.button === 1 || (e.button === 0 && (space || Tools.current() === 'pan'))) {
       pan = { id: e.pointerId, sx: e.clientX, sy: e.clientY, vx: state.view.x, vy: state.view.y };
-      cv.setPointerCapture(e.pointerId);
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* pointeur déjà relâché */ }
       cv.classList.add('drag');
       e.preventDefault();
       return;
     }
     if (e.button === 0) {
-      cv.setPointerCapture(e.pointerId);
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* pointeur déjà relâché */ }
       Tools.down(toWorld(sx, sy), e);
     } else if (e.button === 2) {
-      Tools.rightClick();
+      gest = { x0: sx, y0: sy, x: sx, y: sy, on: false, id: e.pointerId };
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* pointeur déjà relâché */ }
     }
   }
 
   function onMove(e) {
+    if (e.pointerType === 'touch' && touches.has(e.pointerId)) { touches.set(e.pointerId, local(e)); if (pinch && touches.size === 2) { pinchMove(); return; } }
+    if (gest && gest.id === e.pointerId) { const [gx, gy] = local(e); gest.x = gx; gest.y = gy; if (Math.hypot(gx - gest.x0, gy - gest.y0) > 24) gest.on = true; requestDraw(); return; }
     const [sx, sy] = local(e);
     const w = toWorld(sx, sy);
     coordsEl.textContent = `x : ${Math.round(w[0])} mm · y : ${Math.round(w[1])} mm`;
@@ -136,6 +183,14 @@ const Canvas2D = (() => {
   }
 
   function onUp(e) {
+    if (e.pointerType === 'touch') { touches.delete(e.pointerId); if (pinch) { if (touches.size < 2) pinch = null; return; } }
+    if (gest && gest.id === e.pointerId) {
+      const g = gest; gest = null;
+      if (g.on) { const [cmd, label] = GESTURES[gestureDir(g.x - g.x0, g.y - g.y0)]; if (cmd === 'fit') zoomExtents(); else Tools.setTool(cmd); Status.msg(`Geste : ${label}.`); }
+      else Tools.rightClick();
+      requestDraw();
+      return;
+    }
     if (pan && pan.id === e.pointerId) {
       pan = null;
       cv.classList.remove('drag');
@@ -145,15 +200,21 @@ const Canvas2D = (() => {
   }
 
   function onCancel(e) {
+    touches.delete(e.pointerId); if (touches.size < 2) pinch = null; gest = null;
     if (pan && pan.id === e.pointerId) { pan = null; cv.classList.remove('drag'); }
     Tools.cancelDrag();
   }
 
+  /* Zoom à la molette maîtrisé (même réglage qu'ARCHIPLAN) : un cran ≈ 4 %, petits mouvements du pavé tactile proportionnels, plafonné. */
   function onWheel(e) {
     e.preventDefault();
     const [sx, sy] = local(e);
     const before = toWorld(sx, sy);
-    const f = Math.exp(-e.deltaY * 0.0015);
+    let dl = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+    if (!dl || !Number.isFinite(dl)) return;
+    if (e.ctrlKey) dl *= 2.5;
+    const n = Math.max(-1.5, Math.min(1.5, dl / 100));
+    const f = Math.pow(0.96, n);
     state.view.scale = clamp(state.view.scale * f, VIEW_LIMITS.min, VIEW_LIMITS.max);
     state.view.x = sx - before[0] * state.view.scale;
     state.view.y = sy + before[1] * state.view.scale;

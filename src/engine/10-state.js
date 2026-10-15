@@ -13,6 +13,8 @@ const state = {
   sym: { k: 'pompe', s: 400, rot: 0, tag: '' },
   /* Esquisse en cours d'édition (id) ; 0 : plan général. */
   sketch: 0,
+  /* distance de l'outil Décaler (mm) */
+  ofs: 500,
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };

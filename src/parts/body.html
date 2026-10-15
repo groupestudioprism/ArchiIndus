@@ -1,9 +1,16 @@
+<div id="splash" role="status" aria-live="polite">
+  <div class="sp-grid"></div>
+  <div class="sp-word" role="img" aria-label="ARCHIINDUS">ARCHI<span>INDUS</span></div>
+  <p class="sp-tag">Ingénierie des réseaux · Studio Prism</p>
+  <div class="sp-bar" aria-hidden="true"><i></i></div>
+  <p class="sp-msg" id="spMsg">Ouverture du poste de conception…</p>
+</div>
 <div id="app">
   <header id="top">
-    <button class="ib ghost" id="cloud" type="button" title="Accueil : mes projets et dossiers dans le cloud" aria-label="Accueil, mes projets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg></button>
-    <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <button class="ib ghost" id="homeBtn" type="button" title="Accueil : mes projets et projets partagés" aria-label="Accueil, mes projets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10"/></svg></button>
+    <div class="brand"><b>ARCHI<span>INDUS</span></b><small id="projName">Studio Prism</small></div>
     <input id="pname" class="pname" type="text" maxlength="80" aria-label="Nom du projet" value="Projet sans titre">
-    <span id="saved" class="cs">enregistré dans ce navigateur</span>
+    <span id="saved" class="cs">enregistré dans ce navigateur</span><span id="cloudState" class="cs" hidden></span>
     <nav class="modes" aria-label="Mode d'affichage"><button type="button" id="mode2d" data-mode="2d" aria-pressed="true">Plan</button><button type="button" id="mode3d" data-mode="3d" aria-pressed="false">3D</button></nav>
     <div class="acts">
       <button id="undo" class="ib" type="button" title="Annuler (Ctrl+Z)" aria-label="Annuler" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5L4 9l4 4M4 9h11a5 5 0 0 1 0 10h-4"/></svg></button>
@@ -12,7 +19,8 @@
       <button id="bom" class="ib" type="button" title="Nomenclature : quantités par calque, réseau, équipement et structure"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM4 10h16M10 5v14"/></svg><span class="lb">Nomenclature</span></button>
       <button id="exportBtn" class="ib primary" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="exportPop" title="Exporter le dessin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Exporter</span></button>
       <button id="theme" class="ib" type="button" aria-label="Basculer le thème clair / sombre" title="Thème clair / sombre"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button>
-      <button id="acct" class="ib user" type="button" aria-haspopup="true" aria-label="Compte Studio Prism" title="Compte Studio Prism"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+      <button id="licBadge" type="button" hidden title="Licence ARCHIINDUS">Gratuit</button>
+      <button class="ib" id="userBtn" type="button" hidden aria-haspopup="true" aria-label="Mon compte"></button>
       <button id="panelBtn" class="ib" type="button" aria-expanded="false" aria-controls="panel" aria-label="Ouvrir le panneau d'options" title="Panneau d'options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM14 5v14"/></svg></button>
     </div>
     <input id="file" type="file" accept=".json,application/json" hidden>
@@ -113,7 +121,7 @@
       <h2 class="pn-h"><button type="button" aria-expanded="false" aria-controls="pn-help"><span class="pn-t">Aide et raccourcis</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
       <div class="pn-b" id="pn-help">
         <p class="mut small">Outils : V L P R C D T E M K H · Z : tout voir · Suppr : supprimer · Échap : annuler · Ctrl+Z / Ctrl+Y · Ctrl+A · F3 accroches · F8 ortho · taper un chiffre pendant le tracé pour saisir une longueur.</p>
-        <p class="mut small">Enregistrement automatique local dans ce navigateur. Compte Studio Prism et cloud : boutons « Compte » et « Cloud ».</p>
+        <p class="mut small">Avec un compte Studio Prism, le projet ouvert s'enregistre tout seul dans le cloud. Sans projet cloud ouvert, le dessin reste dans ce navigateur.</p>
       </div>
     </section>
   </aside>
@@ -129,22 +137,37 @@
 </div>
 <div id="auth" hidden>
   <aside class="ap-side">
-    <div class="ap-logo" role="img" aria-label="ARCHIINDUS, Studio Prism"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
-    <div class="ap-pitch"><p class="ap-eyebrow">Compte Studio Prism</p><h1>Un seul compte pour toutes les apps du studio.</h1><p>Connectez-vous une fois : votre compte et vos projets vous suivent d'ArchiPlan à ArchiIndus.</p></div>
+    <div class="ap-logo" role="img" aria-label="ARCHIINDUS, ingénierie des réseaux, Studio Prism"><b>ARCHI<span>INDUS</span></b><small>Ingénierie des réseaux</small></div>
+    <div class="ap-pitch"><p class="ap-eyebrow">Compte Studio Prism</p><h1>Un seul compte pour toutes les apps du studio.</h1><p>Connectez-vous une fois : votre fiche client et vos réglages vous suivent d'ARCHIINDUS à ARCHIPLAN, ARCHITRAFIC et Archi Vision.</p></div>
     <ul class="ap-apps">
-      <li><b>ARCHIINDUS</b><span>Plans industriels et réseaux techniques</span><em>Vous êtes ici</em></li>
+      <li><b>ARCHIINDUS</b><span>Plans industriels, réseaux et conception 3D</span><em>Vous êtes ici</em></li>
       <li><b>ARCHIPLAN</b><span>Conception de plans et modélisation 3D</span><em>Même compte</em></li>
+      <li><b>ARCHITRAFIC</b><span>Gestion du trafic et des chantiers</span><em>Même compte</em></li>
       <li><b>Archi Vision</b><span>Visite des maquettes en réalité augmentée</span><em>Même compte</em></li>
     </ul>
     <p class="ap-foot">Studio Prism · Creative &amp; Technical Solutions</p>
   </aside>
   <main class="ap-main"><div class="ap-card" id="apCard" aria-live="polite"></div></main>
 </div>
+<script>setTimeout(function(){if(!window.__apReady){var m=document.getElementById('spMsg');if(m){m.textContent="L'application n'a pas pu se charger. Vérifiez la connexion, puis rechargez la page.";m.classList.add('err');}}},15000);</script>
+<div class="menu" id="userMenu" hidden>
+  <div class="who"><b id="umName"></b><span id="umMail"></span></div><span class="lic" id="umLic"></span><hr>
+  <button data-um="licence"><b>Ma licence ARCHIINDUS</b><span>Droits liés à votre compte Studio Prism</span></button>
+  <button data-um="fiche"><b>Fiche client</b><span>Coordonnées partagées entre les apps Studio Prism</span></button>
+  <button data-um="home"><b>Accueil</b><span>Mes projets et projets partagés</span></button>
+  <button data-um="security"><b>Code PIN et sécurité</b><span>Code PIN du compte, empreinte ou visage (facultatif)</span></button>
+  <button data-um="lock" id="umLock"><b>Verrouiller</b><span>Le code PIN sera demandé pour revenir</span></button>
+  <button data-um="theme"><b>Thème clair / sombre</b><span>Change l'apparence de l'interface sur cet appareil</span></button>
+  <hr><button data-um="logout"><b>Se déconnecter</b><span>Sur cet appareil</span></button>
+  <button data-um="delete" class="danger"><b>Supprimer mon compte</b><span>Sur le site Studio Prism, avec votre mot de passe et votre code PIN</span></button>
+</div>
 <section id="home" hidden aria-label="Accueil ARCHIINDUS">
   <header class="h-top">
-    <div class="brand"><b>ARCHI<span>INDUS</span></b><small>Studio Prism</small></div>
+    <div class="brand" id="homeBrand"><div><b>ARCHI<span>INDUS</span></b><small>Studio Prism · Ingénierie des réseaux</small></div></div>
+    <nav class="h-tabs" id="homeTabs" role="tablist"><button type="button" role="tab" data-htab="mine" aria-selected="true">Mes projets</button><button type="button" role="tab" data-htab="shared" aria-selected="false">Partagés avec moi</button></nav>
     <div class="h-acts">
-      <button type="button" class="h-back btn" id="homeBack">Retour au dessin</button>
+      <button type="button" id="homeLic" class="h-lic" hidden>Gratuit</button>
+      <a class="h-site" href="https://groupestudioprism.github.io/Studio-Prism/" target="_blank" rel="noopener">Studio Prism ↗</a>
       <button type="button" class="ib" id="homeUser" aria-haspopup="true" aria-label="Mon compte"></button>
     </div>
   </header>
@@ -152,18 +175,20 @@
     <section class="h-hero">
       <div class="h-hello"><p class="h-eyebrow">Espace projets</p><h1 id="homeHello">Bonjour</h1><p id="homeSub">Vos projets s'enregistrent tout seuls dans le cloud Studio Prism.</p>
         <div class="h-quick">
-          <button type="button" class="hq primary" id="homeNewP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span><b>Nouveau projet</b><small>Plan et réseaux</small></span></button>
-          <button type="button" class="hq" id="homeNewF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Nouveau dossier</b><small>Ranger ses projets</small></span></button>
+          <button type="button" class="hq primary" id="homeNewP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span><b>Nouveau projet</b><small>Réseaux, structures, pièces 3D</small></span></button>
+          <button type="button" class="hq" id="homeNewF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span><b>Nouveau dossier</b><small>Ranger, partager</small></span></button>
           <button type="button" class="hq" id="homeImport"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg><span><b>Importer</b><small>Fichier .json</small></span></button>
-          <button type="button" class="hq" id="homeSave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7"/></svg><span><b>Dessin actuel</b><small>Vers le cloud</small></span></button>
-        </div>
-      </div>
+          <button type="button" class="hq" id="homeSample"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg><span><b>Exemple</b><small>Station de pompage</small></span></button>
+        </div></div>
       <aside class="h-quota" id="homeQuota" aria-live="polite"></aside>
     </section>
+    <div class="h-offer" id="homeOffer" hidden></div>
     <main class="h-body" id="homeBody"></main>
-    <p class="h-foot">Studio Prism · ARCHIINDUS</p>
+    <footer class="h-foot">Studio Prism · Creative &amp; Technical Solutions · ARCHIINDUS · Données de site © IGN, contributeurs OpenStreetMap (ODbL)</footer>
   </div>
   <div class="h-busy" id="homeBusy" hidden><div class="ap-spin" aria-hidden="true"></div><span></span></div>
   <input type="file" id="homeFile" accept=".json,application/json" hidden>
 </section>
 <div class="menu" id="homeMenu" hidden></div>
+<div id="apDlg" hidden role="dialog" aria-modal="true"><div class="dlg-card"></div></div>
+<div id="toast" hidden></div>

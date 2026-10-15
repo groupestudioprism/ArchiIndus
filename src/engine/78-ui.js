@@ -421,8 +421,8 @@ const UI = (() => {
     const pn = $('#pname');
     if (document.activeElement !== pn) pn.value = Doc.get().name;
     const s = Doc.saveState();
+    $('#saved').hidden = !!window.APCloudActive;
     $('#saved').textContent = s === 'saved' ? 'enregistré dans ce navigateur' : s === 'pending' ? 'enregistrement…' : 'enregistrement local impossible';
-    $('#saved').textContent += Cloud.suffix();
     $('#saved').classList.toggle('err', s === 'error');
     document.title = `${Doc.get().name} · ARCHIINDUS`;
   }
@@ -499,27 +499,26 @@ const UI = (() => {
     $('#bomMenu').addEventListener('click', () => BOM.show());
     $('#undo').addEventListener('click', () => Doc.undo());
     $('#redo').addEventListener('click', () => Doc.redo());
-    $('#new').addEventListener('click', () => { Cloud.forget(); Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.'); });
+    $('#new').addEventListener('click', () => {
+      /* projet cloud ouvert : le nouveau projet est créé dans le cloud (accueil), sinon page blanche locale */
+      if (window.APCloudActive && window.APHome) { window.APHome.newProject(); return; }
+      Doc.reset(); Tools.selection.clear(); Canvas2D.zoomExtents(); Status.msg('Nouveau projet. Ctrl+Z pour revenir au précédent.');
+    });
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
-    $('#save').addEventListener('click', () => IO.saveJSON());
+    $('#save').addEventListener('click', () => { if (Lic.need()) IO.saveJSON(); });
     document.querySelectorAll('.modes [data-mode]').forEach((b) => b.addEventListener('click', () => View3D.setMode(b.dataset.mode === '3d')));
-    $('#glb').addEventListener('click', () => View3D.exportGLB());
+    $('#glb').addEventListener('click', () => { if (Lic.need()) View3D.exportGLB(); });
     document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.addEventListener('click', () => View3D.setStyle(b.dataset.style)));
     document.querySelectorAll('#v3dCams [data-cam]').forEach((b) => b.addEventListener('click', () => window.Scene3D && window.Scene3D.view(b.dataset.cam)));
     bindMenu('#fileBtn', '#fileMenu');
     bindMenu('#exportBtn', '#exportPop');
-    $('#csv').addEventListener('click', () => BOM.exportCSV());
+    $('#csv').addEventListener('click', () => { if (Lic.need()) BOM.exportCSV(); });
     $('#settings').addEventListener('click', projectDialog);
     $('#panelBtn').addEventListener('click', () => { const o = $('#app').classList.toggle('pn-open'); $('#panelBtn').setAttribute('aria-expanded', String(o)); });
-    $('#svg').addEventListener('click', () => IO.exportSVG());
-    $('#dxf').addEventListener('click', () => IO.exportDXF());
-    $('#pdf').addEventListener('click', () => PDF.dialog());
-    $('#acct').addEventListener('click', () => Account.open());
-    $('#cloud').addEventListener('click', () => Home.open());
-    Cloud.on(refreshChrome);
-    const acctIcon = $('#acct').innerHTML;
-    Account.on(() => { const m = Account.me(); $('#acct').classList.toggle('on', !!m); $('#acct').setAttribute('aria-label', m ? `Compte de ${m.firstName || m.email}` : 'Compte Studio Prism'); if (m) $('#acct').textContent = (m.firstName || m.email || '?').trim().charAt(0).toUpperCase(); else $('#acct').innerHTML = acctIcon; $('#acct').title = m ? `${m.email} · Compte Studio Prism` : 'Compte Studio Prism'; });
+    $('#svg').addEventListener('click', () => { if (Lic.need()) IO.exportSVG(); });
+    $('#dxf').addEventListener('click', () => { if (Lic.need()) IO.exportDXF(); });
+    $('#pdf').addEventListener('click', () => { if (Lic.need()) PDF.dialog(); });
     $('#bom').addEventListener('click', () => BOM.show());
     $('#addLayer').addEventListener('click', addLayer);
     $('#snapBtn').addEventListener('click', () => Tools.toggleSnap());

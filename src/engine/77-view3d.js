@@ -73,10 +73,22 @@ const View3D = (() => {
   const beamDepth = (o) => { const m = /(?:IPE|HEA|HEB|HEM|UPN|IPN)\s*(\d{2,3})/i.exec(o.st.prof || ''); return m ? +m[1] : (o.props && o.props.h) || 200; };
 
   const matCol = (id) => (id && MATS[id] ? MATS[id].color : null);
-  function solids() {
+  /* Volumes du plan seuls (réseaux, murs, poutres, équipements), avec leur objet d'origine : servent aussi au noyau (interférences, STEP). */
+  function planSolids() {
+    const out = [];
+    for (const s of solids({ planOnly: true })) if (s.oid && s.k !== 'line') out.push(s);
+    const n = new Map();
+    for (const s of out) { const i = n.get(s.oid) || 0; s.i = i; n.set(s.oid, i + 1); }
+    return out;
+  }
+  function solids(opt = {}) {
     const out = [], d = Doc.get();
-    const consumed = new Set((d.features || []).filter((f) => !f.hide).map((f) => f.sk));
+    const consumed = new Set((d.features || []).filter((f) => !f.hide && f.sk).map((f) => f.sk));
+    const push0 = out.push.bind(out);
     for (const o of d.objects) {
+      const tag = (o.net && o.net.tag) || (o.st && o.st.tag) || o.tag || '';
+      const oname = `${o.net ? 'Réseau' : o.st ? (o.st.kind === 'mur' ? 'Mur' : 'Poutre') : o.type === 'sym' ? (SYMBOLS[o.k] || {}).label || 'Équipement' : 'Objet'}${tag ? ' ' + tag : ''} #${o.id}`;
+      out.push = (...xs) => push0(...xs.map((x) => ({ ...x, oid: o.id, name: oname, mat: objMatId(o) })));
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
       const col = l.color, pr = o.props || {}, mcol = matCol(objMatId(o));
@@ -136,17 +148,29 @@ const View3D = (() => {
         else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 37 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 18), e.c[1] + e.r * Math.sin(i * Math.PI / 18), 0]), col });
       }
     }
-    /* fonctions 3D (esquisses extrudées ou révolutionnées) */
-    for (const f of d.features || []) {
-      const l = Doc.layer(f.layer); if (!l || !l.visible) continue;
-      for (const s of Model.featureSolids(f, l.color)) out.push({ ...s, mcol: matCol(f.mat) });
+    out.push = push0;
+    if (opt.planOnly) return out;
+    /* fonctions 3D : corps calculés par le noyau géométrique (booléens, congés…) ; sinon affichage approché */
+    const kr = Kernel.status() === 'ready' ? Kernel.result() : null;
+    const sel = state.treeSel && state.treeSel.t === 'f' ? state.treeSel.id : 0;
+    if (kr && (d.features || []).length) {
+      for (const b of kr.bodies) {
+        const l = Doc.layer(b.layer); if (l && !l.visible) continue;
+        out.push({ k: 'mesh', mesh: b.mesh, key: b.key, fids: b.fids, col: l ? l.color : '#1B2433', mcol: matCol(b.mat), sel: b.fids.includes(sel) });
+      }
+    } else {
+      const stop = d.rollback == null ? (d.features || []).length : d.rollback;
+      for (const f of (d.features || []).slice(0, stop)) {
+        const l = Doc.layer(f.layer); if (!l || !l.visible || !(f.type === 'extrude' || (f.type === 'revolve' && f.op !== 'cut'))) continue;
+        for (const s of Model.featureSolids(f, l.color)) out.push({ ...s, mcol: matCol(f.mat), sel: f.id === sel });
+      }
     }
     /* composants d'assemblage (position résolue par les contraintes) */
     if (d.comps && d.comps.length) {
       const R = Model.resolve(d.comps);
       for (const c of d.comps) {
         const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
-        for (const s of Model.compSolids(c, R.pos.get(c.id), l.color)) out.push({ ...s, mcol: matCol(c.mat), sel: state.compSel === c.id });
+        for (const s of Model.compSolids(c, R.pos.get(c.id), l.color)) out.push({ ...s, mcol: matCol(c.mat), sel: state.compSel === c.id, util: state.frameUtil ? state.frameUtil.get(c.id) : null });
       }
     }
     return out;
@@ -206,23 +230,35 @@ const View3D = (() => {
 
 
   /* ---- Mode 3D de la fenêtre principale (Three.js) ; repli : aperçu fil de fer si le moteur n'est pas chargé ---- */
-  let on = false, style = 'shaded';
+  let on = false, style = 'shaded', seen3d = false;
   const isOn = () => on;
   function note(t) { const n = document.getElementById('v3dNote'); if (n) n.textContent = t; }
-  function refresh() {
+  let kStarted = false;
+  function refresh(opts = {}) {
     if (!on || !window.Scene3D) return;
+    const d = Doc.get();
+    if ((d.features || []).length) {
+      if (!kStarted) { kStarted = true; Kernel.on(() => { if (on) draw(); }); }
+      Kernel.update().then((r) => { if (r && on) draw(); });
+    }
+    draw(opts);
+  }
+  function draw(opts = {}) {
     const solidsNow = solids();
-    const info = window.Scene3D.show(document.getElementById('cv3d'), solidsNow, { style });
+    const info = window.Scene3D.show(document.getElementById('cv3d'), solidsNow, { style, fit: opts.fit });
+    const d = Doc.get(), ks = Kernel.status(), kr = Kernel.result();
+    const kn = (d.features || []).length ? (ks === 'loading' ? ' · Chargement du noyau géométrique OpenCascade…' : ks === 'ready' && kr ? ` · Noyau OpenCascade : ${kr.bodies.length} corps (${kr.ms} ms)${kr.errors.length ? `, ${kr.errors.length} erreur(s) dans l'arbre` : ''}` : ks === 'error' ? ' · Noyau géométrique indisponible : affichage approché.' : '') : '';
     note(!solidsNow.length ? 'Rien à afficher : le dessin est vide ou tous les calques sont masqués.'
-      : `Vue 3D en lecture seule : modifiez le dessin en mode Plan. Volumes de principe (murs ${DEF_WALL_H / 1000} m, poutres selon le profilé, équipements à hauteur type), calques visibles uniquement.${info.capped ? ` Affichage limité aux ${info.max} premiers éléments.` : ''}`);
+      : `Clic : sélectionner · double-clic sur une face plane : esquisse sur la face · molette : zoom · clic droit : déplacer.${kn}${info.capped ? ` Affichage limité aux ${info.max} premiers éléments.` : ''}`);
   }
   function setMode(want) {
     if (want && !window.Scene3D) { Status.msg('Moteur 3D indisponible (Three.js non chargé, connexion nécessaire) : aperçu en fil de fer.', 7000); show(); return false; }
+    const wasOn = seen3d; seen3d = true;
     on = !!want;
     document.getElementById('app').classList.toggle('m3d', on);
     document.getElementById('v3dView').hidden = !on;
     document.querySelectorAll('.modes [data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (on ? '3d' : '2d'))));
-    if (on) { Tools.setTool('select'); refresh(); window.Scene3D.resume(); } else { if (window.Scene3D) window.Scene3D.hide(); Canvas2D.requestDraw(); }
+    if (on) { Tools.setTool('select'); refresh({ fit: !wasOn }); window.Scene3D.resume(); } else { if (window.Scene3D) window.Scene3D.hide(); Canvas2D.requestDraw(); }
     return true;
   }
   function setStyle(st) { style = st; document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.style === st))); if (on && window.Scene3D) window.Scene3D.setStyle(st, solids()); }
@@ -238,5 +274,5 @@ const View3D = (() => {
     } catch (e) { Status.msg('Export 3D impossible : ' + (e && e.message ? e.message : e), 8000); }
   }
 
-  return { model, solids, project, show, setMode, setStyle, refresh, isOn, exportGLB };
+  return { model, solids, planSolids, project, show, setMode, setStyle, refresh, isOn, exportGLB };
 })();

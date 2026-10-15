@@ -24,7 +24,8 @@ const IO = (() => {
     if (file.size > 20 * 1024 * 1024) { Status.msg('Fichier trop volumineux (20 Mo maximum).', 8000); return; }
     try {
       const data = Doc.sanitize(JSON.parse(await file.text()));
-      Cloud.forget();
+      /* projet cloud ouvert : le fichier devient un nouveau projet cloud (le projet ouvert n'est jamais écrasé) */
+      if (window.APCloudActive && window.APHome && window.APHome.importProject) { await window.APHome.importProject(data.name, JSON.stringify(data)); return; }
       Doc.replace(data);
       Tools.selection.clear();
       Canvas2D.zoomExtents();
@@ -128,6 +129,11 @@ const IO = (() => {
     return best;
   };
   const ascii = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\x20-\x7E]/g, '?');
+  /* textes DXF en Windows-1252 (accents français conservés, déclarés par $DWGCODEPAGE) : les caractères hors de cette page
+     sont remplacés par leur lettre de base ou « ? » */
+  const CP1252 = { '€': 0x80, '‚': 0x82, 'ƒ': 0x83, '„': 0x84, '…': 0x85, '‰': 0x89, 'Š': 0x8A, '‹': 0x8B, 'Œ': 0x8C, 'Ž': 0x8E, '‘': 0x91, '’': 0x92, '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97, '™': 0x99, 'š': 0x9A, '›': 0x9B, 'œ': 0x9C, 'ž': 0x9E, 'Ÿ': 0x9F };
+  const latin = (s) => [...String(s)].map((c) => (c.charCodeAt(0) >= 0x20 && c.charCodeAt(0) <= 0xFF && c.charCodeAt(0) !== 0x7F) || CP1252[c] ? c : (ascii(c) || '?')).join('');
+  const cp1252Bytes = (str) => { const out = new Uint8Array(str.length); for (let i = 0; i < str.length; i++) { const c = str[i], k = c.charCodeAt(0); out[i] = CP1252[c] || (k <= 0xFF ? k : 63); } return out; };
 
   function exportDXF() {
     const objs = visibleObjects();
@@ -143,7 +149,7 @@ const IO = (() => {
       used.add(n);
       names.set(l.id, n);
     }
-    w(0, 'SECTION'); w(2, 'HEADER'); w(9, '$ACADVER'); w(1, 'AC1009'); w(0, 'ENDSEC');
+    w(0, 'SECTION'); w(2, 'HEADER'); w(9, '$ACADVER'); w(1, 'AC1009'); w(9, '$DWGCODEPAGE'); w(3, 'ANSI_1252'); w(9, '$INSUNITS'); w(70, 4); w(0, 'ENDSEC');
     w(0, 'SECTION'); w(2, 'TABLES');
     w(0, 'TABLE'); w(2, 'LTYPE'); w(70, 1);
     w(0, 'LTYPE'); w(2, 'CONTINUOUS'); w(70, 0); w(3, 'Solid line'); w(72, 65); w(73, 0); w(40, nf(0));
@@ -154,7 +160,7 @@ const IO = (() => {
     w(0, 'ENDSEC');
     w(0, 'SECTION'); w(2, 'ENTITIES');
     const line = (ly, a, b) => { w(0, 'LINE'); w(8, ly); w(10, nf(a[0])); w(20, nf(a[1])); w(30, nf(0)); w(11, nf(b[0])); w(21, nf(b[1])); w(31, nf(0)); };
-    const text = (ly, p, h, str, rot) => { w(0, 'TEXT'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); w(40, nf(h)); w(1, ascii(str)); w(50, nf(rot)); };
+    const text = (ly, p, h, str, rot) => { w(0, 'TEXT'); w(8, ly); w(10, nf(p[0])); w(20, nf(p[1])); w(30, nf(0)); w(40, nf(h)); w(1, latin(str)); w(50, nf(rot)); };
     for (const o of objs) {
       const ly = names.get(o.layer);
       if (o.type === 'line' && !o.net) line(ly, o.a, o.b);
@@ -185,9 +191,9 @@ const IO = (() => {
       }
     }
     w(0, 'ENDSEC'); w(0, 'EOF');
-    download(`${safeName(Doc.get().name)}.dxf`, L.join('\r\n') + '\r\n', 'application/dxf');
-    Status.msg('Export DXF envoyé vers vos téléchargements (unité : mm, cotes éclatées).');
+    download(`${safeName(Doc.get().name)}.dxf`, cp1252Bytes(L.join('\r\n') + '\r\n'), 'application/dxf');
+    Status.msg('Export DXF envoyé vers vos téléchargements (unité : mm, cotes éclatées, accents en Windows-1252).');
   }
 
-  return { saveJSON, openFile, exportSVG, exportDXF, download, safeName, visibleObjects, dimExplode, netLabelInfo };
+  return { saveJSON, openFile, exportSVG, exportDXF, download, safeName, visibleObjects, dimExplode, netLabelInfo, latin, cp1252Bytes };
 })();

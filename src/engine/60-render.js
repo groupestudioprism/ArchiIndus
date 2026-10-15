@@ -167,6 +167,12 @@ const Render = (() => {
       }
     }
     if (!state.sketch) drawComps(ctx, d);
+    /* esquisse sur une face : contour de la face rappelé en pointillés */
+    if (state.sketch && state.faceRef && state.faceRef.sk === state.sketch) {
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = css('--accent'); ctx.globalAlpha = 0.7; ctx.lineWidth = 1.2; ctx.beginPath();
+      for (const [a, b] of state.faceRef.segs) { const p = Canvas2D.toScreen(a), q = Canvas2D.toScreen(b); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); }
+      ctx.stroke(); ctx.restore();
+    }
     const selCol = css('--sel');
     for (const o of d.objects) {
       if (Tools.selection.has(o.id)) drawObject(ctx, o, selCol, 2.6);

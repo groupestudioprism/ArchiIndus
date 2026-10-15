@@ -7,3 +7,5 @@ node_modules/
 *.pem
 .env*
 dist/
+tests/rules/.generated/
+__pycache__/

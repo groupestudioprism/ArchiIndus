@@ -5,6 +5,9 @@ Ne remplace ni l'ouverture du DXF dans un logiciel de CAO ni un essai sur télé
 """
 import json, re, sys, tempfile, pathlib
 from playwright.sync_api import sync_playwright
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from helpers import enter
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = tempfile.mkdtemp(prefix='archiindus-equip-') + '/'
@@ -23,7 +26,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append('pageerror:' + str(e)))
     pg.on('console', lambda m: errs.append('console:' + m.text) if m.type == 'error' and 'ERR_FAILED' not in m.text else None)
     pg.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(300); pg.click('#authSkip')
+    enter(pg)
     box = pg.locator('#cv').bounding_box()
     def W(x, y):
         v = pg.evaluate('({x:state.view.x,y:state.view.y,s:state.view.scale})')
@@ -38,7 +41,7 @@ with sync_playwright() as p:
     ok(not pg.is_visible('#pn-help'), "corps de l'aide masqué")
     pg.click('#panel [aria-controls="pn-layers"]')
     ok(not pg.is_visible('#layers'), 'section calques repliée')
-    pg.reload(); pg.wait_for_timeout(300); pg.click('#authSkip')
+    enter(pg, reload=True)
     ok(not pg.is_visible('#layers'), "repli mémorisé après rechargement")
     pg.click('#panel [aria-controls="pn-layers"]'); ok(pg.is_visible('#layers'), 'section calques rouverte')
     ok(pg.locator('#layerCount').inner_text() == str(pg.evaluate('Doc.get().layers.length')), 'compteur de calques')
@@ -179,7 +182,7 @@ with sync_playwright() as p:
     ok(pg.locator('details.ly-other').count() == 1, 'autres métiers repliés')
     pg.click('#rt-trade'); pg.select_option('#tradeSel', 'all'); pg.wait_for_timeout(100)
     ok(pg.locator('.sym-btn').count() == 20 and pg.is_visible('#modeNet') and pg.is_visible('#modeMur'), 'tous les métiers : tout est visible')
-    pg.reload(); pg.wait_for_timeout(300); pg.click('#authSkip')
+    enter(pg, reload=True)
     # --- paramètres du projet
     fmenu('#settings'); pg.wait_for_selector('dialog[open]')
     pg.fill('dialog input[aria-label="Client"]', 'ACME'); pg.fill('dialog input[aria-label="Nom du projet"]', 'Usine test')
@@ -190,7 +193,7 @@ with sync_playwright() as p:
     pg.click('#exportBtn'); ok(pg.is_visible('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'true', 'menu Exporter ouvert')
     pg.keyboard.press('Escape'); ok(pg.is_hidden('#exportPop'), 'Échap ferme le menu Exporter')
     pg.click('#exportBtn'); pg.click('#panel'); ok(pg.is_hidden('#exportPop'), 'clic ailleurs ferme le menu Exporter')
-    ok(pg.locator('#ribbon [role="tab"]').count() == 8 and pg.locator('#rp-sketch .rb-grp').count() == 5, "ruban : 8 onglets, outils d'esquisse en 5 groupes")
+    ok(pg.locator('#ribbon [role="tab"]').count() == 9 and pg.locator('#rp-sketch .rb-grp').count() == 6, "ruban : 9 onglets (dont Mise en plan), outils d'esquisse en 6 groupes")
     # --- exports
     d = lambda sel: (lambda dl: (dl.value.save_as(OUT + dl.value.suggested_filename), OUT + dl.value.suggested_filename)[1])
     with pg.expect_download() as dl: pg.click('#exportBtn'); pg.click('#svg')
@@ -198,7 +201,7 @@ with sync_playwright() as p:
     ok('<circle' in txt and 'P1' in txt and 'IPE 200' in txt and 'Béton' in txt, 'SVG : symboles, repères et étiquettes de structure')
     ok('rotate(' in txt or 'transform' in txt, 'SVG : texte tourné le long du mur')
     with pg.expect_download() as dl: pg.click('#exportBtn'); pg.click('#dxf')
-    dx = OUT + 'e.dxf'; dl.value.save_as(dx); dtx = open(dx, encoding='utf-8').read()
+    dx = OUT + 'e.dxf'; dl.value.save_as(dx); dtx = open(dx, encoding='cp1252').read()
     ok('CIRCLE' in dtx and 'IPE 200' in dtx and 'POLYLINE' in dtx, 'DXF : cercles, polylignes, textes')
     ok(re.search(r'\n50\r?\n(?!0(\.0*)?\r?\n)[-0-9.]+', dtx) is not None, 'DXF : angle de texte présent')
     pg.click('#exportBtn'); pg.click('#pdf'); pg.wait_for_timeout(200)

@@ -1,8 +1,46 @@
 # ARCHIINDUS · Studio Prism
 
-Application de conception de plans industriels et de réseaux techniques (réseaux humides, réseaux secs, structures industrielles, génie civil), de la suite **Studio Prism**. Elle reprend l'identité graphique d'ArchiPlan et vise la compatibilité avec les autres applications de l'écosystème.
+Application de conception de plans industriels, de réseaux techniques et de pièces 3D (réseaux humides, réseaux secs, CVC, construction métallique, génie civil), de la suite **Studio Prism**. Même compte, même charte et mêmes règles que ARCHIPLAN et ARCHITRAFIC.
 
-> **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le bloc de règles `ai*` est publié dans le projet commun (v1 le 14/10/2026, v2 avec les dossiers le 15/10/2026 ; relecture en ligne identique au fichier testé à l'émulateur). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
+> **État (15/10/2026)** : poste CAO sur noyau géométrique **OpenCascade** (booléens, congés, coques, STEP), compte Studio Prism commun (code PIN, fiche client, Particulier / Entreprise, partage, mode découverte), outils métier (hydraulique, profil en long, conflits, calcul de charpente), échanges IFC4 / DXF / STEP / STL. **354 contrôles automatiques** dans Chromium sans interface (`tests/`), plus les règles Firestore à l'émulateur dans l'intégration continue. Rien n'a encore été essayé sur un téléphone réel ni dans un logiciel de CAO tiers (sauf l'IFC, relu par IfcOpenShell).
+> **À faire par le propriétaire** : publier les règles Firestore communes (`firebase/firestore.rules`, voir « Règles Firestore » ci-dessous) ; activer GitHub Pages sur la branche principale ; créer la fiche produit `archiindus` dans l'administration du site.
+
+## Noyau géométrique OpenCascade (`kernel/`, `src/kernel/worker.js`, `src/engine/42-kernel.js`) — `tests/e2e_noyau.py`
+
+- **OpenCascade** (B-rep, le noyau de FreeCAD) compilé en WebAssembly, via **replicad** 1.1.0 ; il tourne dans un **Web Worker** : la reconstruction ne bloque jamais l'interface. Chargé à la demande (première fonction 3D), depuis la copie publiée avec l'app (`kernel/vendor/`, 23 Mo, mise en cache par le navigateur), sinon depuis jsDelivr. Sans noyau (hors ligne au premier chargement), affichage approché comme avant.
+- **Fonctions** : bossage extrudé (fusion avec le corps touché, ou nouveau corps), **enlèvement extrudé** (perçage « à travers tout »), révolution (ajout ou enlèvement), **congé**, **chanfrein** (toutes les arêtes, verticales, horizontales, dessus, dessous), **coque** (face ouverte au choix), **répétition** linéaire ou circulaire, **symétrie** (d'une fonction ou du corps), **tuyauterie 3D** (section circulaire balayée le long d'un réseau du plan, coudes cintrés). Cercles exacts (plus de polygones à 48 côtés).
+- **Arbre de création** : barre de **retour arrière** (glisser, flèches du clavier), **glisser-déposer** pour réordonner, désactivation, fonctions en erreur signalées avec un message lisible (rayon de congé trop grand, etc.), menu contextuel (clic droit).
+- **Équations** : variables du projet et **formules** dans tous les champs (`=L/2+10`, `sqrt`, `min`, `max`, trigonométrie en degrés) ; modifier une variable recalcule les cotes et le modèle.
+- **Vue 3D** : pré-sélection au survol, **sélection dans la vue** (synchronisée avec l'arbre), **barre contextuelle** près du curseur, **double-clic sur une face plane → esquisse sur la face** (contour de la face rappelé et accrochable), **vue normale à la face**, **cube de vue**, **coupe dynamique**, zoom molette maîtrisé (même réglage qu'ARCHIPLAN) centré sur le curseur.
+- **Propriétés de masse** exactes (volume, centre de gravité, surface) et **matrice d'inertie** ; **détection des interférences** entre corps, composants, réseaux, murs, poutres et équipements (raccordements voulus ignorés), avec jeu minimal.
+- **Mise en plan** : vues de face, dessus et gauche projetées depuis le corps (arêtes vues et cachées), projection européenne, encombrements cotés, échelle proposée pour un A3, cartouche ; téléchargement SVG.
+- **Exports** : **STEP** (AP214, solides B-rep : SolidWorks, Inventor, CATIA, FreeCAD), **STL** binaire (impression 3D).
+
+## Outils métier et échanges — `tests/e2e_metiers.py`
+
+- **Hydraulique** (`src/engine/82-networks.js`) : réseaux gravitaires (Manning-Strickler à pleine section, débit capable, vitesse, remplissage, alertes de pente et d'autocurage) et en charge (Darcy-Weisbach, λ de Swamee-Jain, pertes, HMT) ; export CSV.
+- **Profil en long** du réseau sélectionné : fil d'eau, génératrice, terrain naturel IGN si le site est chargé, pentes, PK, profondeurs ; SVG.
+- **Conflits entre réseaux** : distance 3D entre génératrices (altitudes comprises), seuil réglable, localisation dans le plan.
+- **Calcul de structure filaire** (`src/engine/83-frame.js`) : méthode des déplacements 3D (6 ddl/nœud) sur les profilés de l'assemblage et les poutres du plan, jonctions automatiques (traverse posée sur un poteau), pieds encastrés ou articulés, poids propre + charge répartie ; efforts, contraintes, flambement (courbe b), flèches, taux de travail colorés en 3D. Vérifié sur des cas de référence (qL²/12, qL²/2, équilibre des réactions). **Indicatif : pas une note de calcul aux Eurocodes.**
+- **Liste de débit** (mécano-soudure) des profilés : repères, longueurs, quantités, masses ; CSV.
+- **IFC4** (`src/engine/84-interop.js`) : `IfcPipeSegment` / `IfcCableSegment` par tronçon, équipements, murs, poutres et poteaux (profils en I), corps 3D triangulés, matériaux et propriétés (DN, débit, pression, pente). Relu sans erreur par IfcOpenShell (géométrie comprise).
+- **Import DXF** : LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC, TEXT, MTEXT ; unités ($INSUNITS), calques recréés, accents Windows-1252. **Export DXF** : accents désormais conservés (Windows-1252 déclaré).
+- **Dessin 2D** : décaler (O), ajuster (A), prolonger (X), symétrie (I), rotation (Q, angle au clavier), échelle (U, facteur au clavier) ; **gestes de souris** (clic droit glissé : ligne, rectangle, cercle, cote, polyligne, ajuster, sélection, tout voir) ; **pincement à deux doigts** sur tablette ; **barre de raccourcis** (touche S, chiffres 1 à 0).
+
+## Compte Studio Prism, cloud et licence (`src/js/`) — `tests/e2e_compte.py`
+
+Module **commun** aux apps du studio (repris d'ARCHIPLAN, comme ARCHITRAFIC), sur le projet Firebase commun `archivision-studioprism` :
+connexion et création de compte (comptes **Particulier** et **Entreprise** distincts, validation des entreprises par un administrateur), bouton **« Afficher »** sur les mots de passe, **fiche client**, **code PIN** (haché, commun au compte, Face ID / empreinte en option, verrouillage), accueil **« Mes projets » / « Partagés avec moi »**, dossiers, **partage** par email ou par lien, miniatures, **enregistrement automatique**, licence `licenses/{uid}_archiindus` (clé de licence acceptée), **mode découverte** sans licence (tous les outils, cloud 10 Mo, exports réservés aux licences), suppression du compte sur le site Studio Prism (pour toutes les apps). Un compte supprimé ou désactivé par l'administration est déconnecté et oublié de l'appareil.
+Quotas : 10 Mo sans licence, 50 Mo avec licence, 1 Go administrateur. Collections `aiProjects`, `aiFolders`, `aiShares`, `aiGrants`, `aiUsage`, `aiLibrary`.
+
+`dist/archiindus-demo.html` (produit par `tools/build.py`) est une démo autonome : comptes et cloud simulés dans le navigateur (un email contenant « decouverte » montre le mode découverte ; une clé commençant par ARCH active une licence).
+
+## Règles Firestore (fichier COMMUN au site, à ARCHIPLAN, ARCHITRAFIC et ARCHIINDUS)
+
+- `firebase/firestore.rules` : règles complètes à publier, produites par `python3 tools/make_rules.py firebase/firestore.base.rules > firebase/firestore.rules` (le bloc ARCHIINDUS est dérivé du bloc ARCHIPLAN, comme le bloc ARCHITRAFIC). `firebase/firestore.base.rules` = règles publiées relevées le 15/10/2026 (dépôts archiplan et ArchiTraffic, identiques).
+- **Garde-fou** : `python3 tools/check_rules.py firebase/firestore.rules` refuse tout fichier auquel il manque un bloc (site, ARCHIPLAN, ARCHITRAFIC, ARCHIINDUS, code PIN). À lancer avant **chaque** publication, depuis n'importe quelle app : c'est ce manque qui a bloqué le cloud d'ArchiIndus le 15/10/2026.
+- Testées à l'émulateur dans l'intégration continue (`tests/rules/`, `.github/workflows/tests.yml`) : cycle de vie, quotas, partage, confidentialité, et non-régression des blocs ap* et at*.
+- Les projets ArchiIndus créés avant le partage (v1/v2) restent lisibles ; le champ manquant `linkMode` est ajouté à leur prochain enregistrement.
 
 ## Poste de conception (type SolidWorks / Inventor / Revit) — testé dans Chromium sans interface, `tests/e2e_cao.py`
 
@@ -46,14 +84,17 @@ Application de conception de plans industriels et de réseaux techniques (résea
 - **Panneau d'options** refondu : sections repliables (état mémorisé dans le navigateur), calques avec boutons œil / cadenas, mode de tracé en un seul sélecteur, bibliothèque de symboles en vignettes. Tests : `tests/e2e_equip.py`.
 - Thème clair et sombre.
 
+## Format du projet (`schemaVersion` 1)
+
+JSON : `name`, `units` (`mm`), `layers`, `objects` (`line`, `poly`, `circle`, `dim`, `text`, `sym` ; `net`, `st`, `props`, `sk`), `sketches` (`plane` : top, front, right ou **custom** {o, u, n} pour une esquisse sur face), `features` (extrude, cut, revolve, fillet, chamfer, shell, pattern, mirror, pipe ; `ex` : formules par champ), `vars` (variables {n, e}), `rollback` (barre de retour arrière), `comps`, `site`, `sheet`. À l'ouverture, tout fichier est validé ; un fichier invalide est refusé sans toucher au projet courant.
+
 ### Limites connues
 
-- Le DXF n'a pas été ouvert dans un logiciel de CAO : seule sa structure a été contrôlée. Les accents sont supprimés, les couleurs sont ramenées aux indices AutoCAD.
-- Les symboles sont des schémas de principe, pas des symboles normalisés ; pas de bibliothèque personnalisée, pas de jonction automatique des murs entre eux (chevauchements visibles). Phase 4 et nouveau panneau testés dans Chromium sans interface uniquement, pas sur un téléphone réel.
-- Compte : pas de code PIN ni de verrouillage. Pas de partage de projets ou de dossiers (par email ou lien), pas de « Partagés avec moi », pas de miniatures de projets, pas de vérification d'email. Les règles n'empêchent pas un dossier d'être déplacé dans son propre sous-dossier (contrôlé par l'application seulement). Le lien projet courant ↔ projet cloud n'est gardé qu'en mémoire. Le compteur d'usage cloud dépend des règles ; non vérifié en production.
-- L'export PDF n'a pas été ouvert dans tous les lecteurs (seulement qpdf, pypdf, poppler).
-- Pas de gestion du tactile à deux doigts ; l'outil Main permet de déplacer la vue au doigt.
-- Le stockage local est propre à un navigateur : vider les données du site efface le projet. Utiliser « Enregistrer » pour garder un fichier.
+- Rien n'a été essayé sur un téléphone ou une tablette réels, ni dans AutoCAD, SolidWorks ou Revit (STEP et DXF : structure contrôlée ; IFC : relu par IfcOpenShell).
+- Noyau : pas encore de solveur de contraintes d'esquisse (cotes pilotantes, tangences), de balayage d'un profil quelconque, de lissage, de tôlerie, de dépouille ; congés et chanfreins par familles d'arêtes (pas encore à l'arête cliquée).
+- Calculs (structure, hydraulique, analyse) : pré-dimensionnement indicatif ; pas d'éléments finis volumiques, pas de cinématique.
+- Mise en plan : une feuille, trois vues, cotes d'encombrement seulement.
+- Logo : version texte en attendant les fichiers définitifs (le logo du Drive « Ingénierie des réseaux » n'est pas encore intégré).
 
 ## Contenu du dépôt
 
@@ -62,14 +103,20 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | `src/parts/` | Structure de la page : en-tête (polices, thème) et corps (barre haute, outils, zone de dessin, panneau, barre d'état). |
 | `src/css/tokens.css` | Charte Studio Prism : valeurs relevées dans ArchiPlan (`src/css/app.css`), thème clair et sombre. |
 | `src/css/app.css`, `src/css/home.css` | Mise en page et composants ; connexion et accueil (repris d'`auth.css` / `home.css` d'ArchiPlan). |
-| `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `79-cloudstore`, `79-account`, `79-home` (page de connexion et accueil), `80-main`. |
-| `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html`. |
+| `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique), dont `02-expr` (formules), `31-edit2d` (outils 2D), `42-kernel` (pont avec le noyau), `78c-cad` (poste CAO), `81-sample` (exemple), `82-networks`, `83-frame`, `84-interop`, et : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `80-main`. |
+| `src/js/` | Compte Studio Prism, cloud, partage, accueil (module commun, repris d'ARCHIPLAN). |
+| `src/kernel/worker.js` | Noyau géométrique (Web Worker) : fonctions, maillage, masse, interférences, STEP / STL, projections. |
+| `kernel/vendor/` | replicad 1.1.0 (MIT) et OpenCascade compilé (LGPL 2.1, licence jointe), publiés avec l'app. |
+| `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html` (en ligne) et `dist/archiindus-demo.html` (démo, tests). |
+| `tools/make_rules.py`, `tools/check_rules.py` | Règles Firestore communes : génération du bloc ai*, garde-fou avant publication. |
+| `tests/helpers.py` | Serveur HTTP local, Chromium, contournement de l'écran de compte pour les tests. |
+| `tests/e2e_noyau.py`, `tests/e2e_metiers.py` | Noyau OpenCascade et poste CAO ; outils métier et échanges (IFC relu par IfcOpenShell). |
 | `tests/e2e_cao.py` | Poste de conception : ruban, arbre, esquisses, fonctions, assemblage, générateur, matériaux, analyse, site (réponses IGN / OSM simulées), GLB avec lieu, import validé. |
 | `tests/e2e_3d.py` | Vue 3D et export GLB (WebGL logiciel ; Three.js servi depuis `THREE_DIR`, voir l'en-tête du test). |
 | `tests/e2e_reseaux.py`, `tests/e2e_equip.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF, des équipements / structures / panneau, et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
 | `tests/rules/` | Règles Firestore testées à l'émulateur contre les règles publiées d'ArchiPlan + le bloc `ai*` proposé : `cd tests/rules && npm install && PUBLISHED_RULES=<chemin firestore.rules> npm test`. |
 | `tests/e2e.py` | Test de bout en bout (Playwright pour Python) : `pip install playwright`, `playwright install chromium`, puis `python3 tests/e2e.py`. |
-| `firebase/firestore.ai.rules.proposed` | Bloc de règles `ai*` (projets, dossiers, quota) **déjà publié** dans le fichier de règles commun (v2, 15/10/2026), testé à l'émulateur (63 contrôles). Toute modification se publie en comparant d'abord au fichier de base. **Attention : le fichier de règles est commun à toutes les apps Studio Prism ; un déploiement depuis un autre dépôt qui ne contient pas le bloc `ai*` l'écrase et bloque le cloud d'ArchiIndus (« Enregistrement cloud refusé »). Cela s'est produit le 15/10/2026 (apparition d'un bloc ARCHITRAFIC) ; règles republiées le jour même (v3 = règles en ligne + bloc `ai*`).** |
+| ~~`firebase/firestore.ai.rules.proposed`~~ (retiré : remplacé par `firebase/firestore.rules`) | Bloc de règles `ai*` (projets, dossiers, quota) **déjà publié** dans le fichier de règles commun (v2, 15/10/2026), testé à l'émulateur (63 contrôles). Toute modification se publie en comparant d'abord au fichier de base. **Attention : le fichier de règles est commun à toutes les apps Studio Prism ; un déploiement depuis un autre dépôt qui ne contient pas le bloc `ai*` l'écrase et bloque le cloud d'ArchiIndus (« Enregistrement cloud refusé »). Cela s'est produit le 15/10/2026 (apparition d'un bloc ARCHITRAFIC) ; règles republiées le jour même (v3 = règles en ligne + bloc `ai*`).** |
 | `index.html` | Version publiée (**générée, ne pas modifier à la main**). |
 
 On modifie `src/`, on lance `python3 tools/build.py`, on enregistre (commit) : si GitHub Pages est activé sur la branche principale, le site se met à jour.
@@ -77,26 +124,6 @@ On modifie `src/`, on lance `python3 tools/build.py`, on enregistre (commit) : s
 ## Format du projet (`schemaVersion` 1)
 
 JSON : `name`, `units` (`mm`), `layers` (`id`, `name`, `color`, `group`, `visible`, `locked`), `objects` (`id`, `type`, `layer` + géométrie), `active`, compteurs. Types d'objets : `line {a,b}`, `poly {pts,closed}`, `circle {c,r}`, `dim {a,b,off,h}`, `text {p,text,h}`, `sym {c,k,s,rot,tag}` (équipement ou poteau). Les lignes et polylignes peuvent porter `net {dn,mat,tag}` ou `st {kind: mur|poutre, w, prof, tag}`. Axe Y vers le haut. À l'ouverture, tout fichier est validé (types, nombres finis, tailles) ; un fichier invalide est refusé sans toucher au projet courant.
-
-## Comptes et licences (codés, non activés)
-
-Réalisé dans le code : comptes et licence. Reste à faire :
-
-- Réutiliser les comptes Studio Prism (`users/{uid}`) et le code PIN, dans le projet Firebase commun.
-- Licence propre : `licenses/{uid}_archiindus`. Une licence ArchiPlan ne donne pas droit à ArchiIndus.
-- Données dans des collections préfixées `ai` (`aiProjects`, `aiFolders`, …), sur le modèle du préfixe `ap` d'ArchiPlan.
-- Nécessite un bloc de règles Firestore `ai*` dans le fichier de règles commun au site et à ArchiPlan : **modification d'un service partagé : comparer les règles en ligne, publier les règles seules, relire en ligne.**
-
-### Projets Firebase (14/10/2026)
-
-| Rôle | Projet | Contenu |
-| --- | --- | --- |
-| Commun Studio Prism | `archivision-studioprism` | Comptes (`users`), PIN, licences, futures données `ai*`. Partagé avec le site et ArchiPlan. |
-| Propre à ArchiIndus | `archiindus-studioprism` | Créé le 14/10/2026 : application web enregistrée, rien d'autre activé (ni Auth, ni Firestore, ni Hosting déployé). |
-
-Un jeton d'authentification n'est valable que dans le projet qui l'a émis : les règles du projet `archiindus-studioprism` ne peuvent pas lire `users` ni `licenses` du projet commun. Le brouillon `ai*` est donc prévu pour le projet **commun**. Le bloc `ai*` a été ajouté aux règles publiées du projet commun le 14/10/2026 (v1) puis mis à jour le 15/10/2026 (v2, dossiers) ; les blocs existants sont inchangés et la relecture en ligne est identique au fichier fusionné testé à l'émulateur.
-
-La configuration publique des deux projets est dans `src/engine/01-firebase-config.js` (clés d'application web, non secrètes ; chargée à la demande par le module Compte (SDK compat 10.12.2)). `.firebaserc` déclare les deux projets. **Ne jamais ajouter de clé privée ni de compte de service dans ce dépôt.**
 
 ## Conventions
 

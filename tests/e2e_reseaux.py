@@ -6,6 +6,9 @@ Ce test ne remplace ni l'ouverture du DXF dans un logiciel de CAO, ni la lecture
 """
 import json, re, shutil, subprocess, sys, tempfile, pathlib, xml.etree.ElementTree as ET
 from playwright.sync_api import sync_playwright
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from helpers import enter
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = tempfile.mkdtemp(prefix='archiindus-reseaux-') + '/'
@@ -23,7 +26,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append('pageerror:' + str(e)))
     pg.on('console', lambda m: errs.append('console:' + m.text) if m.type == 'error' and 'ERR_FAILED' not in m.text else None)
     pg.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(300); pg.click('#authSkip')
+    enter(pg)
     box = pg.locator('#cv').bounding_box()
     def W(x, y):
         v = pg.evaluate('({x:state.view.x,y:state.view.y,s:state.view.scale})')
@@ -99,7 +102,7 @@ with sync_playwright() as p:
     # --- DXF (structure + largeur de polyligne)
     with pg.expect_download() as d: pg.click('#exportBtn'); pg.click('#dxf')
     dp = OUT + 'sortie.dxf'; d.value.save_as(dp)
-    L = open(dp, encoding='ascii', newline='').read().split('\r\n'); L = L[:-1] if L and L[-1] == '' else L
+    L = open(dp, encoding='cp1252', newline='').read().split('\r\n'); L = L[:-1] if L and L[-1] == '' else L
     pairs = list(zip(L[0::2], L[1::2]))
     ok(len(L) % 2 == 0 and all(re.fullmatch(r'\s*-?\d+', c) for c, _ in pairs) and pairs[-1] == ('0', 'EOF'), 'DXF : structure valide')
     widths = []
@@ -111,7 +114,7 @@ with sync_playwright() as p:
                 j += 1
     ok(sorted(widths) == [100.0, 100.0, 200.0], f'DXF : largeurs de polyligne {widths}')
     ok(any(c == '1' and v in ('EP-01 - DN200', 'EU-01 - DN100') for c, v in pairs), 'DXF : texte de repère')
-    ok(all(ord(ch) < 128 for ch in ''.join(L)), 'DXF : ASCII pur')
+    ok('$DWGCODEPAGE' in L and 'ANSI_1252' in L, 'DXF : page de code Windows-1252 déclarée (accents conservés)')
 
     # --- PDF
     pg.click('#exportBtn'); pg.click('#pdf'); pg.wait_for_selector('dialog[open]')
@@ -136,7 +139,7 @@ with sync_playwright() as p:
         print('Rendu PDF :', sorted(f.name for f in pathlib.Path(OUT).glob('pdf*.png')))
 
     # --- persistance et import validé
-    pg.wait_for_timeout(700); pg.reload(); pg.wait_for_timeout(400); pg.click('#authSkip')
+    pg.wait_for_timeout(700); enter(pg, reload=True)
     ok(objs()[0].get('net', {}).get('tag') == 'EP-01', 'réseau restauré après rechargement')
     bad = OUT + 'bad.json'
     base = pg.evaluate('JSON.parse(JSON.stringify(Doc.get()))')

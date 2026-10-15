@@ -8,6 +8,9 @@ il ne remplace pas une ouverture dans un logiciel de CAO.
 """
 import json, re, sys, xml.etree.ElementTree as ET
 from playwright.sync_api import sync_playwright
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from helpers import enter
 import pathlib, tempfile
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 OUT=tempfile.mkdtemp(prefix='archiindus-e2e-')+'/'
@@ -28,7 +31,7 @@ with sync_playwright() as p:
     pg.on('pageerror',lambda e: errs.append('pageerror:'+str(e)))
     pg.on('console',lambda m: errs.append('console:'+m.text) if m.type=='error' and 'ERR_FAILED' not in m.text else None)
     pg.route('**/*',lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-    pg.goto((ROOT/'index.html').as_uri()); pg.wait_for_timeout(300); pg.click('#authSkip')
+    enter(pg)
     box=pg.locator('#cv').bounding_box()
     def W(x,y):
         v=pg.evaluate('({x:state.view.x,y:state.view.y,s:state.view.scale})')
@@ -101,7 +104,7 @@ with sync_playwright() as p:
     total=n()
     # --- enregistrement local + rechargement
     pg.wait_for_timeout(800); ok(pg.inner_text('#saved').startswith('enregistré'),f"état d'enregistrement {pg.inner_text('#saved')}")
-    pg.reload(); pg.wait_for_timeout(400); pg.click('#authSkip'); ok(n()==total,f'restauration après rechargement {n()} / {total}')
+    enter(pg, reload=True); ok(n()==total,f'restauration après rechargement {n()} / {total}')
     # --- export / import JSON
     with pg.expect_download() as d: fmenu('#save')
     path=OUT+'sortie.archiindus.json'; d.value.save_as(path)
@@ -123,14 +126,14 @@ with sync_playwright() as p:
     # --- DXF (contrôle de structure uniquement)
     with pg.expect_download() as d: pg.click('#exportBtn'); pg.click('#dxf')
     dp=OUT+'sortie.dxf'; d.value.save_as(dp)
-    L=open(dp,encoding='ascii',newline='').read().split('\r\n'); L=L[:-1] if L and L[-1]=='' else L
+    L=open(dp,encoding='cp1252',newline='').read().split('\r\n'); L=L[:-1] if L and L[-1]=='' else L
     ok(len(L)%2==0,'DXF : nombre de lignes pair (paires code/valeur)')
     pairs=list(zip(L[0::2],L[1::2])); codes_ok=all(re.fullmatch(r'\s*-?\d+',c) for c,_ in pairs); ok(codes_ok,'DXF : tous les codes de groupe sont numériques')
     ok(pairs[-1]==('0','EOF'),'DXF : se termine par EOF')
     secs=[v for c,v in pairs if c=='0' and v in('SECTION','ENDSEC')]; ok(secs.count('SECTION')==secs.count('ENDSEC')==3,f'DXF : 3 sections équilibrées {secs}')
     ents=[v for c,v in pairs if c=='0']; from collections import Counter; ce=Counter(ents); print('DXF entités :',dict(ce))
     ok(ce['CIRCLE']==2 and ce['POLYLINE']==1 and ce['SEQEND']==1 and ce['VERTEX']==4 and ce['TEXT']>=2 and ce['LINE']>=8,f'DXF : entités attendues {dict(ce)}')
-    ok(all(ord(ch)<128 for ch in ''.join(L)),'DXF : ASCII pur')
+    ok('$DWGCODEPAGE' in L and 'ANSI_1252' in L,'DXF : page de code Windows-1252 déclarée')
     names=[v for (c,v),(c0,v0) in zip(pairs[1:],pairs) if c0=='0' and v0=='LAYER' and c=='2']; ok(len(names)==len(set(names))==nl+1,f'DXF : noms de calque uniques {names}')
     print('erreurs page :',errs); ok(not errs,f'aucune erreur JS {errs}')
     b.close()

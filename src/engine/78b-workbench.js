@@ -18,33 +18,47 @@ const Workbench = (() => {
     matLib: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4', compo: 'M4 4h3v16H4zM9 4h6v16H9zM17 4h3v16h-3z', brush: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3',
     ana: 'M3 20h18M4 8c4 7 12 7 16 0M4 8V5M20 8V5', util: 'M4 19h4v-8H4zM10 19h4V5h-4zM16 19h4v-5h-4z', plan: 'M4 4h16v16H4zM4 12h16M12 4v16', cube: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5',
     fit: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5', theme: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z', tree: 'M4 5h6M4 12h6M4 19h6M14 4h6v4h-6zM14 16h6v4h-6zM7 5v14', panel: 'M4 5h16v14H4zM14 5v14',
+    cut: 'M4 9l8-4 8 4-8 4zM4 9v8l8 4 8-4V9M9 11l6 3', fillet: 'M4 20V10a6 6 0 0 1 6-6h10', chamfer: 'M4 20V9l5-5h11', shell: 'M4 7l8-4 8 4v10l-8 4-8-4zM8 9v6l4 2 4-2V9',
+    pattern: 'M3 8h4v8H3zM10 8h4v8h-4zM17 8h4v8h-4z', mirror: 'M12 3v18M4 7l5 5-5 5zM20 7l-5 5 5 5z', pipe: 'M3 7h9a5 5 0 0 1 5 5v9M3 11h9a1 1 0 0 1 1 1v9', fx: 'M7 20c3 0 3-16 6-16M6 10h7M15 13l5 6M20 13l-5 6',
+    mass: 'M6 20h12l-2-11H8zM9 9a3 3 0 0 1 6 0', interf: 'M8 4h8v8H8zM4 12h8v8H4zM8 12h4', step: 'M4 4h10l6 6v10H4zM14 4v6h6M8 15h8', draw: 'M3 4h18v16H3zM7 8h5v4H7zM14 8h3v8h-3zM7 14h5v2H7z',
+    section: 'M3 12h18M6 4l12 16', offset: 'M4 18L18 4M8 20L20 8', trim: 'M5 5l14 14M5 19l6-6M15 9l4-4', extend: 'M4 12h11M15 6v12M19 9l-4 3 4 3', rotate: 'M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5', scale: 'M4 20h7v-7H4zM11 13l9-9M14 4h6v6',
+    mirror2: 'M12 3v18M4 7l5 5-5 5zM20 7l-5 5 5 5z', prof: 'M3 6l6 5 4-3 8 6M3 20h18', hydro: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z', clash: 'M3 12h18M12 3v18M8 8l8 8M16 8l-8 8', frame: 'M4 20V6h16v14M4 6l8 7 8-7M8 20v-6h8v6',
+    weld: 'M4 18L18 4M4 4h4v4M16 16h4v4', bom2: 'M4 5h16v14H4zM4 10h16M10 5v14',
     net: 'M3 12h18M7 9v6M17 9v6', mur: 'M3 8h18v8H3z', poutre: 'M3 7h18M3 17h18M12 7v10', none: 'M5 19L19 5', snap: 'M12 3v4M12 17v4M3 12h4M17 12h4M9 9h6v6H9z', ortho: 'M5 19V5M5 19h14',
   };
   const svg = (d) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.innerHTML = `<path d="${d}"/>`; return s; };
-  const TOOLS = [['select', 'Sélection', 'V'], ['move', 'Déplacer', 'M'], ['copy', 'Copier', 'K'], ['line', 'Ligne', 'L'], ['poly', 'Polyligne', 'P'], ['rect', 'Rectangle', 'R'], ['circle', 'Cercle', 'C'], ['dim', 'Cote', 'D'], ['text', 'Texte', 'T'], ['sym', 'Équipement', 'E'], ['pan', 'Main', 'H']];
-  const tool = (t) => { const [, label, key] = TOOLS.find((x) => x[0] === t); return { tool: t, label, key, icon: I[t], title: `${label} (${key})` }; };
+  const TOOLS = [['select', 'Sélection', 'V'], ['move', 'Déplacer', 'M'], ['copy', 'Copier', 'K'], ['line', 'Ligne', 'L'], ['poly', 'Polyligne', 'P'], ['rect', 'Rectangle', 'R'], ['circle', 'Cercle', 'C'], ['dim', 'Cote', 'D'], ['text', 'Texte', 'T'], ['sym', 'Équipement', 'E'], ['pan', 'Main', 'H'],
+    ['offset', 'Décaler', 'O'], ['trim', 'Ajuster', 'A'], ['extend', 'Prolonger', 'X'], ['mirror', 'Symétrie', 'I'], ['rotate', 'Rotation', 'Q'], ['scale', 'Échelle', 'U']];
+  const tool = (t) => { const [, label, key] = TOOLS.find((x) => x[0] === t); return { tool: t, label, key, icon: I[t === 'mirror' ? 'mirror2' : t], title: `${label} (${key})` }; };
   const cmd = (id, label, icon, title) => ({ id, label, icon, title: title || label });
   const TABS = [
     { id: 'sketch', label: 'Esquisse', groups: [
       { label: 'Esquisse', items: [cmd('skNew', 'Nouvelle esquisse', I.skNew, 'Créer une esquisse sur un plan (Dessus, Face, Droite)'), cmd('skExit', 'Quitter', I.skExit, 'Quitter l\'esquisse : revenir au plan général')] },
-      { label: 'Sélection et modification', items: [tool('select'), tool('move'), tool('copy')] },
+      { label: 'Sélection et modification', items: [tool('select'), tool('move'), tool('copy'), tool('rotate'), tool('scale'), tool('mirror')] },
+      { label: 'Modifier', items: [tool('offset'), tool('trim'), tool('extend')] },
       { label: 'Dessin', items: [tool('line'), tool('poly'), tool('rect'), tool('circle')] },
       { label: 'Annotation', items: [tool('dim'), tool('text')] },
       { label: 'Aides au dessin', items: [cmd('rbSnap', 'Accroches', I.snap, 'Accroches aux objets (F3)'), cmd('rbOrtho', 'Ortho', I.ortho, 'Mode ortho (F8)'), cmd('rbFit', 'Tout voir', I.fit, 'Tout voir (Z)')] },
     ] },
     { id: 'model', label: 'Fonctions 3D', groups: [
-      { label: 'Fonctions', items: [cmd('ftExtrude', 'Bossage extrudé', I.extrude, 'Extruder les contours fermés d\'une esquisse'), cmd('ftRevolve', 'Révolution', I.revolve, 'Faire tourner un contour autour d\'une ligne d\'axe de l\'esquisse')] },
+      { label: 'Fonctions', items: [cmd('ftExtrude', 'Bossage', I.extrude, 'Bossage extrudé : extruder les contours fermés d\'une esquisse'), cmd('ftCut', 'Enlèvement', I.cut, 'Enlèvement extrudé : perçages, rainures, lumières'), cmd('ftRevolve', 'Révolution', I.revolve, 'Faire tourner un contour autour d\'une ligne d\'axe de l\'esquisse'), cmd('ftPipe', 'Tuyau', I.pipe, 'Balayer une section circulaire le long des réseaux sélectionnés dans le plan (coudes cintrés)')] },
+      { label: 'Modifier', items: [cmd('ftFillet', 'Congé', I.fillet, 'Arrondir des arêtes'), cmd('ftChamfer', 'Chanfrein', I.chamfer, 'Casser des arêtes'), cmd('ftShell', 'Coque', I.shell, 'Évider le corps (paroi d\'épaisseur constante)')] },
+      { label: 'Répéter', items: [cmd('ftPattern', 'Répétition', I.pattern, 'Répétition linéaire ou circulaire d\'une fonction'), cmd('ftMirror', 'Symétrie', I.mirror, 'Symétrie d\'une fonction ou du corps')] },
+      { label: 'Paramètres', items: [cmd('ftVars', 'Équations', I.fx, 'Variables et formules du projet (pilotent les cotes des fonctions)')] },
       { label: 'Plans de référence', items: [cmd('pTop', 'Dessus', I.top, 'Nouvelle esquisse sur le plan de dessus (X · Y)'), cmd('pFront', 'Face', I.front, 'Nouvelle esquisse sur le plan de face (X · Z)'), cmd('pRight', 'Droite', I.right, 'Nouvelle esquisse sur le plan de droite (Y · Z)')] },
     ] },
     { id: 'asm', label: 'Assemblage', groups: [
       { label: 'Composants', items: [cmd('cIns', 'Insérer', I.insert, 'Insérer un composant de la bibliothèque'), cmd('cDup', 'Dupliquer', I.dup, 'Dupliquer le composant sélectionné'), cmd('cDel', 'Supprimer', I.trash, 'Supprimer le composant sélectionné')] },
       { label: 'Contraintes', items: [cmd('mFix', 'Fixe', I.fix, 'Fixer le composant à sa position'), cmd('mSur', 'Posé sur', I.sur, 'Poser le composant sur un autre'), cmd('mAxe', 'Axe aligné', I.axe, 'Centrer le composant sur un autre (en plan)'), cmd('mDecal', 'Décalage', I.decal, 'Placer le composant à une distance d\'un autre'), cmd('mFree', 'Libre', I.free, 'Retirer la contrainte')] },
       { label: 'Génération', items: [cmd('gBld', 'Bâtiment', I.building, 'Générer la structure d\'un bâtiment d\'activité (portiques, massifs, dallage, bardage)')] },
+      { label: 'Contrôle', items: [cmd('aInterf', 'Interférences', I.interf, 'Détecter les volumes communs entre corps, composants, réseaux et structures'), cmd('aMass', 'Masse', I.mass, 'Propriétés de masse : volume, masse, centre de gravité, inertie')] },
     ] },
     { id: 'trade', label: 'Métiers', groups: [
       { label: 'Corps de métier', items: [{ html: 'trade' }] },
       { label: 'Tracé métier', items: [cmd('tmNone', 'Simple', I.none), cmd('tmNet', 'Réseau', I.net), cmd('tmMur', 'Mur', I.mur), cmd('tmPoutre', 'Poutre', I.poutre)] },
       { label: 'Équipements', items: [tool('sym')] },
+      { label: 'Réseaux', items: [cmd('nProfile', 'Profil en long', I.prof, 'Profil en long du réseau sélectionné (terrain, fil d\'eau, pentes, regards)'), cmd('nHydro', 'Hydraulique', I.hydro, 'Débit capable, vitesse et pertes de charge des réseaux'), cmd('nClash', 'Conflits', I.clash, 'Croisements de réseaux trop proches (distance minimale entre génératrices)'), cmd('ftPipe2', 'Tuyauterie 3D', I.pipe, 'Tuyaux 3D cintrés depuis les réseaux sélectionnés')] },
+      { label: 'Charpente', items: [cmd('sFrame', 'Calcul', I.frame, 'Calcul de structure filaire : déplacements, efforts et taux de travail des poutres et poteaux'), cmd('sWeld', 'Liste de débit', I.weld, 'Mécano-soudure : liste de débit des profilés (longueurs, masses, coupes)')] },
     ] },
     { id: 'site', label: 'Site', groups: [
       { label: 'Lieu du projet', items: [cmd('sSet', 'Adresse', I.site, 'Choisir l\'adresse du projet : relief, bâtiments et voirie réels'), cmd('sReload', 'Mettre à jour', I.reload, 'Recharger les données du site'), cmd('sShow', 'Afficher', I.eye, 'Afficher ou masquer le site en 3D')] },
@@ -54,11 +68,16 @@ const Workbench = (() => {
       { label: 'Affectation', items: [cmd('mApply', 'Appliquer', I.brush, 'Appliquer un matériau à la sélection'), cmd('cApply', 'Composition', I.compo, 'Appliquer une composition aux murs sélectionnés')] },
     ] },
     { id: 'ana', label: 'Analyse', groups: [
-      { label: 'Calculs', items: [cmd('aRun', 'Déformations', I.ana, 'Flèches, contraintes, flambement, dilatation')] },
+      { label: 'Calculs', items: [cmd('aRun', 'Déformations', I.ana, 'Flèches, contraintes, flambement, dilatation'), cmd('sFrame2', 'Structure', I.frame, 'Calcul de structure filaire (méthode des déplacements)'), cmd('nHydro2', 'Hydraulique', I.hydro, 'Calcul hydraulique des réseaux')] },
+      { label: 'Contrôle', items: [cmd('aMass2', 'Masse', I.mass, 'Propriétés de masse'), cmd('aInterf2', 'Interférences', I.interf, 'Détection des interférences')] },
       { label: 'Affichage 3D', items: [cmd('aUtil', 'Taux de travail', I.util, 'Colorer la 3D selon le taux de travail des poutres')] },
     ] },
+    { id: 'doc', label: 'Mise en plan', groups: [
+      { label: 'Plans', items: [cmd('dDraw', 'Mise en plan', I.draw, 'Vues 2D (face, dessus, droite) projetées depuis un corps 3D, avec cartouche'), cmd('dPdf', 'PDF du plan', I.plan, 'Plan 2D coté avec cartouche et nomenclature')] },
+      { label: 'Échange CAO', items: [cmd('dStep', 'STEP', I.step, 'Export STEP AP214 (SolidWorks, Inventor, CATIA, FreeCAD)'), cmd('dStl', 'STL', I.step, 'Export STL (impression 3D, Prism 3D)'), cmd('dIfc', 'IFC', I.step, 'Export IFC4 (réseaux, équipements, structures)'), cmd('dDxfIn', 'Importer DXF', I.step, 'Reprendre un plan DXF (lignes, polylignes, cercles, arcs, textes)')] },
+    ] },
     { id: 'view', label: 'Affichage', groups: [
-      { label: 'Vue', items: [cmd('vPlan', 'Plan', I.plan, 'Vue en plan (2D)'), cmd('v3d', '3D', I.cube, 'Vue 3D'), cmd('vFit', 'Tout voir', I.fit)] },
+      { label: 'Vue', items: [cmd('vPlan', 'Plan', I.plan, 'Vue en plan (2D)'), cmd('v3d', '3D', I.cube, 'Vue 3D'), cmd('vFit', 'Tout voir', I.fit), cmd('vSection', 'Coupe', I.section, 'Coupe dynamique de la vue 3D (plan de section réglable)')] },
       { label: 'Interface', items: [cmd('vTree', 'Arbre', I.tree, 'Afficher ou masquer l\'arbre de création'), cmd('vTheme', 'Thème', I.theme, 'Thème clair ou sombre')] },
     ] },
   ];
@@ -128,8 +147,30 @@ const Workbench = (() => {
       case 'rbSnap': return Tools.toggleSnap();
       case 'rbOrtho': return Tools.toggleOrtho();
       case 'rbFit': case 'vFit': return View3D.isOn() && window.Scene3D ? window.Scene3D.view('iso') : Canvas2D.zoomExtents();
-      case 'ftExtrude': return featureDialog('extrude');
-      case 'ftRevolve': return featureDialog('revolve');
+      case 'ftExtrude': return Cad.dialog('extrude');
+      case 'ftCut': return Cad.dialog('cut');
+      case 'ftRevolve': return Cad.dialog('revolve');
+      case 'ftFillet': return Cad.dialog('fillet');
+      case 'ftChamfer': return Cad.dialog('chamfer');
+      case 'ftShell': return Cad.dialog('shell');
+      case 'ftPattern': return Cad.dialog('pattern');
+      case 'ftMirror': return Cad.dialog('mirror');
+      case 'ftPipe': case 'ftPipe2': return Cad.pipesFromSelection();
+      case 'ftVars': return Cad.varsDialog();
+      case 'aMass': case 'aMass2': return Cad.massDialog();
+      case 'aInterf': case 'aInterf2': return Cad.interfDialog();
+      case 'dDraw': return Cad.drawingDialog();
+      case 'dPdf': return Lic.need() && PDF.dialog();
+      case 'dStep': return Cad.exportCAD('step');
+      case 'dStl': return Cad.exportCAD('stl');
+      case 'dIfc': return Lic.need() && Interop.exportIFC();
+      case 'dDxfIn': return Interop.importDXFDialog();
+      case 'nProfile': return Networks.profileDialog();
+      case 'nHydro': case 'nHydro2': return Networks.hydroDialog();
+      case 'nClash': return Networks.clashDialog();
+      case 'sFrame': case 'sFrame2': return Frame.dialog();
+      case 'sWeld': return Frame.cutList();
+      case 'vSection': return sectionDialog();
       case 'pTop': return newSketch('top'); case 'pFront': return newSketch('front'); case 'pRight': return newSketch('right');
       case 'cIns': return insertDialog();
       case 'cDup': return dupComp();
@@ -153,6 +194,19 @@ const Workbench = (() => {
     }
   }
 
+  /* ---------- coupe dynamique de la vue 3D ---------- */
+  function sectionDialog() {
+    if (!View3D.isOn()) View3D.setMode(true);
+    if (!window.Scene3D) return;
+    const cur = window.Scene3D.sectionState() || { axis: 'x', t: 0.5 };
+    const ax = el('select', { 'aria-label': 'Axe de coupe' }, ...[['x', 'Coupe suivant X'], ['y', 'Coupe suivant Y'], ['z', 'Coupe horizontale (Z)']].map(([v, t]) => el('option', { value: v, selected: v === cur.axis }, t)));
+    const sl = el('input', { type: 'range', min: 0, max: 1, step: 0.005, value: cur.t, 'aria-label': 'Position du plan de coupe' });
+    const upd = () => window.Scene3D.section(ax.value, +sl.value);
+    ax.addEventListener('change', upd); sl.addEventListener('input', upd); upd();
+    Dlg.open('Coupe dynamique', el('div', { class: 'frm' }, el('label', { class: 'lbl' }, 'Axe', ax), el('label', { class: 'lbl' }, 'Position', sl), el('p', { class: 'mut small' }, 'La partie située au-delà du plan est masquée. La coupe reste active après fermeture : « Retirer la coupe » pour tout revoir.')),
+      [{ label: 'Retirer la coupe', run: () => { window.Scene3D.section(null); } }]);
+  }
+
   /* ---------- esquisses ---------- */
   function newSketch(plane, off = 0, name = '') {
     let id = 0;
@@ -162,7 +216,7 @@ const Workbench = (() => {
     return id;
   }
   function newSketchDialog() {
-    const plane = el('select', { 'aria-label': 'Plan de l\'esquisse' }, ...Object.entries(PLANES).map(([k, p]) => el('option', { value: k }, `${p.label} (${p.axes}, normale ${p.norm})`)));
+    const plane = el('select', { 'aria-label': 'Plan de l\'esquisse' }, ...Object.entries(PLANES).filter(([k]) => k !== 'custom').map(([k, p]) => el('option', { value: k }, `${p.label} (${p.axes}, normale ${p.norm})`)));
     const off = el('input', { class: 'fld', type: 'number', step: 'any', value: 0, 'aria-label': 'Décalage du plan en millimètres' });
     const name = el('input', { class: 'fld', type: 'text', maxlength: 60, placeholder: 'ex. Socle', 'aria-label': 'Nom de l\'esquisse' });
     Dlg.open('Nouvelle esquisse', el('div', {}, el('div', { class: 'frm' }, el('label', { class: 'lbl' }, 'Plan', plane), el('label', { class: 'lbl' }, 'Décalage du plan (mm)', off), el('label', { class: 'lbl' }, 'Nom', name)),
@@ -172,13 +226,14 @@ const Workbench = (() => {
   function enterSketch(id) {
     const s = Model.sketch(id); if (!s) return;
     state.sketch = id; Tools.selection.clear(); state.treeSel = { t: 's', id };
+    Cad.faceRefFor(id);
     if (View3D.isOn()) View3D.setMode(false);
     setTab('sketch');
     refresh(); Canvas2D.requestDraw();
   }
   function exitSketch() {
     if (!state.sketch) return;
-    state.sketch = 0; Tools.selection.clear(); refresh(); Canvas2D.requestDraw();
+    state.sketch = 0; state.faceRef = null; Tools.selection.clear(); refresh(); Canvas2D.requestDraw();
     Status.msg('Retour au plan général.');
   }
 
@@ -190,41 +245,7 @@ const Workbench = (() => {
     return s;
   };
   const layerSelect = (cur) => el('select', { 'aria-label': 'Calque' }, ...Doc.get().layers.map((l) => el('option', { value: l.id, selected: l.id === cur }, l.name)));
-  function featureDialog(type, edit) {
-    const d = Doc.get(), sks = d.sketches || [];
-    if (!sks.length) { Status.msg('Créez d\'abord une esquisse (onglet Esquisse → Nouvelle esquisse) avec un contour fermé.', 7000); return; }
-    const f0 = edit || { type, sk: state.sketch || (state.treeSel && state.treeSel.t === 's' ? state.treeSel.id : sks[sks.length - 1].id), d: 1000, dir: '+', ang: 360, axis: 0, mat: '', layer: d.active };
-    const sk = el('select', { 'aria-label': 'Esquisse' }, ...sks.map((s) => el('option', { value: s.id, selected: s.id === f0.sk }, `${s.name} · ${PLANES[s.plane].label}${s.off ? ` (${s.off} mm)` : ''} · ${Model.loops(s.id).length} contour(s)`)));
-    const depth = el('input', { class: 'fld', type: 'number', min: 1, max: 1e6, step: 'any', value: f0.d, 'aria-label': 'Profondeur en millimètres' });
-    const dir = el('select', { 'aria-label': 'Sens' }, ...[['+', 'Sens de la normale'], ['-', 'Sens opposé'], ['mid', 'Plan milieu (symétrique)']].map(([v, t]) => el('option', { value: v, selected: v === f0.dir }, t)));
-    const ang = el('input', { class: 'fld', type: 'number', min: 1, max: 360, step: 'any', value: f0.ang, 'aria-label': 'Angle en degrés' });
-    const axis = el('select', { 'aria-label': 'Ligne d\'axe' });
-    const fillAxis = () => { axis.textContent = ''; const lines = d.objects.filter((o) => o.sk === +sk.value && o.type === 'line'); for (const o of lines) axis.append(el('option', { value: o.id, selected: o.id === f0.axis }, `Ligne #${o.id} (${fmt(G.dist(o.a, o.b))} mm)`)); if (!lines.length) axis.append(el('option', { value: '' }, '— aucune ligne dans l\'esquisse —')); };
-    sk.addEventListener('change', fillAxis); fillAxis();
-    const mat = matSelect(f0.mat), lay = layerSelect(f0.layer);
-    const rows = type === 'extrude' ? [el('label', { class: 'lbl' }, 'Profondeur (mm)', depth), el('label', { class: 'lbl' }, 'Sens', dir)] : [el('label', { class: 'lbl' }, 'Ligne d\'axe (dans l\'esquisse)', axis), el('label', { class: 'lbl' }, 'Angle (°)', ang)];
-    Dlg.open(`${edit ? 'Modifier : ' : ''}${FEATURE_TYPES[type]}`, el('div', {}, el('div', { class: 'frm' }, el('label', { class: 'lbl' }, 'Esquisse', sk), ...rows, el('label', { class: 'lbl' }, 'Matériau', mat), el('label', { class: 'lbl' }, 'Calque', lay)),
-      el('p', { class: 'mut small' }, type === 'extrude' ? 'Contours fermés de l\'esquisse : polylignes fermées, rectangles, cercles. Un contour intérieur à un autre fait un trou.' : 'Dessinez dans l\'esquisse une ligne qui servira d\'axe et un contour fermé d\'un seul côté de cette ligne.')),
-    [{ label: edit ? 'Appliquer' : 'Créer la fonction', primary: true, run: () => {
-      const skId = +sk.value, n = Model.loops(skId, type === 'revolve' ? +axis.value : 0).length;
-      if (!n) { Status.msg('Aucun contour fermé dans cette esquisse : dessinez une polyligne fermée, un rectangle ou un cercle.', 7000); return false; }
-      const dv = Number(depth.value), av = Number(ang.value);
-      if (type === 'extrude' && !(dv > 0 && dv <= 1e6)) { Status.msg('Profondeur invalide (1 à 1 000 000 mm).', 6000); return false; }
-      if (type === 'revolve' && (!(+axis.value) || !(av > 0 && av <= 360))) { Status.msg('Choisissez une ligne d\'axe et un angle entre 1 et 360°.', 6000); return false; }
-      let fid = edit ? edit.id : 0;
-      Doc.mutate((dd) => {
-        dd.features = dd.features || [];
-        let f = edit ? dd.features.find((x) => x.id === edit.id) : null;
-        if (!f) { fid = dd.nextF++; f = { id: fid, type, name: `${FEATURE_TYPES[type]} ${fid}`, hide: false }; dd.features.push(f); }
-        Object.assign(f, { sk: skId, d: type === 'extrude' ? dv : f.d || 1000, dir: dir.value, mat: mat.value, layer: +lay.value });
-        if (type === 'revolve') { f.ang = av; f.axis = +axis.value; }
-      });
-      state.sketch = 0; state.treeSel = { t: 'f', id: fid }; Tools.selection.clear();
-      if (window.Scene3D) { setTab('model'); View3D.setMode(true); }
-      refresh();
-      Status.msg(`${FEATURE_TYPES[type]} : ${n} contour(s), volume ${fmtV(Model.featureVolume(Doc.get().features.find((x) => x.id === fid)))}.`, 6000);
-    } }]);
-  }
+  const featureDialog = (type, edit) => Cad.dialog(type, edit);
   const fmtV = (mm3) => `${(mm3 / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 3 })} m³`;
   const massOf = (mm3, matId) => { const m = matOf(matId); return m && mm3 ? mm3 / 1e9 * m.rho : null; };
 
@@ -418,7 +439,7 @@ const Workbench = (() => {
     const sec = (t) => T.append(el('p', { class: 'tr-sec' }, t));
     T.append(row(I.cube, d.name, { badge: d.site ? 'site' : '' }));
     sec('Origine et plans');
-    for (const [k, p] of Object.entries(PLANES)) T.append(row(I[k], `Plan ${p.label}`, { sub: true, badge: p.axes, click: () => newSketch(k) }));
+    for (const [k, p] of Object.entries(PLANES)) if (k !== 'custom') T.append(row(I[k], `Plan ${p.label}`, { sub: true, badge: p.axes, click: () => newSketch(k) }));
     T.append(row(I.plan, 'Plan général (2D)', { sub: true, on: !state.sketch && !ts.t, click: () => { exitSketch(); state.treeSel = null; if (View3D.isOn()) View3D.setMode(false); refresh(); } }));
     sec(`Esquisses (${(d.sketches || []).length})`);
     for (const s of d.sketches || []) {
@@ -427,7 +448,7 @@ const Workbench = (() => {
     }
     if (!(d.sketches || []).length) T.append(el('p', { class: 'tr-empty' }, 'Aucune esquisse. Cliquez un plan pour en créer une.'));
     sec(`Fonctions 3D (${(d.features || []).length})`);
-    for (const f of d.features || []) T.append(row(f.type === 'revolve' ? I.revolve : I.extrude, f.name, { sub: true, dim: f.hide, on: ts.t === 'f' && ts.id === f.id, badge: (Model.sketch(f.sk) || {}).name, eye: !f.hide, onEye: () => Doc.mutate((dd) => { const x = dd.features.find((y) => y.id === f.id); x.hide = !x.hide; }), click: () => { state.treeSel = { t: 'f', id: f.id }; refresh(); } }));
+    Cad.renderFeatures(T);
     sec(`Composants (${(d.comps || []).length})`);
     for (const c of d.comps || []) T.append(row(I.insert, c.name, { sub: true, on: ts.t === 'c' && ts.id === c.id, badge: c.fix ? 'fixe' : c.mate.t ? MATE_TYPES[c.mate.t].split(' ')[0].toLowerCase() : '', click: () => { state.treeSel = { t: 'c', id: c.id }; state.compSel = c.id; refresh(); } }));
     sec('Site');
@@ -454,17 +475,7 @@ const Workbench = (() => {
     }
     if (t.t === 'f') {
       const f = (d.features || []).find((x) => x.id === t.id); if (!f) return null;
-      const V = Model.featureVolume(f), mid = f.mat || '', M = massOf(V, mid);
-      const name = el('input', { class: 'fld', type: 'text', maxlength: 60, value: f.name, 'aria-label': 'Nom de la fonction' });
-      name.addEventListener('change', () => Doc.mutate((dd) => { const x = dd.features.find((y) => y.id === f.id); x.name = name.value.trim().slice(0, 60) || x.name; }));
-      const quick = el('input', { class: 'fld', type: 'number', step: 'any', min: 1, max: f.type === 'revolve' ? 360 : 1e6, value: f.type === 'revolve' ? f.ang : f.d, 'aria-label': f.type === 'revolve' ? 'Angle en degrés' : 'Profondeur en millimètres' });
-      quick.addEventListener('change', () => { const v = Number(quick.value); if (!(v > 0) || v > (f.type === 'revolve' ? 360 : 1e6)) { Status.msg('Valeur invalide.'); renderProps(); return; } Doc.mutate((dd) => { const x = dd.features.find((y) => y.id === f.id); if (f.type === 'revolve') x.ang = v; else x.d = v; }); });
-      const edit = el('button', { type: 'button', class: 'btn wide' }, 'Modifier la fonction…'); edit.addEventListener('click', () => featureDialog(f.type, f));
-      const esk = el('button', { type: 'button', class: 'btn wide' }, 'Éditer l\'esquisse'); esk.addEventListener('click', () => enterSketch(f.sk));
-      const del = el('button', { type: 'button', class: 'btn danger' }, 'Supprimer la fonction');
-      del.addEventListener('click', () => { Doc.mutate((dd) => { dd.features = dd.features.filter((x) => x.id !== f.id); }); state.treeSel = null; refresh(); });
-      return el('div', {}, el('dl', { class: 'kv' }, ...kv('Type', FEATURE_TYPES[f.type]), ...kv('Esquisse', (Model.sketch(f.sk) || {}).name || '—'), ...kv('Volume', fmtV(V)), ...kv('Matériau', mid ? matOf(mid).nom : '—'), ...kv('Masse', M ? `${nf(M, 1)} kg` : '—')),
-        el('label', { class: 'lbl' }, 'Nom', name), el('label', { class: 'lbl' }, f.type === 'revolve' ? 'Angle (°)' : 'Profondeur (mm)', quick), edit, esk, del);
+      return Cad.featurePanel(f);
     }
     if (t.t === 'c') {
       const c = (d.comps || []).find((x) => x.id === t.id); if (!c) return null;

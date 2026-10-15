@@ -59,3 +59,15 @@ const Theme = {
   },
   toggle() { this.set(!this.isDark()); },
 };
+
+/* Droits liés à la licence ARCHIINDUS (module commun du compte : window.SPAccess, window.SPLicense).
+   Les exports demandent une licence active (ou un compte administrateur), comme dans ARCHIPLAN ; sinon l'écran de licence s'ouvre. */
+const Lic = {
+  canExport() { return !!(window.SPAccess && window.SPAccess.canExport); },
+  need(what = 'export') {
+    if (this.canExport()) return true;
+    if (window.SPLicense && window.SPLicense.prompt) window.SPLicense.prompt(what);
+    else Status.msg('Export réservé aux comptes avec une licence ARCHIINDUS active.', 7000);
+    return false;
+  },
+};

@@ -3,7 +3,8 @@
 const Tools = (() => {
   const selection = new Set();
   const listeners = [];
-  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', sym: 'Équipement', move: 'Déplacer', copy: 'Copier', pan: 'Main' };
+  const NAMES = { select: 'Sélection', line: 'Ligne', poly: 'Polyligne', rect: 'Rectangle', circle: 'Cercle', dim: 'Cote', text: 'Texte', sym: 'Équipement', move: 'Déplacer', copy: 'Copier', pan: 'Main',
+    offset: 'Décaler', trim: 'Ajuster', extend: 'Prolonger', mirror: 'Symétrie', rotate: 'Rotation', scale: 'Échelle' };
   const HINTS = {
     select: 'Cliquer un objet, ou glisser pour une fenêtre (gauche → droite : objets entiers ; droite → gauche : objets touchés). Maj : ajouter.',
     line: 'Cliquer le point de départ, puis les points suivants. Clic droit ou Échap pour terminer. Taper une longueur (ex. 1500 ou 1500<45) puis Entrée.',
@@ -16,9 +17,15 @@ const Tools = (() => {
     move: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis le point d\'arrivée.',
     copy: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis chaque point d\'arrivée. Échap pour finir.',
     pan: 'Glisser pour déplacer la vue (aussi : barre d\'espace ou molette enfoncée).',
+    offset: 'Cliquer une ligne, une polyligne ou un cercle, puis le côté du décalage. Taper une distance puis Entrée pour la changer.',
+    trim: 'Cliquer la partie d\'une ligne ou d\'une polyligne à retirer : elle est coupée aux intersections voisines.',
+    extend: 'Cliquer près de l\'extrémité d\'une ligne ou d\'une polyligne : elle est prolongée jusqu\'au premier objet rencontré.',
+    mirror: 'Sélectionner d\'abord des objets. Cliquer deux points de l\'axe de symétrie : une copie symétrique est créée.',
+    rotate: 'Sélectionner d\'abord des objets. Cliquer le centre, puis un point donnant l\'angle (ou taper l\'angle en degrés).',
+    scale: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis taper le facteur (ex. 2 ou 0,5) et Entrée.',
   };
-  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', e: 'sym', m: 'move', k: 'copy', h: 'pan' };
-  const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy'];
+  const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', e: 'sym', m: 'move', k: 'copy', h: 'pan', o: 'offset', a: 'trim', x: 'extend', i: 'mirror', q: 'rotate', u: 'scale' };
+  const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy', 'rotate', 'scale'];
 
   let tool = 'select';
   let pts = [];
@@ -28,6 +35,7 @@ const Tools = (() => {
   let rawLast = [0, 0];
   let scrLast = [0, 0];
   let textBusy = false;
+  let target = null;    /* objet visé par Décaler */
 
   const css = (n) => Canvas2D.css(n);
   const R6 = (p) => [+p[0].toFixed(6), +p[1].toFixed(6)];
@@ -61,7 +69,7 @@ const Tools = (() => {
 
   function setTool(t) {
     if (!NAMES[t]) return;
-    tool = t; pts = []; box = null; cur = null; hoverObj = null;
+    tool = t; pts = []; box = null; cur = null; hoverObj = null; target = null;
     Status.msg(NAMES[t] + ' : ' + HINTS[t], 9000);
     updateLive();
     notify('tool');
@@ -132,6 +140,30 @@ const Tools = (() => {
         addObj({ type: 'sym', c: p, ...cs });
         break;
       }
+      case 'mirror': {
+        if (!selection.size) { Status.msg('Sélectionnez d\'abord des objets avec l\'outil Sélection (V).'); return; }
+        if (!pts.length) { pts = [p]; return; }
+        if (G.dist(pts[0], p) < 1e-6) return;
+        const M = Edit2D.mirrorM(pts[0], p), ids = new Set(selection);
+        Doc.mutate((d) => { const copies = []; for (const o of d.objects) if (ids.has(o.id)) { const c2 = Edit2D.affine(Geo.clone(o), M); c2.id = d.nextId++; copies.push(c2); } d.objects.push(...copies); });
+        pts = []; Status.msg(`Symétrie : ${ids.size} objet(s) copiés.`);
+        break;
+      }
+      case 'rotate': case 'scale': {
+        if (!selection.size) { Status.msg('Sélectionnez d\'abord des objets avec l\'outil Sélection (V).'); return; }
+        if (!pts.length) { pts = [p]; return; }
+        if (tool === 'rotate') { if (G.dist(pts[0], p) < 1e-6) return; transformSel(Edit2D.rotM(pts[0], Math.atan2(p[1] - pts[0][1], p[0] - pts[0][0]))); pts = []; }
+        else if (pts.length === 1) { pts.push(p); Status.msg('Échelle : cliquer le nouvel emplacement du point de référence (ou taper le facteur).'); return; }
+        else { const k = G.dist(pts[0], p) / (G.dist(pts[0], pts[1]) || 1); if (k > 1e-6) transformSel(Edit2D.scaleM(pts[0], k)); pts = []; }
+        break;
+      }
+      case 'offset': {
+        if (!target) return;
+        const c2 = Edit2D.offset(target, state.ofs, p);
+        if (!c2) { Status.msg('Décalage impossible (cercle de rayon nul ?).'); return; }
+        addObj(c2); target = null;
+        break;
+      }
       case 'move': case 'copy': {
         if (!selection.size) { Status.msg('Sélectionnez d\'abord des objets avec l\'outil Sélection (V).'); return; }
         if (!pts.length) { pts = [p]; return; }
@@ -158,6 +190,24 @@ const Tools = (() => {
       }
     }
     updateLive();
+  }
+
+  function transformSel(M) {
+    const ids = new Set(selection);
+    Doc.mutate((d) => { for (const o of d.objects) if (ids.has(o.id)) Edit2D.affine(o, M); });
+  }
+  /* Ajuster / prolonger / choix de l'objet à décaler : clic direct sur un objet (sans accroche). */
+  function pickEdit(raw) {
+    const o = pick(raw);
+    if (!o) { Status.msg('Cliquez sur une ligne ou une polyligne.'); return; }
+    if (tool === 'offset') { if (!['line', 'poly', 'circle'].includes(o.type)) { Status.msg('Décaler : ligne, polyligne ou cercle.'); return; } target = o; Status.msg(`Décaler de ${fmt(state.ofs)} mm : cliquez le côté (tapez une distance pour la changer).`, 7000); return; }
+    const res = tool === 'trim' ? Edit2D.trim(o, raw) : Edit2D.extend(o, raw);
+    if (!res) { Status.msg(tool === 'trim' ? 'Rien à couper : aucune intersection sur cet objet.' : 'Aucun objet à atteindre dans le prolongement.'); return; }
+    Doc.mutate((d) => {
+      const i = d.objects.findIndex((x) => x.id === o.id); if (i < 0) return;
+      if (tool === 'extend') { res.id = o.id; d.objects[i] = res; return; }
+      d.objects.splice(i, 1, ...res.map((x) => ({ ...x, id: d.nextId++ })));
+    });
   }
 
   /* Saisie d'un texte : petit champ posé sur le dessin. */
@@ -200,6 +250,7 @@ const Tools = (() => {
       }
       return;
     }
+    if (tool === 'trim' || tool === 'extend' || (tool === 'offset' && !target)) { pickEdit(raw); Canvas2D.requestDraw(); return; }
     cur = snapPt(raw);
     click(cur);
     Canvas2D.requestDraw();
@@ -259,11 +310,19 @@ const Tools = (() => {
   }
 
   function wantsTyping() {
-    return (TYPED_TOOLS.includes(tool) && pts.length >= 1) || (tool === 'dim' && pts.length === 1);
+    return tool === 'offset' || (TYPED_TOOLS.includes(tool) && pts.length >= 1) || (tool === 'dim' && pts.length === 1);
   }
 
   /* Saisie directe : « 1500 » (direction du curseur) ou « 1500<45 » (angle en degrés, sens trigonométrique). */
   function typed(str) {
+    /* décalage : distance ; rotation : angle en degrés ; échelle : facteur */
+    if (tool === 'offset' || ((tool === 'rotate' || tool === 'scale') && pts.length >= 1)) {
+      const v = parseFloat(String(str).replace(',', '.'));
+      if (!Number.isFinite(v) || (tool !== 'rotate' && !(v > 0))) { Status.msg('Valeur non reconnue.'); return false; }
+      if (tool === 'offset') { state.ofs = v; Status.msg(`Distance de décalage : ${fmt(v)} mm.`); return true; }
+      if (tool === 'rotate') transformSel(Edit2D.rotM(pts[0], v * Math.PI / 180)); else transformSel(Edit2D.scaleM(pts[0], v));
+      pts = []; updateLive(); Canvas2D.requestDraw(); return true;
+    }
     const m = /^\s*(\d+(?:[.,]\d+)?)\s*(?:[<;]\s*(-?\d+(?:[.,]\d+)?))?\s*$/.exec(str);
     if (!m || !wantsTyping()) {
       Status.msg('Saisie non reconnue : entrez une longueur en mm (ex. 1500) ou longueur<angle (ex. 1500<45).');

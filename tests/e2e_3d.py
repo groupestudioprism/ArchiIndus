@@ -6,6 +6,9 @@ Prérequis : python3 tools/build.py ; Playwright + Chromium ; une copie locale d
 """
 import os, sys, json, tempfile, pathlib, re
 from playwright.sync_api import sync_playwright
+import pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from helpers import enter
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 THREE = pathlib.Path(os.environ.get('THREE_DIR', '/tmp/claude-0/three/node_modules/three'))
@@ -33,7 +36,7 @@ with sync_playwright() as p:
     pg.on('pageerror', lambda e: errs.append('pageerror:' + str(e)))
     pg.on('console', lambda m: errs.append('console:' + m.text) if m.type == 'error' and 'ERR_FAILED' not in m.text and 'GPU stall' not in m.text else None)
     pg.route('**/*', serve)
-    pg.goto((ROOT / 'index.html').as_uri()); pg.wait_for_timeout(500); pg.click('#authSkip')
+    enter(pg)
     pg.wait_for_function('window.Scene3D && window.Scene3D.ready', timeout=15000)
     ok(True, 'Three.js chargé')
     # scène de test : réseau en pente, mur, poutre, pompe, poteau
@@ -74,7 +77,7 @@ with sync_playwright() as p:
     n0 = pg.evaluate('Scene3D.stats().objects'); pg.evaluate("Doc.mutate(d=>{d.layers.find(l=>l.id===2).visible=false})"); pg.wait_for_timeout(200)
     ok(pg.evaluate('Scene3D.stats().objects') < n0, 'masquer un calque met la 3D à jour')
     pg.evaluate("Doc.mutate(d=>{d.layers.find(l=>l.id===2).visible=true})"); pg.wait_for_timeout(200)
-    ok('lecture seule' in pg.inner_text('#v3dNote'), 'mention « lecture seule » affichée')
+    ok('Clic : sélectionner' in pg.inner_text('#v3dNote'), 'aide de la vue 3D affichée (sélection, esquisse sur face)')
     # export GLB
     pg.click('#exportBtn')
     with pg.expect_download() as dl: pg.click('#glb')
@@ -86,7 +89,7 @@ with sync_playwright() as p:
     ok(pg.is_visible('#cv') and pg.is_hidden('#cv3d'), 'retour au mode Plan')
     # sans Three.js : repli
     pg2 = ctx.new_page(); pg2.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-    pg2.goto((ROOT / 'index.html').as_uri()); pg2.wait_for_timeout(500); pg2.click('#authSkip')
+    enter(pg2)
     pg2.evaluate("Doc.mutate(d=>{d.objects.push({id:1,type:'line',a:[0,0],b:[1000,0],layer:1})})")
     pg2.click('#mode3d'); pg2.wait_for_timeout(300)
     ok(pg2.locator('dialog canvas.v3d').count() == 1 and pg2.get_attribute('#mode2d', 'aria-pressed') == 'true', 'hors ligne : repli sur l\'aperçu fil de fer, mode Plan conservé')

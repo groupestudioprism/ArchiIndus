@@ -1,0 +1,41 @@
+# Tests automatiques d'ARCHIINDUS à chaque envoi (push) et chaque demande de fusion :
+#  - règles Firestore communes (garde-fou + émulateur Firestore) : blocs ARCHIPLAN, ARCHITRAFIC et ARCHIINDUS ;
+#  - tests de bout en bout dans Chromium (dessin, réseaux, équipements, 3D, poste CAO, noyau OpenCascade, métiers, compte).
+name: Tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  regles:
+    name: Règles Firestore
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: python3 tools/check_rules.py firebase/firestore.rules
+      - run: python3 tools/make_rules.py firebase/firestore.rules | cmp - firebase/firestore.rules
+      - working-directory: tests/rules
+        run: npm ci && npm test
+  navigateur:
+    name: Tests dans Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: pip install playwright ifcopenshell && python -m playwright install --with-deps chromium
+      - run: mkdir -p /tmp/three && cd /tmp/three && npm init -y >/dev/null && npm i three@0.160.0
+      - run: python3 tools/build.py && git diff --exit-code index.html
+      - env: { THREE_DIR: /tmp/three/node_modules/three }
+        run: |
+          set -e
+          for t in e2e e2e_reseaux e2e_equip e2e_3d e2e_cao e2e_noyau e2e_metiers e2e_compte; do
+            echo "::group::$t"; python3 tests/$t.py; echo "::endgroup::"
+          done

@@ -24,6 +24,9 @@ const Snap = {
         for (const [a, b] of Geo.segments(o)) { mids.push(G.mid(a, b)); segs.push([a, b]); }
       } else if (o.type === 'circle' || o.type === 'sym') centers.push(o.c);
     }
+    if (state.sketch && state.faceRef && state.faceRef.sk === state.sketch && state.faceRef.segs.length < 4000) {
+      for (const [a, b] of state.faceRef.segs) { ends.push(a, b); segs.push([a, b]); }
+    }
     const nearest = (list) => {
       let best = null, bd = tl;
       for (const p of list) { const d = G.dist(p, raw); if (d <= bd) { bd = d; best = p; } }
