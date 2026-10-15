@@ -32,7 +32,7 @@ jobs:
         with: { python-version: '3.12' }
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
-      - run: pip install playwright ifcopenshell && python -m playwright install --with-deps chromium
+      - run: sudo apt-get install -y qpdf poppler-utils && pip install playwright ifcopenshell pypdf && python -m playwright install --with-deps chromium
       - run: mkdir -p /tmp/three && cd /tmp/three && npm init -y >/dev/null && npm i three@0.160.0
       - run: python3 tools/build.py && git diff --exit-code index.html
       - env: { THREE_DIR: /tmp/three/node_modules/three }

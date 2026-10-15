@@ -49,10 +49,13 @@ function cloud(db, uid, email, P) {
     const d = c.firestore();
     await d.doc('users/alice').set(prof({ email: 'alice@ex.fr' }));
     await d.doc('users/bob').set(prof({ email: 'bob@ex.fr' }));
+    await d.doc('users/bob2').set(prof({ email: 'bob@ex.fr' }));
     await d.doc('users/carol').set(prof({ status: 'suspended' }));
     await d.doc('licenses/alice_archiindus').set({ userId: 'alice', productId: 'archiindus', licenseType: 'pro', status: 'active', expiresAt: null });
   });
-  const ctx = (uid, email, verified = true) => env.authenticatedContext(uid, { email, email_verified: verified }).firestore();
+  /* une seule instance Firestore par compte : en recréer une pour le même uid lève « Firestore has already been started » */
+  const dbs = new Map();
+  const ctx = (uid, email, verified = true) => { const k = uid + '|' + email + '|' + verified; if (!dbs.has(k)) dbs.set(k, env.authenticatedContext(uid, { email, email_verified: verified }).firestore()); return dbs.get(k); };
   const A = cloud(ctx('alice', 'alice@ex.fr'), 'alice', 'alice@ex.fr', 'ai'), B = cloud(ctx('bob', 'bob@ex.fr'), 'bob', 'bob@ex.fr', 'ai');
   const usage = async (P, uid) => { let v = null; await env.withSecurityRulesDisabled(async (c) => { const s = await c.firestore().doc(P + 'Usage/' + uid).get(); v = s.exists ? s.data().bytes : null; }); return v; };
 
@@ -79,7 +82,7 @@ function cloud(db, uid, email, P) {
   /* ---- partage par email (email vérifié requis), dossiers, bibliothèque */
   ok(await code(A.share(pid, 'bob@ex.fr', 'view')) === 'ok', 'ai : partage d\'un projet par email');
   ok(await code(B.open(pid)) === 'ok', 'ai : projet partagé lisible par l\'invité');
-  ok(await code(cloud(ctx('bob', 'bob@ex.fr', false), 'bob', 'bob@ex.fr', 'ai').open(pid)) === 'permission-denied', 'ai : invité à l\'email non vérifié refusé');
+  ok(await code(cloud(ctx('bob2', 'bob@ex.fr', false), 'bob2', 'bob@ex.fr', 'ai').open(pid)) === 'permission-denied', 'ai : invité à l\'email non vérifié refusé');
   ok(await code(B.save(pid, d2 + 'z', byteLen(d2), 'alice')) === 'permission-denied', 'ai : invité en lecture seule ne peut pas enregistrer');
   let fid = null;
   ok(await code(A.folder('Dossier').then((x) => { fid = x; })) === 'ok', 'ai : création d\'un dossier');
