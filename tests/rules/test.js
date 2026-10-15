@@ -73,7 +73,7 @@ function cloud(db, uid, email, P) {
   ok(await code(C.create('x', '{}')) === 'permission-denied', 'ai : compte désactivé refusé');
 
   /* ---- quotas : 10 Mo sans licence (bob), 50 Mo avec licence ARCHIINDUS (alice) */
-  await env.withSecurityRulesDisabled(async (c) => { await c.firestore().doc('aiUsage/bob').set({ bytes: 9990000, lastPid: '', updatedAt: new Date() }); await c.firestore().doc('aiUsage/alice').set({ bytes: 49990000, lastPid: '', updatedAt: new Date() }); });
+  await env.withSecurityRulesDisabled(async (c) => { const d = c.firestore(); await d.doc('aiUsage/bob').set({ bytes: 9990000, lastPid: '', updatedAt: new Date() }); await d.doc('aiUsage/alice').set({ bytes: 49990000, lastPid: '', updatedAt: new Date() }); });
   ok(await code(B.create('gros', 'x'.repeat(20000))) === 'permission-denied', 'ai : quota de 10 Mo sans licence (dépassement refusé)');
   ok(await code(B.create('petit', 'x'.repeat(5000))) === 'ok', 'ai : écriture sous le quota acceptée');
   ok(await code(A.create('gros', 'x'.repeat(5000))) === 'ok', 'ai : licence ARCHIINDUS active → quota de 50 Mo');
