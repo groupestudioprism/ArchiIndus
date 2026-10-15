@@ -163,11 +163,11 @@ with sync_playwright() as p:
     ok(pg.is_visible('#panel') and not pg.is_visible('#panelBtn'), 'ordinateur : panneau fixe, bouton Options masqué')
     # --- corps de métier
     nlay = pg.evaluate('Doc.get().layers.length')
-    pg.select_option('#tradeSel', 'cvc'); pg.wait_for_timeout(100)
+    pg.click('#rt-trade'); pg.select_option('#tradeSel', 'cvc'); pg.wait_for_timeout(100)
     ks = pg.evaluate("[...document.querySelectorAll('.sym-btn')].map(b=>b.dataset.k)")
     ok('pompe' in ks and 'ventilo' in ks and 'poteau' not in ks and 'chambre' not in ks, f'métier CVC : bibliothèque filtrée {ks}')
     ok(pg.is_hidden('#modeMur') and pg.is_visible('#modeNet'), 'métier CVC : modes Mur et Poutre masqués, Réseau visible')
-    pg.select_option('#tradeSel', 'metal'); pg.wait_for_timeout(100)
+    pg.click('#rt-trade'); pg.select_option('#tradeSel', 'metal'); pg.wait_for_timeout(100)
     ks = pg.evaluate("[...document.querySelectorAll('.sym-btn')].map(b=>b.dataset.k)")
     ok(set(ks) == {'poteau', 'poteauRond', 'semelle'} and pg.is_visible('#modePoutre') and pg.is_hidden('#modeNet'), f'métier construction métallique {ks}')
     ok(pg.evaluate('state.mode') in ('none', 'poutre', 'mur'), 'mode de tracé compatible avec le métier')
@@ -177,7 +177,7 @@ with sync_playwright() as p:
     ok(pg.locator('#addTradeLayers').is_hidden(), 'plus de calque à ajouter')
     pg.click('#undo'); ok(pg.evaluate('Doc.get().layers.length') == nlay, 'annuler retire les calques ajoutés')
     ok(pg.locator('details.ly-other').count() == 1, 'autres métiers repliés')
-    pg.select_option('#tradeSel', 'all'); pg.wait_for_timeout(100)
+    pg.click('#rt-trade'); pg.select_option('#tradeSel', 'all'); pg.wait_for_timeout(100)
     ok(pg.locator('.sym-btn').count() == 20 and pg.is_visible('#modeNet') and pg.is_visible('#modeMur'), 'tous les métiers : tout est visible')
     pg.reload(); pg.wait_for_timeout(300); pg.click('#authSkip')
     # --- paramètres du projet
@@ -190,7 +190,7 @@ with sync_playwright() as p:
     pg.click('#exportBtn'); ok(pg.is_visible('#exportPop') and pg.get_attribute('#exportBtn', 'aria-expanded') == 'true', 'menu Exporter ouvert')
     pg.keyboard.press('Escape'); ok(pg.is_hidden('#exportPop'), 'Échap ferme le menu Exporter')
     pg.click('#exportBtn'); pg.click('#panel'); ok(pg.is_hidden('#exportPop'), 'clic ailleurs ferme le menu Exporter')
-    ok(pg.locator('#rail hr').count() == 4, "familles d'outils séparées dans la barre latérale")
+    ok(pg.locator('#ribbon [role="tab"]').count() == 8 and pg.locator('#rp-sketch .rb-grp').count() == 5, "ruban : 8 onglets, outils d'esquisse en 5 groupes")
     # --- exports
     d = lambda sel: (lambda dl: (dl.value.save_as(OUT + dl.value.suggested_filename), OUT + dl.value.suggested_filename)[1])
     with pg.expect_download() as dl: pg.click('#exportBtn'); pg.click('#svg')

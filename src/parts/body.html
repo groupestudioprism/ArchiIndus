@@ -34,23 +34,11 @@
     <button id="glb" type="button" role="menuitem"><b>Modèle 3D (.glb)</b><span>Pour Archi Vision et les visionneuses 3D</span></button>
   </div>
 
-  <nav id="rail" aria-label="Outils" role="toolbar">
-    <button class="tool" type="button" data-tool="select" aria-pressed="false" title="Sélection (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l13 8-6 1.5L9 19z"/></svg><span>Sélection</span><kbd>V</kbd></button>
-    <button class="tool" type="button" data-tool="move" aria-pressed="false" title="Déplacer (M)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span>Déplacer</span><kbd>M</kbd></button>
-    <button class="tool" type="button" data-tool="copy" aria-pressed="false" title="Copier (K)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h12v12H8zM4 16V4h12"/></svg><span>Copier</span><kbd>K</kbd></button>
-    <hr>
-    <button class="tool" type="button" data-tool="line" aria-pressed="false" title="Ligne (L)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L19 5M4 20h2M18 4h2"/></svg><span>Ligne</span><kbd>L</kbd></button>
-    <button class="tool" type="button" data-tool="poly" aria-pressed="false" title="Polyligne (P)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18l5-9 5 6 6-10"/></svg><span>Polyligne</span><kbd>P</kbd></button>
-    <button class="tool" type="button" data-tool="rect" aria-pressed="false" title="Rectangle (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4z"/></svg><span>Rectangle</span><kbd>R</kbd></button>
-    <button class="tool" type="button" data-tool="circle" aria-pressed="false" title="Cercle (C)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"/></svg><span>Cercle</span><kbd>C</kbd></button>
-    <hr>
-    <button class="tool" type="button" data-tool="dim" aria-pressed="false" title="Cote (D)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8v8M20 8v8M4 12h16M7 10l-3 2 3 2M17 10l3 2-3 2"/></svg><span>Cote</span><kbd>D</kbd></button>
-    <button class="tool" type="button" data-tool="text" aria-pressed="false" title="Texte (T)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M12 6v13M9 19h6"/></svg><span>Texte</span><kbd>T</kbd></button>
-    <hr>
-    <button class="tool" type="button" data-tool="sym" aria-pressed="false" title="Équipements et poteaux (E)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM10 8.5l5 3.5-5 3.5z"/></svg><span>Équipement</span><kbd>E</kbd></button>
-    <hr>
-    <button class="tool" type="button" data-tool="pan" aria-pressed="false" title="Main : déplacer la vue (H)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V6a1.5 1.5 0 0 1 3 0v5M10 11V4.5a1.5 1.5 0 0 1 3 0V11M13 11V5.5a1.5 1.5 0 0 1 3 0V13M16 9a1.5 1.5 0 0 1 3 0v5a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a1.5 1.5 0 0 1 2.5-1.5L7 14"/></svg><span>Main</span><kbd>H</kbd></button>
-  </nav>
+  <div id="ribbon" role="toolbar" aria-label="Ruban de commandes"></div>
+  <aside id="tree" aria-label="Arbre de création">
+    <div class="tr-h"><b>Arbre de création</b><button type="button" class="ibs" id="treeClose" aria-label="Masquer l'arbre" title="Masquer l'arbre">✕</button></div>
+    <div id="treeBody"></div>
+  </aside>
 
   <main id="stage">
     <canvas id="cv" aria-label="Zone de dessin 2D"></canvas>
@@ -62,7 +50,7 @@
       </div>
       <div class="v3d-note" id="v3dNote" role="status"></div>
     </div>
-    <div id="hud"><label class="pill"><span>Métier</span><select id="tradeSel" aria-label="Corps de métier"></select></label></div>
+    <div id="skBar" hidden><span id="skBarTxt"></span><button type="button" class="btn" id="skBarExit">Quitter l'esquisse</button></div>
     <div id="live" hidden></div>
     <input id="tbox" type="text" maxlength="500" placeholder="Texte" aria-label="Texte à placer" hidden>
     <input id="cmd" type="text" autocomplete="off" spellcheck="false" placeholder="Longueur en mm, ou longueur&lt;angle" aria-label="Saisie de longueur" hidden>
@@ -116,7 +104,7 @@
       </div>
     </section>
     <section class="pn" data-sec="sel">
-      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-sel"><span class="pn-t">Sélection</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
+      <h2 class="pn-h"><button type="button" aria-expanded="true" aria-controls="pn-sel"><span class="pn-t">Propriétés</span><svg class="pn-c" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></h2>
       <div class="pn-b" id="pn-sel">
         <div id="props"></div>
       </div>

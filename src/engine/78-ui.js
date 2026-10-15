@@ -371,7 +371,7 @@ const UI = (() => {
     const box = $('#props');
     box.textContent = '';
     const objs = Doc.get().objects.filter((o) => Tools.selection.has(o.id));
-    if (!objs.length) { box.append(projectSummary()); return; }
+    if (!objs.length) { box.append(Workbench.panel() || projectSummary()); return; }
     const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
     const dl = el('dl', { class: 'kv' });
     if (objs.length === 1) {
@@ -485,6 +485,7 @@ const UI = (() => {
   }
 
   function init() {
+    Workbench.build();
     bindCmd();
     bindSections();
     bindModeFields();
@@ -502,7 +503,7 @@ const UI = (() => {
     $('#open').addEventListener('click', () => $('#file').click());
     $('#file').addEventListener('change', (e) => { IO.openFile(e.target.files[0]); e.target.value = ''; });
     $('#save').addEventListener('click', () => IO.saveJSON());
-    document.querySelectorAll('#top .modes [data-mode]').forEach((b) => b.addEventListener('click', () => View3D.setMode(b.dataset.mode === '3d')));
+    document.querySelectorAll('.modes [data-mode]').forEach((b) => b.addEventListener('click', () => View3D.setMode(b.dataset.mode === '3d')));
     $('#glb').addEventListener('click', () => View3D.exportGLB());
     document.querySelectorAll('#v3dStyle [data-style]').forEach((b) => b.addEventListener('click', () => View3D.setStyle(b.dataset.style)));
     document.querySelectorAll('#v3dCams [data-cam]').forEach((b) => b.addEventListener('click', () => window.Scene3D && window.Scene3D.view(b.dataset.cam)));
@@ -530,15 +531,15 @@ const UI = (() => {
     });
     $('#pname').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
-    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Canvas2D.requestDraw(); if (View3D.isOn()) View3D.refresh(); });
+    Doc.on(() => { renderLayers(); renderProps(); refreshChrome(); Workbench.renderTree(); Canvas2D.requestDraw(); if (View3D.isOn()) View3D.refresh(); });
     Tools.onChange((reason) => {
-      if (reason === 'selection') renderProps();
+      if (reason === 'selection') { if (Tools.selection.size) { state.treeSel = null; state.compSel = 0; Workbench.renderTree(); } renderProps(); }
       else if (reason === 'tool') { refreshTools(); renderLib(); }
       else if (reason === 'sym') renderLib();
       else if (reason === 'mode') refreshModes();
     });
-    renderLayers(); renderProps(); refreshChrome(); refreshTools(); refreshModes();
+    renderLayers(); renderProps(); refreshChrome(); refreshTools(); refreshModes(); Workbench.refresh();
   }
 
-  return { init, focusCmd };
+  return { init, focusCmd, renderProps };
 })();

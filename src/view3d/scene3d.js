@@ -5,9 +5,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const MAX_SOLIDS = 20000;
-let renderer = null, scene = null, camera = null, controls = null, canvas = null, root = null, grid = null, raf = 0, ro = null;
+let renderer = null, scene = null, camera = null, controls = null, canvas = null, root = null, grid = null, raf = 0, ro = null, siteGrp = null, siteData = null;
 let style = 'shaded', box = new THREE.Box3(), last = { n: 0, capped: false };
 
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#ffffff';
@@ -111,6 +112,45 @@ function buildSolids(solids, minR) {
   return g;
 }
 
+
+/* ---------- site réel (relief, bâtiments, voirie) : même principe qu'ARCHITRAFFIC (30-world.js), simplifié ---------- */
+function disposeGrp(g) { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
+function buildSite(S) {
+  const g = new THREE.Group(); g.name = 'Site';
+  const H = (x, y) => window.Site.H(x, y);
+  const P3 = (x, y, z) => new THREE.Vector3(x, z, -y);
+  /* terrain */
+  const n = Math.min(S.elev.N, 161), st = S.size / (n - 1), pos = [], idx = [];
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const x = -S.size / 2 + i * st, y = -S.size / 2 + j * st; pos.push(x, H(x, y) - 0.03, -y); }
+  for (let j = 0; j + 1 < n; j++) for (let i = 0; i + 1 < n; i++) { const a = j * n + i, b = a + 1, c = a + n, d = c + 1; idx.push(a, b, d, a, d, c); }
+  const tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setIndex(idx); tg.computeVertexNormals();
+  const terr = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ color: 0xC9CDB4, roughness: 1, metalness: 0 })); terr.name = 'Terrain'; g.add(terr);
+  /* voirie : rubans posés sur le relief */
+  const rp = [];
+  for (const r of S.W.roads) {
+    for (let i = 0; i + 1 < r.pts.length; i++) {
+      const a = r.pts[i], b = r.pts[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 0.2) continue;
+      const nx = -(b[1] - a[1]) / L * r.w / 2, ny = (b[0] - a[0]) / L * r.w / 2;
+      const q = [[a[0] + nx, a[1] + ny], [a[0] - nx, a[1] - ny], [b[0] - nx, b[1] - ny], [b[0] + nx, b[1] + ny]].map(([x, y]) => P3(x, y, H(x, y) + (r.foot ? 0.04 : 0.06)));
+      rp.push(q[0], q[1], q[2], q[0], q[2], q[3]);
+    }
+  }
+  if (rp.length) { const rg = new THREE.BufferGeometry().setFromPoints(rp); rg.computeVertexNormals(); const m = new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ color: 0x6E737A, roughness: 0.95, side: THREE.DoubleSide })); m.name = 'Voirie'; g.add(m); }
+  /* bâtiments : emprises extrudées à leur hauteur (toits plats), posées au point le plus bas du terrain */
+  const geos = [];
+  for (const b of S.W.bld) {
+    const p = Math.sign(areaXY(b.p)) < 0 ? b.p.slice().reverse() : b.p;
+    const zb = Math.min(...p.map((q) => H(q[0], q[1]))) - 0.3;
+    try {
+      const geo = new THREE.ExtrudeGeometry(new THREE.Shape(p.map((q) => new THREE.Vector2(q[0], q[1]))), { depth: b.h + 0.3, bevelEnabled: false });
+      geo.rotateX(-Math.PI / 2); geo.translate(0, zb, 0); geos.push(geo);
+    } catch (e) { /* emprise dégénérée : ignorée */ }
+  }
+  if (geos.length) { const merged = mergeGeometries(geos.map((x) => x.index ? x.toNonIndexed() : x)); geos.forEach((x) => x.dispose()); const m = new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ color: 0xE7E3DA, roughness: 0.9 })); m.name = 'Bâtiments'; g.add(m); }
+  return g;
+}
+const areaXY = (p) => { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[i], r = p[(i + 1) % p.length]; a += q[0] * r[1] - r[0] * q[1]; } return a / 2; };
+
 function extentOf(solids) {
   const b = new THREE.Box3();
   for (const s of solids) {
@@ -133,11 +173,11 @@ function lights() {
 }
 
 function frame() {
-  if (box.isEmpty()) { camera.position.set(8, 8, 8); controls.target.set(0, 0, 0); controls.update(); return; }
-  const c = box.getCenter(new THREE.Vector3()), r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1);
+  const bx = box.isEmpty() ? new THREE.Box3(new THREE.Vector3(-40, -5, -40), new THREE.Vector3(40, 20, 40)) : box;
+  const c = bx.getCenter(new THREE.Vector3()), r = Math.max(bx.getSize(new THREE.Vector3()).length() / 2, 1);
   controls.target.copy(c);
   const dist = r / Math.sin((camera.fov * Math.PI / 180) / 2) * 0.95;
-  camera.near = Math.max(dist / 1000, 0.01); camera.far = dist * 40; camera.updateProjectionMatrix();
+  camera.near = Math.max(dist / 1000, 0.01); camera.far = Math.max(dist * 40, siteGrp ? 8000 : 0); camera.updateProjectionMatrix();
   return { c, dist };
 }
 
@@ -194,9 +234,19 @@ const Scene3D = {
     if (opts.style) style = opts.style;
     scene.background = new THREE.Color(css('--vp'));
     build(solids);
+    if (siteData && !siteGrp) { siteGrp = buildSite(siteData); scene.add(siteGrp); }
+    if (grid) grid.visible = !siteGrp;
     size(); setView('iso');
     if (!raf) loop();
     return { count: last.n, capped: last.capped, max: MAX_SOLIDS };
+  },
+  /* Site de contexte (données de Site, classic script) ; null pour le retirer */
+  setSite(S) {
+    siteData = S;
+    if (!scene) return;
+    if (siteGrp) { scene.remove(siteGrp); disposeGrp(siteGrp); siteGrp = null; }
+    if (S) { siteGrp = buildSite(S); scene.add(siteGrp); if (grid) grid.visible = false; } else if (grid) grid.visible = true;
+    render();
   },
   hide() { if (raf) { cancelAnimationFrame(raf); raf = 0; } },
   resume() { if (renderer && !raf) { loop(); size(); } },
@@ -207,9 +257,12 @@ const Scene3D = {
     if (!root) throw new Error('Aucune scène 3D à exporter.');
     const ex = new GLTFExporter();
     const tmp = new THREE.Scene(); tmp.add(root.clone(true));
+    /* lieu du projet (même clé qu'ARCHIPLAN : ARCHITRAFFIC place la maquette à son adresse) */
+    const lieu = window.Site && window.Site.lieu ? window.Site.lieu() : null;
+    tmp.userData = { archiindus: { version: 1, unites: 'm', axe: 'Y vers le haut' }, ...(lieu ? { archiplan: { lieu } } : {}) };
     return new Promise((res, rej) => ex.parse(tmp, (buf) => res(buf), (e) => rej(e), { binary: true }));
   },
-  stats() { return { objects: root ? root.children.length : 0, ...last }; },
+  stats() { return { objects: root ? root.children.length : 0, site: siteGrp ? siteGrp.children.map((c) => c.name) : [], ...last }; },
   screenshot() { render(); return canvas.toDataURL('image/png'); },
 };
 window.Scene3D = Scene3D;

@@ -73,22 +73,13 @@ const View3D = (() => {
   const beamDepth = (o) => { const m = /(?:IPE|HEA|HEB|HEM|UPN|IPN)\s*(\d{2,3})/i.exec(o.st.prof || ''); return m ? +m[1] : (o.props && o.props.h) || 200; };
 
   const matCol = (id) => (id && MATS[id] ? MATS[id].color : null);
-  /* Matériau effectif d'un objet (saisi, sinon valeur par défaut selon sa nature) */
-  function matIdOf(o) {
-    if (o.mat) return o.mat;
-    if (o.net) return MAT_DEFAULT.net[o.net.mat] || '';
-    if (o.st) return o.st.kind === 'poutre' ? MAT_DEFAULT.poutre : MAT_DEFAULT.mur;
-    if (o.type === 'sym' && (o.k === 'poteau' || o.k === 'poteauRond')) return MAT_DEFAULT.poteau;
-    return '';
-  }
-
   function solids() {
     const out = [], d = Doc.get();
     const consumed = new Set((d.features || []).filter((f) => !f.hide).map((f) => f.sk));
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
-      const col = l.color, pr = o.props || {}, mcol = matCol(matIdOf(o));
+      const col = l.color, pr = o.props || {}, mcol = matCol(objMatId(o));
       if (o.sk) {
         /* esquisse sans fonction : ses traits sont montrés sur leur plan (comme une esquisse visible dans l'arbre) */
         const sk = Model.sketch(o.sk); if (!sk || consumed.has(o.sk)) continue;
@@ -230,7 +221,7 @@ const View3D = (() => {
     on = !!want;
     document.getElementById('app').classList.toggle('m3d', on);
     document.getElementById('v3dView').hidden = !on;
-    document.querySelectorAll('#top .modes [data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (on ? '3d' : '2d'))));
+    document.querySelectorAll('.modes [data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === (on ? '3d' : '2d'))));
     if (on) { Tools.setTool('select'); refresh(); window.Scene3D.resume(); } else { if (window.Scene3D) window.Scene3D.hide(); Canvas2D.requestDraw(); }
     return true;
   }
