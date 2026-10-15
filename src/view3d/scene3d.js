@@ -12,7 +12,19 @@ let style = 'shaded', box = new THREE.Box3(), last = { n: 0, capped: false };
 
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#ffffff';
 const V = (x, y, z) => new THREE.Vector3(x / 1000, z / 1000, -y / 1000);
+/* Matrice Three d'un repère local du plan (U, V, W, t en mm, plan x/y/z haut) → scène (m, Y vers le haut). */
+function planMatrix(M) {
+  const P = (x, y, z) => [x / 1000, z / 1000, -y / 1000];
+  const U = P(M[0], M[1], M[2]), Vv = P(M[3], M[4], M[5]), W = P(M[6], M[7], M[8]), T = P(M[9], M[10], M[11]);
+  return new THREE.Matrix4().set(U[0], Vv[0], W[0], T[0], U[1], Vv[1], W[1], T[1], U[2], Vv[2], W[2], T[2], 0, 0, 0, 1);
+}
 
+/* Couleur d'affichage : calque (Ombré), matériau (Matériaux) ou taux d'utilisation (Utilisation : vert < 0,7 < orange < 1 < rouge). */
+function colorOf(s) {
+  if (style === 'mat' && s.mcol) return s.mcol;
+  if (style === 'util') { if (s.util == null) return '#C9CED4'; return s.util < 0.7 ? '#1E8E5A' : s.util < 1 ? '#E2861B' : '#B3261E'; }
+  return s.col;
+}
 function mats(col) {
   const c = new THREE.Color(col);
   const base = { color: c, roughness: 0.62, metalness: 0.08 };
@@ -27,36 +39,73 @@ function shapeOf(rings) {
   return sh;
 }
 
+function shapeMM(outer, holes) {
+  const sh = new THREE.Shape(outer.map((p) => new THREE.Vector2(p[0], p[1])));
+  for (const h of holes || []) sh.holes.push(new THREE.Path(h.map((p) => new THREE.Vector2(p[0], p[1]))));
+  return sh;
+}
 function buildSolids(solids, minR) {
   const g = new THREE.Group();
   const edgeMat = (col) => new THREE.LineBasicMaterial({ color: new THREE.Color(col).multiplyScalar(0.55) });
   let n = 0;
   for (const s of solids) {
     if (n++ >= MAX_SOLIDS) break;
+    const col = s.sel ? css('--sel') || '#E2861B' : colorOf(s);
+    let obj = null;
     if (s.k === 'pipe') {
       const a = V(...s.a), b = V(...s.b), len = a.distanceTo(b);
       if (len < 1e-6) continue;
       const r = Math.max(s.r / 1000, minR);
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14, 1), mats(s.col));
+      const grp = new THREE.Group();
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14, 1), mats(col));
       m.position.copy(a).add(b).multiplyScalar(0.5);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-      g.add(m);
-      const j = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mats(s.col)); j.position.copy(b); g.add(j);
+      grp.add(m);
+      const j = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mats(col)); j.position.copy(b); grp.add(j);
+      obj = grp;
     } else if (s.k === 'prism') {
       if (!s.rings.length || s.rings[0].length < 3 || s.z1 <= s.z0) continue;
       const geo = new THREE.ExtrudeGeometry(shapeOf(s.rings), { depth: (s.z1 - s.z0) / 1000, bevelEnabled: false });
-      const m = new THREE.Mesh(geo, mats(s.col));
-      m.rotation.x = -Math.PI / 2; m.position.y = s.z0 / 1000;
-      g.add(m);
-      if (style !== 'wire') { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(s.col)); e.rotation.x = -Math.PI / 2; e.position.y = s.z0 / 1000; g.add(e); }
+      const grp = new THREE.Group(), m = new THREE.Mesh(geo, mats(col));
+      m.rotation.x = -Math.PI / 2; m.position.y = s.z0 / 1000; grp.add(m);
+      if (style !== 'wire') { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(col)); e.rotation.x = -Math.PI / 2; e.position.y = s.z0 / 1000; grp.add(e); }
+      obj = grp;
+    } else if (s.k === 'ext') {
+      /* extrusion dans un repère local (u, v) → w, en mm ; la matrice place le volume (esquisse sur plan, profilé le long d'un tronçon) */
+      if (!s.outer || s.outer.length < 3 || s.w1 <= s.w0) continue;
+      const geo = new THREE.ExtrudeGeometry(shapeMM(s.outer, s.holes), { depth: s.w1 - s.w0, bevelEnabled: false, curveSegments: 24 });
+      geo.translate(0, 0, s.w0);
+      const grp = new THREE.Group(); grp.matrixAutoUpdate = false;
+      grp.matrix.copy(planMatrix(s.M));
+      const m = new THREE.Mesh(geo, mats(col)); grp.add(m);
+      if (style !== 'wire') grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(col)));
+      obj = grp;
+    } else if (s.k === 'rev') {
+      /* révolution : profil (r, h) en mm autour de l'axe local Y, repère (X, Y, Z, O) dans le plan */
+      if (!s.prof || s.prof.length < 3) continue;
+      const pts = s.prof.concat([s.prof[0]]).map(([r, h]) => new THREE.Vector2(Math.max(0, r), h));
+      const geo = new THREE.LatheGeometry(pts, 48, 0, s.ang);
+      const grp = new THREE.Group(); grp.matrixAutoUpdate = false;
+      grp.matrix.copy(planMatrix([...s.X, ...s.Y, ...s.Z, ...s.O]));
+      grp.add(new THREE.Mesh(geo, mats(col)));
+      obj = grp;
     } else if (s.k === 'cyl') {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(s.r / 1000, s.r / 1000, (s.z1 - s.z0) / 1000, 28), mats(s.col));
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(s.r / 1000, s.r / 1000, (s.z1 - s.z0) / 1000, 28), mats(col));
       m.position.copy(V(s.c[0], s.c[1], (s.z0 + s.z1) / 2));
-      g.add(m);
+      obj = m;
     } else if (s.k === 'line') {
       const geo = new THREE.BufferGeometry().setFromPoints(s.pts.map((p) => V(...p)));
-      g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(s.col) })));
+      obj = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(col) }));
     }
+    if (!obj) continue;
+    if (s.tf) {
+      /* composant : la pièce est décrite autour de son origine ; on applique sa position et sa rotation */
+      /* rotation dans le plan (autour de Z) = rotation autour de Y dans la scène ; même sens (vu de dessus) */
+      const holder = new THREE.Group(); holder.position.copy(V(...s.tf.pos)); holder.rotation.y = (s.tf.rot || 0) * Math.PI / 180;
+      holder.add(obj); g.add(holder);
+    } else g.add(obj);
+    if (s.cid) obj.userData.cid = s.cid;
+    if (s.fid) obj.userData.fid = s.fid;
   }
   last = { n: Math.min(n, MAX_SOLIDS), capped: solids.length > MAX_SOLIDS };
   return g;
@@ -64,12 +113,15 @@ function buildSolids(solids, minR) {
 
 function extentOf(solids) {
   const b = new THREE.Box3();
-  const add = (x, y, z) => b.expandByPoint(V(x, y, z));
   for (const s of solids) {
+    const o = s.tf ? s.tf.pos : [0, 0, 0];
+    const add = (x, y, z) => b.expandByPoint(V(x + o[0], y + o[1], z + o[2]));
     if (s.k === 'pipe') { add(...s.a); add(...s.b); }
     else if (s.k === 'prism') { for (const p of s.rings[0]) { add(p[0], p[1], s.z0); add(p[0], p[1], s.z1); } }
     else if (s.k === 'cyl') { add(s.c[0] - s.r, s.c[1] - s.r, s.z0); add(s.c[0] + s.r, s.c[1] + s.r, s.z1); }
     else if (s.k === 'line') for (const p of s.pts) add(...p);
+    else if (s.k === 'ext') { const M = s.M; for (const [u, v] of s.outer) for (const w of [s.w0, s.w1]) add(M[9] + u * M[0] + v * M[3] + w * M[6], M[10] + u * M[1] + v * M[4] + w * M[7], M[11] + u * M[2] + v * M[5] + w * M[8]); }
+    else if (s.k === 'rev') { const R = Math.max(...s.prof.map((q) => q[0])), H = Math.max(...s.prof.map((q) => Math.abs(q[1]))); add(s.O[0] - R - H, s.O[1] - R - H, s.O[2] - R - H); add(s.O[0] + R + H, s.O[1] + R + H, s.O[2] + R + H); }
   }
   return b;
 }
@@ -116,6 +168,7 @@ function build(solids) {
   const ext = box.isEmpty() ? 10 : box.getSize(new THREE.Vector3()).length();
   root = buildSolids(solids, Math.max(ext / 900, 0.004));
   scene.add(root);
+  { const b2 = new THREE.Box3().setFromObject(root); if (!b2.isEmpty()) box = b2; }
   if (grid) scene.remove(grid);
   const sz = Math.max(10, Math.ceil(ext * 1.5));
   grid = new THREE.GridHelper(sz, Math.min(100, sz), new THREE.Color(css('--grid-major')), new THREE.Color(css('--grid-minor')));

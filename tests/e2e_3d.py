@@ -47,10 +47,12 @@ with sync_playwright() as p:
     sol = pg.evaluate('View3D.solids()')
     kinds = {}
     for s in sol: kinds[s['k']] = kinds.get(s['k'], 0) + 1
-    ok(kinds.get('pipe') == 1 and kinds.get('prism', 0) == 3 and kinds.get('cyl', 0) == 2, f'solides {kinds}')
+    ok(kinds.get('pipe') == 1 and kinds.get('prism', 0) == 2 and kinds.get('ext', 0) == 2 and kinds.get('cyl', 0) == 2, f'solides {kinds}')
     pipe = [s for s in sol if s['k'] == 'pipe'][0]; ok(pipe['r'] == 100 and pipe['a'][2] == 2000 and pipe['b'][2] == 1000, 'tuyau : rayon DN/2, altitudes 2 m → 1 m')
     mur = [s for s in sol if s['k'] == 'prism' and abs(s['z1'] - s['z0'] - 3000) < 1e-6]; ok(len(mur) >= 1, 'mur extrudé de 3 m')
-    pou = [s for s in sol if s['k'] == 'prism' and abs(s['z1'] - s['z0'] - 300) < 1e-6]; ok(len(pou) == 1 and abs(pou[0]['z1'] - 4000) < 1e-6, 'poutre IPE 300 : hauteur 300 mm, dessus à 4 m')
+    pou = [s for s in sol if s['k'] == 'ext']
+    hs = [max(p[1] for p in s['outer']) - min(p[1] for p in s['outer']) for s in pou]
+    ok(len(pou) == 2 and all(abs(h - 300) < 1e-6 for h in hs) and all(abs(s['M'][11] - 3850) < 1e-6 for s in pou) and abs(pou[0]['w1'] - 6000) < 1e-6, 'poutre IPE 300 : section réelle h 300 balayée par tronçon, dessus à 4 m')
     # bascule en 3D
     pg.click('#mode3d'); pg.wait_for_timeout(800)
     ok(pg.is_visible('#cv3d') and pg.is_hidden('#cv') and pg.get_attribute('#mode3d', 'aria-pressed') == 'true', 'mode 3D : canevas 3D visible, plan masqué')

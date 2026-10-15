@@ -17,7 +17,7 @@ const Snap = {
     const ends = [], mids = [], centers = [], segs = [];
     for (const o of Doc.get().objects) {
       const l = Doc.layer(o.layer);
-      if (!l || !l.visible) continue;
+      if (!l || !l.visible || !Model.visible2D(o)) continue;
       if (o.type === 'line') { ends.push(o.a, o.b); mids.push(G.mid(o.a, o.b)); segs.push([o.a, o.b]); }
       else if (o.type === 'poly') {
         ends.push(...o.pts);

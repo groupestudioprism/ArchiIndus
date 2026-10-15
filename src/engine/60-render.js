@@ -134,6 +134,23 @@ const Render = (() => {
     ctx.restore();
   }
 
+  /* Composants d'assemblage vus en plan : empreinte en tirets et nom (lecture seule, ils se modifient dans l'onglet Assemblage). */
+  function drawComps(ctx, d) {
+    if (!d.comps || !d.comps.length) return;
+    const R = Model.resolve(d.comps);
+    ctx.save(); ctx.setLineDash([6, 4]);
+    for (const c of d.comps) {
+      const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
+      const fp = Model.footprint(c, R.pos.get(c.id)), sel = state.compSel === c.id;
+      ctx.strokeStyle = sel ? css('--sel') : shade(l.color); ctx.lineWidth = sel ? 2.4 : 1.4;
+      strokePath(ctx, fp, true);
+      const s = Canvas2D.toScreen(fp[0]);
+      ctx.fillStyle = ctx.strokeStyle; ctx.font = '600 11px Inter, system-ui, sans-serif'; ctx.textBaseline = 'bottom';
+      if (Math.abs(Canvas2D.toScreen(fp[1])[0] - s[0]) > 40) ctx.fillText(c.name, s[0] + 3, s[1] - 3);
+    }
+    ctx.restore();
+  }
+
   function scene(ctx) {
     const d = Doc.get();
     const byLayer = new Map();
@@ -144,8 +161,12 @@ const Render = (() => {
     for (const l of d.layers) {
       if (!l.visible) continue;
       const col = shade(l.color);
-      for (const o of byLayer.get(l.id) || []) drawObject(ctx, o, col, 1.6);
+      for (const o of byLayer.get(l.id) || []) {
+        if (!Model.visible2D(o)) continue;
+        if (Model.faded2D(o)) { ctx.save(); ctx.globalAlpha = 0.22; drawObject(ctx, o, col, 1.2); ctx.restore(); } else drawObject(ctx, o, col, 1.6);
+      }
     }
+    if (!state.sketch) drawComps(ctx, d);
     const selCol = css('--sel');
     for (const o of d.objects) {
       if (Tools.selection.has(o.id)) drawObject(ctx, o, selCol, 2.6);

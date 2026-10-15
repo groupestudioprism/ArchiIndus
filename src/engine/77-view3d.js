@@ -72,22 +72,56 @@ const View3D = (() => {
   const area = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
   const beamDepth = (o) => { const m = /(?:IPE|HEA|HEB|HEM|UPN|IPN)\s*(\d{2,3})/i.exec(o.st.prof || ''); return m ? +m[1] : (o.props && o.props.h) || 200; };
 
+  const matCol = (id) => (id && MATS[id] ? MATS[id].color : null);
+  /* Matériau effectif d'un objet (saisi, sinon valeur par défaut selon sa nature) */
+  function matIdOf(o) {
+    if (o.mat) return o.mat;
+    if (o.net) return MAT_DEFAULT.net[o.net.mat] || '';
+    if (o.st) return o.st.kind === 'poutre' ? MAT_DEFAULT.poutre : MAT_DEFAULT.mur;
+    if (o.type === 'sym' && (o.k === 'poteau' || o.k === 'poteauRond')) return MAT_DEFAULT.poteau;
+    return '';
+  }
+
   function solids() {
-    const out = [];
-    for (const o of Doc.get().objects) {
+    const out = [], d = Doc.get();
+    const consumed = new Set((d.features || []).filter((f) => !f.hide).map((f) => f.sk));
+    for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
-      const col = l.color, pr = o.props || {};
-      if (o.net && (o.type === 'line' || o.type === 'poly')) { const sg = []; netSegs(o, col, sg); for (const s of sg) out.push({ k: 'pipe', a: s.a, b: s.b, r: o.net.dn / 2, col }); continue; }
+      const col = l.color, pr = o.props || {}, mcol = matCol(matIdOf(o));
+      if (o.sk) {
+        /* esquisse sans fonction : ses traits sont montrés sur leur plan (comme une esquisse visible dans l'arbre) */
+        const sk = Model.sketch(o.sk); if (!sk || consumed.has(o.sk)) continue;
+        const F = Model.frame(sk);
+        for (const e of Sym.expand(o)) {
+          if (e.type === 'line') out.push({ k: 'line', pts: [F.to3(...e.a), F.to3(...e.b)], col });
+          else if (e.type === 'poly') out.push({ k: 'line', pts: e.pts.map((q) => F.to3(...q)).concat(e.closed ? [F.to3(...e.pts[0])] : []), col });
+          else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 49 }, (_, i) => F.to3(e.c[0] + e.r * Math.cos(i * Math.PI / 24), e.c[1] + e.r * Math.sin(i * Math.PI / 24))), col });
+        }
+        continue;
+      }
+      if (o.net && (o.type === 'line' || o.type === 'poly')) { const sg = []; netSegs(o, col, sg); for (const s of sg) out.push({ k: 'pipe', a: s.a, b: s.b, r: o.net.dn / 2, col, mcol }); continue; }
       if (o.st && (o.type === 'line' || o.type === 'poly')) {
         const pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
         const beam = o.st.kind === 'poutre';
         const top = (typeof pr.z === 'number' ? pr.z : beam ? DEF_BEAM_Z / 1000 : 0) * 1000;
+        const prof = beam ? Sections.find(o.st.prof) : null;
+        const util = beam && typeof Analysis !== 'undefined' ? Analysis.beamUtil(o) : null;
+        if (prof) {
+          /* section réelle du profilé (I ou U, sans congés) balayée le long de chaque tronçon, dessus de poutre à la cote z */
+          const ol = Sections.outline({ kind: 'prof', id: prof.id });
+          for (const [a, b] of Geo.segments(o)) {
+            const L = G.dist(a, b); if (L < 1e-6) continue;
+            const W = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, 0], U = [-W[1], W[0], 0];
+            out.push({ k: 'ext', outer: ol.outer, holes: [], w0: 0, w1: L, M: [...U, 0, 0, 1, ...W, a[0], a[1], top - prof.h / 2], col, mcol, util });
+          }
+          continue;
+        }
         const bands = Sym.band(pts, closed, o.st.w).map((b) => b.pts);
         const hh = beam ? beamDepth(o) : (pr.h || DEF_WALL_H);
         const z0 = beam ? top - hh : top;
         const rings = closed && bands.length === 2 ? (area(bands[0]) >= area(bands[1]) ? [bands[0], bands[1]] : [bands[1], bands[0]]) : bands;
-        out.push({ k: 'prism', rings, z0, z1: z0 + hh, col });
+        out.push({ k: 'prism', rings, z0, z1: z0 + hh, col, mcol, util });
         continue;
       }
       if (o.type === 'sym') {
@@ -96,8 +130,8 @@ const View3D = (() => {
         let base = null;
         const edges = [];
         for (const e of Sym.world(o)) {
-          if (!base && e.type === 'circle') base = { k: 'cyl', c: e.c, r: e.r, z0, z1: z0 + (h || 50), col };
-          else if (!base && e.type === 'poly' && e.closed && e.pts.length >= 3) base = { k: 'prism', rings: [e.pts], z0, z1: z0 + (h || 50), col };
+          if (!base && e.type === 'circle') base = { k: 'cyl', c: e.c, r: e.r, z0, z1: z0 + (h || 50), col, mcol };
+          else if (!base && e.type === 'poly' && e.closed && e.pts.length >= 3) base = { k: 'prism', rings: [e.pts], z0, z1: z0 + (h || 50), col, mcol };
           else if (e.type === 'line') edges.push([[e.a[0], e.a[1], z0 + h], [e.b[0], e.b[1], z0 + h]]);
           else if (e.type === 'poly') edges.push(e.pts.map((p) => [p[0], p[1], z0 + h]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], z0 + h]] : []));
         }
@@ -109,6 +143,19 @@ const View3D = (() => {
         if (e.type === 'line') out.push({ k: 'line', pts: [[e.a[0], e.a[1], 0], [e.b[0], e.b[1], 0]], col });
         else if (e.type === 'poly') out.push({ k: 'line', pts: e.pts.map((p) => [p[0], p[1], 0]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], 0]] : []), col });
         else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 37 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 18), e.c[1] + e.r * Math.sin(i * Math.PI / 18), 0]), col });
+      }
+    }
+    /* fonctions 3D (esquisses extrudées ou révolutionnées) */
+    for (const f of d.features || []) {
+      const l = Doc.layer(f.layer); if (!l || !l.visible) continue;
+      for (const s of Model.featureSolids(f, l.color)) out.push({ ...s, mcol: matCol(f.mat) });
+    }
+    /* composants d'assemblage (position résolue par les contraintes) */
+    if (d.comps && d.comps.length) {
+      const R = Model.resolve(d.comps);
+      for (const c of d.comps) {
+        const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
+        for (const s of Model.compSolids(c, R.pos.get(c.id), l.color)) out.push({ ...s, mcol: matCol(c.mat), sel: state.compSel === c.id });
       }
     }
     return out;

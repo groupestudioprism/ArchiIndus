@@ -13,7 +13,7 @@ const BOM = (() => {
     const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map(), techs = [];
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
-      if (!l || !l.visible) continue;
+      if (!l || !l.visible || o.sk) continue;
       if (o.props && Props.kindOf(o)) {
         const len = o.type === 'sym' ? null : (Geo.length(o) || 0) / 1000, sl = Props.slope(o);
         const what = o.net ? `Réseau DN${o.net.dn}${o.net.mat ? ' ' + o.net.mat : ''}` : o.st ? Sym.stLabel({ ...o.st, tag: '' }) : SYMBOLS[o.k].label;

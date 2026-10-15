@@ -11,6 +11,8 @@ const state = {
   st: { w: { mur: 200, poutre: 150 }, prof: { mur: '', poutre: '' } },
   /* Symbole à poser (outil « Équipements ») : voir SYMBOLS. */
   sym: { k: 'pompe', s: 400, rot: 0, tag: '' },
+  /* Esquisse en cours d'édition (id) ; 0 : plan général. */
+  sketch: 0,
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };

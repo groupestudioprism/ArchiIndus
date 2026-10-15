@@ -11,6 +11,8 @@ const PROP_DEFS = {
   t:     { label: 'Température', unit: '°C', min: -273, max: 2000, dec: 1, kinds: ['net', 'sym'] },
   z:     { label: 'Altitude / niveau', unit: 'm', min: -1000, max: 10000, dec: 3, kinds: ['st', 'sym'] },
   h:     { label: 'Hauteur', unit: 'mm', min: 1, max: 100000, dec: 1, kinds: ['st'] },
+  ql:    { label: 'Charge répartie (service)', unit: 'kN/m', min: 0, max: 10000, dec: 2, kinds: ['st'] },
+  dt:    { label: 'Écart de température', unit: 'K', min: -200, max: 500, dec: 1, kinds: ['net'] },
 };
 const Props = (() => {
   const kindOf = (o) => (o.net ? 'net' : o.st ? 'st' : o.type === 'sym' ? 'sym' : null);

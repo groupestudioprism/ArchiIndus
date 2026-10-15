@@ -47,7 +47,7 @@ const Doc = (() => {
 
   function fresh() {
     const layers = LAYER_DEFAULTS.map((l, i) => ({ id: i + 1, name: l.name, color: l.color, group: l.group, visible: true, locked: false }));
-    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT } };
+    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT }, sketches: [], features: [], comps: [], site: null, nextSk: 1, nextF: 1, nextC: 1 };
   }
 
   function emit(reason) { for (const f of subs) f(reason); }
@@ -126,12 +126,17 @@ const Doc = (() => {
         default: bad(where + ` (type « ${String(o.type).slice(0, 20)} » inconnu).`);
       }
       out.layer = layerIds.has(o.layer) ? o.layer : layers[0].id;
+      if (Number.isInteger(o.sk) && o.sk > 0) out.sk = o.sk;
+      { const m = cleanMatId(o.mat); if (m && (out.net || out.st || out.type === 'sym')) out.mat = m; }
+      if (out.st && o.st && typeof o.st.comp === 'string' && COMPOS[o.st.comp] && out.st.kind === 'mur') out.st.comp = o.st.comp;
       let id = Number.isInteger(o.id) && o.id > 0 && !seenO.has(o.id) ? o.id : 0;
       if (id) { seenO.add(id); maxO = Math.max(maxO, id); }
       out.id = id;
       objects.push(out);
     });
     for (const o of objects) if (!o.id) o.id = ++maxO;
+    const M = Model.clean(raw, objects, layerIds, layers[0].id);
+    const nx = (arr) => arr.reduce((m, x) => Math.max(m, x.id), 0) + 1;
 
     return {
       schemaVersion: 1,
@@ -142,6 +147,8 @@ const Doc = (() => {
       nextLayerId: maxL + 1,
       active: layerIds.has(raw.active) ? raw.active : layers[0].id,
       sheet: cleanSheet(raw.sheet),
+      sketches: M.sketches, features: M.features, comps: M.comps, site: M.site,
+      nextSk: nx(M.sketches), nextF: nx(M.features), nextC: nx(M.comps),
     };
   }
 
@@ -162,6 +169,7 @@ const Doc = (() => {
     /* À appeler dans mutate : ajoute un objet sur le calque actif. */
     add(o) {
       o.id = data.nextId++; o.layer = data.active;
+      if (state.sketch && Model.sketch(state.sketch)) o.sk = state.sketch;
       if (state.mode !== 'none' && (o.type === 'line' || (o.type === 'poly' && (!o.closed || state.mode !== 'net')))) {
         if (state.mode === 'net') { const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' }); if (nt) o.net = nt; }
         else { const k = state.mode, sc = cleanSt({ kind: k, w: state.st.w[k], prof: state.st.prof[k], tag: '' }); if (sc) o.st = sc; }

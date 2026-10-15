@@ -32,7 +32,7 @@ const Tools = (() => {
   const css = (n) => Canvas2D.css(n);
   const R6 = (p) => [+p[0].toFixed(6), +p[1].toFixed(6)];
   const notify = (reason) => { for (const f of listeners) f(reason); Canvas2D.requestDraw(); };
-  const selectable = (o) => { const l = Doc.layer(o.layer); return !!l && l.visible && !l.locked; };
+  const selectable = (o) => { const l = Doc.layer(o.layer); return !!l && l.visible && !l.locked && Model.visible2D(o) && !Model.faded2D(o); };
 
   function pick(p) {
     let best = null, bd = 8 / state.view.scale;

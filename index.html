@@ -776,9 +776,320 @@ const state = {
   st: { w: { mur: 200, poutre: 150 }, prof: { mur: '', poutre: '' } },
   /* Symbole à poser (outil « Équipements ») : voir SYMBOLS. */
   sym: { k: 'pompe', s: 400, rot: 0, tag: '' },
+  /* Esquisse en cours d'édition (id) ; 0 : plan général. */
+  sketch: 0,
 };
 
 const VIEW_LIMITS = { min: 0.002, max: 5 };
+
+/* ==== 12-materials.js ==== */
+/* ============ Bibliothèque de matériaux d'ARCHIINDUS : mécanique, thermique, hygrométrie, carbone ============
+   Même principe que la bibliothèque d'ARCHIPLAN (src/engine/10-materials.js), complétée des caractéristiques mécaniques
+   nécessaires au calcul des déformations. Unités :
+     rho kg/m³ · E, G, fy, fu, fk MPa (N/mm²) · nu (−) · alpha 1/K (dilatation linéique) · lambda W/(m·K) · c J/(kg·K)
+     mu facteur de résistance à la vapeur (−) · gwp kg CO2e/kg (production A1-A3, valeur générique) · R m²·K/W (lames d'air).
+   Sources des valeurs mécaniques (valeurs caractéristiques ou nominales, épaisseurs courantes) :
+     - Aciers de construction : EN 1993-1-1 § 3.2 et tableau 3.1 (t ≤ 40 mm) ; E 210 000, G 81 000, ν 0,3, α 12·10⁻⁶.
+     - Aciers inoxydables : EN 1993-1-4 tableau 2.1 (tôles laminées à chaud) ; E 200 000, G 76 900.
+     - Aluminium : EN 1999-1-1 § 3.2.5 et tableau 3.2b (profilés filés) ; E 70 000, G 27 000, α 23·10⁻⁶.
+     - Bétons : EN 1992-1-1 tableau 3.1 (fck, fctm, Ecm) ; ν 0,2, α 10·10⁻⁶.
+     - Armatures : EN 1992-1-1 § 3.2 (B500B, Es 200 000).
+     - Bois massif : EN 338 ; lamellé-collé : EN 14080 (E0,mean, fm,k, ρ moyen).
+     - Fonte ductile : EN 1563 (EN-GJS-500-7).
+   Les valeurs marquées « typique » (plastiques, cuivre, isolants…) sont des ordres de grandeur de fiches fabricants :
+   à remplacer par la fiche technique du produit retenu. Valeurs thermiques : ordre de grandeur EN ISO 10456 / règles Th-U.
+   Aucune de ces valeurs ne remplace une note de calcul signée : elles servent au pré-dimensionnement. */
+const MAT_CATS = ['Aciers', 'Aciers inoxydables', 'Aluminium', 'Fontes et cuivreux', 'Bétons', 'Armatures', 'Bois', 'Maçonnerie',
+  'Plastiques (réseaux)', 'Isolants', 'Bardages et couvertures', 'Verre', 'Étanchéité et divers'];
+const MATS = {};
+function MI(id, nom, cat, p) { MATS[id] = { nom, cat, rho: 1000, lambda: 1, c: 1000, mu: 1, gwp: 0, color: '#9AA3AD', ...p }; }
+const ST_E = { E: 210000, G: 81000, nu: 0.3, alpha: 12e-6, rho: 7850, lambda: 50, c: 450, mu: 1e6, color: '#8C96A2', src: 'EN 1993-1-1' };
+// ---- Aciers de construction (EN 10025-2, EN 1993-1-1 tableau 3.1, t ≤ 40 mm)
+MI('S235', 'Acier S235', 'Aciers', { ...ST_E, fy: 235, fu: 360, gwp: 1.55 });
+MI('S275', 'Acier S275', 'Aciers', { ...ST_E, fy: 275, fu: 430, gwp: 1.55 });
+MI('S355', 'Acier S355', 'Aciers', { ...ST_E, fy: 355, fu: 490, gwp: 1.55 });
+MI('S320GD', 'Tôle galvanisée S320GD (bardage, bac)', 'Aciers', { ...ST_E, fy: 320, fu: 390, gwp: 2.40, src: 'EN 10346', color: '#7D8893' });
+MI('acierGalva', 'Acier galvanisé (tube, serrurerie) S235', 'Aciers', { ...ST_E, fy: 235, fu: 360, gwp: 1.90, color: '#A9B2BA' });
+// ---- Aciers inoxydables (EN 1993-1-4 tableau 2.1, tôles laminées à chaud)
+MI('inox304', 'Inox 1.4301 (304)', 'Aciers inoxydables', { E: 200000, G: 76900, nu: 0.3, alpha: 16e-6, rho: 7900, lambda: 15, c: 500, mu: 1e6, fy: 210, fu: 520, gwp: 4.40, color: '#B9C0C6', src: 'EN 1993-1-4' });
+MI('inox316', 'Inox 1.4404 (316L)', 'Aciers inoxydables', { E: 200000, G: 76900, nu: 0.3, alpha: 16e-6, rho: 8000, lambda: 15, c: 500, mu: 1e6, fy: 220, fu: 520, gwp: 4.80, color: '#C2C8CD', src: 'EN 1993-1-4' });
+// ---- Aluminium (EN 1999-1-1, profilés filés)
+MI('alu6060', 'Aluminium EN AW-6060 T6 (t ≤ 15 mm)', 'Aluminium', { E: 70000, G: 27000, nu: 0.3, alpha: 23e-6, rho: 2700, lambda: 200, c: 880, mu: 1e6, fy: 140, fu: 170, gwp: 6.70, color: '#C3CAD2', src: 'EN 1999-1-1' });
+MI('alu6082', 'Aluminium EN AW-6082 T6 (t ≤ 5 mm)', 'Aluminium', { E: 70000, G: 27000, nu: 0.3, alpha: 23e-6, rho: 2700, lambda: 170, c: 880, mu: 1e6, fy: 250, fu: 290, gwp: 6.70, color: '#BCC4CC', src: 'EN 1999-1-1' });
+// ---- Fontes et cuivreux
+MI('fonteGS', 'Fonte ductile EN-GJS-500-7', 'Fontes et cuivreux', { E: 169000, G: 66000, nu: 0.275, alpha: 12.5e-6, rho: 7100, lambda: 36, c: 515, mu: 1e6, fy: 320, fu: 500, gwp: 1.50, color: '#4D5155', src: 'EN 1563' });
+MI('cuivre', 'Cuivre Cu-DHP (tube R250)', 'Fontes et cuivreux', { E: 115000, nu: 0.34, alpha: 17e-6, rho: 8930, lambda: 380, c: 385, mu: 1e6, fu: 250, gwp: 2.70, color: '#B87333', src: 'EN 1057 · E typique' });
+// ---- Bétons (EN 1992-1-1 tableau 3.1) : fk = fck (compression), ft = fctm (traction moyenne)
+const BE = { nu: 0.2, alpha: 10e-6, rho: 2500, lambda: 2.3, c: 1000, mu: 130, gwp: 0.16, color: '#A9AEB1', src: 'EN 1992-1-1' };
+MI('C20', 'Béton armé C20/25', 'Bétons', { ...BE, fk: 20, ft: 2.2, E: 30000 });
+MI('C25', 'Béton armé C25/30', 'Bétons', { ...BE, fk: 25, ft: 2.6, E: 31000 });
+MI('C30', 'Béton armé C30/37', 'Bétons', { ...BE, fk: 30, ft: 2.9, E: 33000 });
+MI('C35', 'Béton armé C35/45', 'Bétons', { ...BE, fk: 35, ft: 3.2, E: 34000 });
+MI('C40', 'Béton armé C40/50', 'Bétons', { ...BE, fk: 40, ft: 3.5, E: 35000 });
+MI('betonNA', 'Béton non armé C25/30', 'Bétons', { ...BE, fk: 25, ft: 2.6, E: 31000, rho: 2300, lambda: 1.75, mu: 100, gwp: 0.13 });
+// ---- Armatures
+MI('B500B', 'Acier pour béton armé B500B', 'Armatures', { E: 200000, nu: 0.3, alpha: 12e-6, rho: 7850, lambda: 50, c: 450, mu: 1e6, fy: 500, fu: 540, gwp: 1.40, color: '#7A6E64', src: 'EN 1992-1-1 · EN 10080' });
+// ---- Bois (EN 338, EN 14080) : fy = fm,k (flexion), E = E0,mean ; α parallèle au fil typique
+const BO = { alpha: 4e-6, lambda: 0.13, c: 1600, mu: 50, color: '#D8B27A' };
+MI('boisC24', 'Bois massif résineux C24', 'Bois', { ...BO, fy: 24, E: 11000, G: 690, rho: 420, rhok: 350, gwp: 0.26, src: 'EN 338' });
+MI('boisC30', 'Bois massif résineux C30', 'Bois', { ...BO, fy: 30, E: 12000, G: 750, rho: 460, rhok: 380, gwp: 0.26, src: 'EN 338' });
+MI('GL24h', 'Lamellé-collé GL24h', 'Bois', { ...BO, fy: 24, E: 11500, G: 650, rho: 420, rhok: 385, gwp: 0.38, color: '#D6AE72', src: 'EN 14080' });
+MI('GL28h', 'Lamellé-collé GL28h', 'Bois', { ...BO, fy: 28, E: 12600, G: 650, rho: 460, rhok: 425, gwp: 0.38, color: '#D3A86A', src: 'EN 14080' });
+// ---- Maçonnerie (thermique, masse) — résistance non donnée : dépend du produit et du mortier (EN 1996)
+MI('parpaing', 'Bloc béton creux B40', 'Maçonnerie', { rho: 1350, lambda: 1.0, c: 1000, mu: 10, gwp: 0.10, alpha: 8e-6, color: '#BDB6A8', src: 'thermique Th-U' });
+MI('parpaingP', 'Bloc béton plein', 'Maçonnerie', { rho: 2000, lambda: 1.40, c: 1000, mu: 15, gwp: 0.11, alpha: 8e-6, color: '#B3AC9F', src: 'thermique Th-U' });
+MI('brique', 'Brique terre cuite alvéolaire', 'Maçonnerie', { rho: 800, lambda: 0.40, c: 1000, mu: 10, gwp: 0.24, alpha: 6e-6, color: '#C47A52', src: 'thermique Th-U' });
+// ---- Plastiques de réseaux (valeurs typiques, MRS selon EN ISO 12162)
+MI('PVC', 'PVC-U (canalisations)', 'Plastiques (réseaux)', { E: 3000, nu: 0.38, alpha: 80e-6, rho: 1400, lambda: 0.17, c: 900, mu: 5e4, mrs: 25, gwp: 3.10, color: '#E9ECEF', src: 'typique · MRS 25' });
+MI('PE100', 'PEHD PE100', 'Plastiques (réseaux)', { E: 1100, nu: 0.4, alpha: 200e-6, rho: 960, lambda: 0.40, c: 1900, mu: 1e5, mrs: 10, gwp: 2.00, color: '#2F3437', src: 'typique · MRS 10' });
+MI('PPR', 'Polypropylène PP-R', 'Plastiques (réseaux)', { E: 900, nu: 0.4, alpha: 150e-6, rho: 900, lambda: 0.22, c: 1800, mu: 1e5, mrs: 8, gwp: 1.95, color: '#5E8B4A', src: 'typique · MRS 8' });
+// ---- Isolants (ArchiPlan)
+MI('laineRoche', 'Laine de roche', 'Isolants', { rho: 40, lambda: 0.035, c: 1030, mu: 1, gwp: 1.28, color: '#D8BF6E', src: 'thermique' });
+MI('laineRocheD', 'Laine de roche haute densité (bardage, ITE)', 'Isolants', { rho: 140, lambda: 0.038, c: 1030, mu: 1, gwp: 1.28, color: '#CBB062', src: 'thermique' });
+MI('PIR', 'Polyuréthane PIR (parements alu)', 'Isolants', { rho: 32, lambda: 0.022, c: 1400, mu: 60, gwp: 3.48, color: '#E7D9A8', src: 'thermique' });
+MI('PSE', 'Polystyrène expansé PSE', 'Isolants', { rho: 20, lambda: 0.032, c: 1450, mu: 60, gwp: 3.29, color: '#E9EEF0', src: 'thermique' });
+MI('XPS', 'Polystyrène extrudé XPS', 'Isolants', { rho: 32, lambda: 0.032, c: 1450, mu: 150, gwp: 3.40, color: '#A9CBE4', src: 'thermique' });
+MI('laineVerre', 'Laine de verre', 'Isolants', { rho: 15, lambda: 0.035, c: 1030, mu: 1, gwp: 1.35, color: '#E8D56F', src: 'thermique' });
+// ---- Bardages et couvertures
+MI('bacAcier', 'Bac acier laqué (nervuré)', 'Bardages et couvertures', { ...ST_E, fy: 320, fu: 390, gwp: 2.40, color: '#5F6B76', src: 'EN 10346 (S320GD)' });
+MI('bardageAcier', 'Bardage acier laqué (plateau + parement)', 'Bardages et couvertures', { ...ST_E, fy: 320, fu: 390, gwp: 2.40, color: '#9AA6B1', src: 'EN 10346 (S320GD)' });
+MI('fibroCiment', 'Plaque fibres-ciment', 'Bardages et couvertures', { rho: 1500, lambda: 0.35, c: 1050, mu: 50, gwp: 0.60, alpha: 10e-6, color: '#A8A8A2', src: 'typique' });
+// ---- Verre (EN 572, EN 16612)
+MI('verre', 'Verre float', 'Verre', { E: 70000, nu: 0.22, alpha: 9e-6, rho: 2500, lambda: 1.0, c: 750, mu: 1e6, fy: 45, gwp: 1.44, color: '#9FD0E2', src: 'EN 572 · fg,k 45' });
+// ---- Étanchéité et divers (ArchiPlan)
+MI('bitume', 'Membrane bitumineuse', 'Étanchéité et divers', { rho: 1100, lambda: 0.23, c: 1000, mu: 50000, gwp: 0.43, color: '#2C2E31' });
+MI('paraVapeur', 'Pare-vapeur polyéthylène', 'Étanchéité et divers', { rho: 920, lambda: 0.33, c: 2200, mu: 100000, gwp: 2.0, color: '#D6E7EE' });
+MI('chape', 'Chape ciment', 'Étanchéité et divers', { rho: 2000, lambda: 1.40, c: 1000, mu: 50, gwp: 0.17, alpha: 10e-6, color: '#9C978E' });
+MI('resine', 'Résine époxy (sol industriel)', 'Étanchéité et divers', { rho: 1400, lambda: 0.20, c: 1400, mu: 1e4, gwp: 5.70, color: '#9AA7B0' });
+MI('gravier', 'Grave / hérisson', 'Étanchéité et divers', { rho: 1700, lambda: 2.0, c: 1000, mu: 50, gwp: 0.004, color: '#A8A49B' });
+MI('airNV', 'Lame d\'air non ventilée', 'Étanchéité et divers', { rho: 1.2, lambda: 0.025, c: 1000, mu: 1, R: 0.18, color: '#EAF4F8' });
+MI('airFV', 'Lame d\'air faiblement ventilée', 'Étanchéité et divers', { rho: 1.2, lambda: 0.025, c: 1000, mu: 1, R: 0.09, color: '#EAF4F8' });
+MI('enduit', 'Enduit ciment', 'Étanchéité et divers', { rho: 1800, lambda: 1.15, c: 1000, mu: 15, gwp: 0.20, color: '#E7E1D3' });
+MI('ba13', 'Plaque de plâtre BA13', 'Étanchéité et divers', { rho: 800, lambda: 0.25, c: 1000, mu: 10, gwp: 0.39, color: '#F2F0EA' });
+
+/* Matériau par défaut selon le type d'objet (aucun matériau saisi) */
+const MAT_DEFAULT = { poutre: 'S235', mur: 'C25', poteau: 'S235', net: { PVC: 'PVC', PEHD: 'PE100', 'Fonte ductile': 'fonteGS', Acier: 'S235', 'Acier galvanisé': 'acierGalva', Inox: 'inox304', Béton: 'betonNA', Cuivre: 'cuivre' } };
+const matOf = (id) => MATS[id] || null;
+const cleanMatId = (v) => (typeof v === 'string' && MATS[v] ? v : '');
+
+/* ==== 13-sections.js ==== */
+/* ============ Sections : profilés acier laminés (catalogues normalisés) et sections paramétriques ============
+   Profilés I et U : dimensions et caractéristiques des catalogues de profilés laminés à chaud (série européenne :
+   IPE, HEA, HEB selon EN 10365 / Euronorm 19-57 et 53-62 ; UPN). Valeurs tabulées en cm, cm², cm⁴, cm³, kg/m.
+     h, b, tw, tf, r (mm) · A (cm²) · m (kg/m) · Iy, Iz (cm⁴, axe fort / faible) · Wy (cm³, module élastique axe fort)
+   Sections paramétriques calculées : tube rond (CHS), tube rectangulaire (RHS, angles vifs : légère surestimation),
+   rectangle plein (béton, bois), rond plein. Les caractéristiques sont recalculées en mm (A mm², I mm⁴, W mm³). */
+const PROFILES = {};
+function PR(id, fam, h, b, tw, tf, r, A, m, Iy, Wy, Iz) { PROFILES[id] = { id, fam, h, b, tw, tf, r, A, m, Iy, Wy, Iz }; }
+// IPE
+PR('IPE 100', 'IPE', 100, 55, 4.1, 5.7, 7, 10.3, 8.1, 171.0, 34.2, 15.92);
+PR('IPE 120', 'IPE', 120, 64, 4.4, 6.3, 7, 13.2, 10.4, 317.8, 52.96, 27.67);
+PR('IPE 140', 'IPE', 140, 73, 4.7, 6.9, 7, 16.4, 12.9, 541.2, 77.32, 44.92);
+PR('IPE 160', 'IPE', 160, 82, 5.0, 7.4, 9, 20.1, 15.8, 869.3, 108.7, 68.31);
+PR('IPE 180', 'IPE', 180, 91, 5.3, 8.0, 9, 23.9, 18.8, 1317, 146.3, 100.9);
+PR('IPE 200', 'IPE', 200, 100, 5.6, 8.5, 12, 28.5, 22.4, 1943, 194.3, 142.4);
+PR('IPE 220', 'IPE', 220, 110, 5.9, 9.2, 12, 33.4, 26.2, 2772, 252.0, 204.9);
+PR('IPE 240', 'IPE', 240, 120, 6.2, 9.8, 15, 39.1, 30.7, 3892, 324.3, 283.6);
+PR('IPE 270', 'IPE', 270, 135, 6.6, 10.2, 15, 45.9, 36.1, 5790, 428.9, 419.9);
+PR('IPE 300', 'IPE', 300, 150, 7.1, 10.7, 15, 53.8, 42.2, 8356, 557.1, 603.8);
+PR('IPE 330', 'IPE', 330, 160, 7.5, 11.5, 18, 62.6, 49.1, 11770, 713.1, 788.1);
+PR('IPE 360', 'IPE', 360, 170, 8.0, 12.7, 18, 72.7, 57.1, 16270, 903.6, 1043);
+PR('IPE 400', 'IPE', 400, 180, 8.6, 13.5, 21, 84.5, 66.3, 23130, 1156, 1318);
+// HEA
+PR('HEA 160', 'HEA', 152, 160, 6.0, 9.0, 15, 38.8, 30.4, 1673, 220.1, 615.6);
+PR('HEA 200', 'HEA', 190, 200, 6.5, 10.0, 18, 53.8, 42.3, 3692, 388.6, 1336);
+PR('HEA 240', 'HEA', 230, 240, 7.5, 12.0, 21, 76.8, 60.3, 7763, 675.1, 2769);
+// HEB
+PR('HEB 160', 'HEB', 160, 160, 8.0, 13.0, 15, 54.3, 42.6, 2492, 311.5, 889.2);
+PR('HEB 200', 'HEB', 200, 200, 9.0, 15.0, 18, 78.1, 61.3, 5696, 569.6, 2003);
+PR('HEB 240', 'HEB', 240, 240, 10.0, 17.0, 21, 106.0, 83.2, 11260, 938.3, 3923);
+// UPN
+PR('UPN 160', 'UPN', 160, 65, 7.5, 10.5, 10.5, 24.0, 18.8, 925.0, 116.0, 85.3);
+
+const Sections = (() => {
+  /* Profil désigné dans un texte libre (« IPE 200 », « ipe200 », « HEA200 »). */
+  function find(txt) {
+    const m = /\b(IPE|HEA|HEB|UPN)\s*(\d{2,3})\b/i.exec(String(txt || ''));
+    return m ? PROFILES[`${m[1].toUpperCase()} ${m[2]}`] || null : null;
+  }
+  /* Caractéristiques en mm d'une section : {kind, A, Iy, Iz, Wy, h, b, m (kg/m pour l'acier), label} */
+  function props(sec, rho = 7850) {
+    if (!sec) return null;
+    if (sec.kind === 'prof') { const p = PROFILES[sec.id]; if (!p) return null; return { kind: 'prof', label: p.id, h: p.h, b: p.b, A: p.A * 100, Iy: p.Iy * 1e4, Iz: p.Iz * 1e4, Wy: p.Wy * 1e3, m: p.m, tab: true }; }
+    if (sec.kind === 'chs') { const D = sec.D, d = D - 2 * sec.t, A = Math.PI / 4 * (D * D - d * d), I = Math.PI / 64 * (D ** 4 - d ** 4); return { kind: 'chs', label: `Tube Ø${D}×${sec.t}`, h: D, b: D, A, Iy: I, Iz: I, Wy: I / (D / 2), m: A * 1e-6 * rho }; }
+    if (sec.kind === 'rhs') { const { h, b, t } = sec, A = b * h - (b - 2 * t) * (h - 2 * t), Iy = (b * h ** 3 - (b - 2 * t) * (h - 2 * t) ** 3) / 12, Iz = (h * b ** 3 - (h - 2 * t) * (b - 2 * t) ** 3) / 12; return { kind: 'rhs', label: `Tube ${h}×${b}×${t}`, h, b, A, Iy, Iz, Wy: Iy / (h / 2), m: A * 1e-6 * rho }; }
+    if (sec.kind === 'rect') { const { h, b } = sec, A = b * h, Iy = b * h ** 3 / 12, Iz = h * b ** 3 / 12; return { kind: 'rect', label: `Section ${b}×${h}`, h, b, A, Iy, Iz, Wy: Iy / (h / 2), m: A * 1e-6 * rho }; }
+    if (sec.kind === 'round') { const D = sec.D, A = Math.PI * D * D / 4, I = Math.PI * D ** 4 / 64; return { kind: 'round', label: `Rond Ø${D}`, h: D, b: D, A, Iy: I, Iz: I, Wy: I / (D / 2), m: A * 1e-6 * rho }; }
+    return null;
+  }
+  /* Inertie géométrique d'un I sans congés (contrôle des valeurs tabulées : la valeur tabulée doit être un peu supérieure). */
+  const iGeom = (p) => (p.b * p.h ** 3 - (p.b - p.tw) * (p.h - 2 * p.tf) ** 3) / 12;
+  /* Contour d'un profilé (mm, centré, axe fort horizontal) : I ou U, sans congés ; rectangle ; cercle (polygone 32 côtés). */
+  function outline(sec) {
+    if (sec.kind === 'prof') {
+      const p = PROFILES[sec.id]; if (!p) return null;
+      const h = p.h / 2, b = p.b / 2, w = p.tw / 2, f = p.tf;
+      if (p.fam === 'UPN') return { outer: [[-b, -h], [b, -h], [b, -h + f], [-b + p.tw, -h + f], [-b + p.tw, h - f], [b, h - f], [b, h], [-b, h]], holes: [] };
+      return { outer: [[-b, -h], [b, -h], [b, -h + f], [w, -h + f], [w, h - f], [b, h - f], [b, h], [-b, h], [-b, h - f], [-w, h - f], [-w, -h + f], [-b, -h + f]], holes: [] };
+    }
+    const circ = (r, n = 32) => Array.from({ length: n }, (_, i) => [r * Math.cos(i * 2 * Math.PI / n), r * Math.sin(i * 2 * Math.PI / n)]);
+    if (sec.kind === 'chs') return { outer: circ(sec.D / 2), holes: [circ(sec.D / 2 - sec.t).reverse()] };
+    if (sec.kind === 'round') return { outer: circ(sec.D / 2), holes: [] };
+    const rect = (b, h) => [[-b / 2, -h / 2], [b / 2, -h / 2], [b / 2, h / 2], [-b / 2, h / 2]];
+    if (sec.kind === 'rhs') return { outer: rect(sec.b, sec.h), holes: [rect(sec.b - 2 * sec.t, sec.h - 2 * sec.t).reverse()] };
+    if (sec.kind === 'rect') return { outer: rect(sec.b, sec.h), holes: [] };
+    return null;
+  }
+  const list = () => Object.keys(PROFILES);
+  return { find, props, iGeom, outline, list };
+})();
+
+/* ==== 14-physics.js ==== */
+/* ============ Compositions et calculs : parois (thermique, inertie, acoustique, hygrométrie, carbone) et mécanique ============
+   Parois : mêmes méthodes qu'ARCHIPLAN (src/engine/12-physics.js), simplifiées et indicatives (pré-dimensionnement) :
+   - Résistance et coefficient U : EN ISO 6946 (sans ponts thermiques ni fixations).
+   - Inertie : EN ISO 13786 (matrices de transfert, période 24 h) → déphasage, amortissement.
+   - Acoustique : loi de masse expérimentale et système masse-ressort-masse.
+   - Hygrométrie : méthode de Glaser (régime permanent, hiver).
+   - Carbone : production (A1-A3) à partir des valeurs génériques de la bibliothèque.
+   Mécanique (formules de la résistance des matériaux, élasticité linéaire, petites déformations) :
+   - Flèche, moment et effort tranchant de poutres isostatiques ou bi-encastrées sous charge répartie et charge ponctuelle.
+   - Flambement : charge critique d'Euler Ncr = π²EI/Lcr² et élancement réduit λ̄ (EN 1993-1-1 § 6.3.1.3).
+   - Dilatation thermique : ΔL = α·L·ΔT.
+   Ces résultats ne tiennent compte ni des coefficients partiels, ni du déversement, ni des assemblages : ils ne remplacent
+   pas une note de calcul aux Eurocodes. */
+const RS = {
+  mur: { si: 0.13, se: 0.04, label: 'Mur (flux horizontal)' },
+  toiture: { si: 0.10, se: 0.04, label: 'Toiture (flux ascendant)' },
+  plancherBas: { si: 0.17, se: 0.04, label: 'Plancher bas (flux descendant)' },
+  terrePlein: { si: 0.17, se: 0.00, label: 'Dallage sur terre-plein (approché)' },
+};
+/* Compositions types d'ARCHIINDUS (bâtiments d'activité, ouvrages). Murs : extérieur → intérieur ; planchers et toitures : haut → bas. */
+const COMPOS = {
+  'BARD-SP': { nom: 'Bardage simple peau acier (75/100)', kind: 'wall', layers: [['bardageAcier', 0.00075]] },
+  'BARD-DP': { nom: 'Bardage double peau acier + laine de roche 120', kind: 'wall', layers: [['bardageAcier', 0.00075], ['airFV', 0.02], ['laineRocheD', 0.12], ['bardageAcier', 0.00075]] },
+  'SANDW-PIR80': { nom: 'Panneau sandwich PIR 80 (parements acier)', kind: 'wall', layers: [['bardageAcier', 0.0005], ['PIR', 0.08], ['bardageAcier', 0.0004]] },
+  'SANDW-LR100': { nom: 'Panneau sandwich laine de roche 100 (coupe-feu)', kind: 'wall', layers: [['bardageAcier', 0.0006], ['laineRocheD', 0.10], ['bardageAcier', 0.0005]] },
+  'VOILE-BA20': { nom: 'Voile béton armé 20', kind: 'wall', layers: [['C25', 0.20]] },
+  'VOILE-BA20-ITE': { nom: 'Voile BA 20 + ITE laine de roche 140 sous bardage', kind: 'wall', layers: [['bardageAcier', 0.00075], ['airFV', 0.03], ['laineRocheD', 0.14], ['C25', 0.20]] },
+  'MUR-PARP20': { nom: 'Parpaing 20 enduit deux faces', kind: 'wall', layers: [['enduit', 0.015], ['parpaing', 0.20], ['enduit', 0.015]] },
+  'MUR-PARP20-DOUB': { nom: 'Parpaing 20 + doublage laine 100 + BA13 (locaux sociaux)', kind: 'wall', layers: [['enduit', 0.015], ['parpaing', 0.20], ['laineVerre', 0.10], ['ba13', 0.013]] },
+  'DAL-IND': { nom: 'Dallage industriel BA 20 + résine, sur hérisson', kind: 'slab', ctx: 'terrePlein', layers: [['resine', 0.003], ['C30', 0.20], ['paraVapeur', 0.0002], ['gravier', 0.20]] },
+  'DAL-IND-ISO': { nom: 'Dallage industriel isolé : BA 18 + XPS 80', kind: 'slab', ctx: 'terrePlein', layers: [['resine', 0.003], ['C30', 0.18], ['XPS', 0.08], ['gravier', 0.20]] },
+  'DALLE-BA20': { nom: 'Plancher dalle BA 20 + chape', kind: 'slab', ctx: 'plancherBas', layers: [['chape', 0.05], ['C25', 0.20]] },
+  'TOIT-BAC-PIR': { nom: 'Toiture bac acier + PIR 120 + étanchéité', kind: 'roof', ctx: 'toiture', layers: [['bitume', 0.006], ['PIR', 0.12], ['paraVapeur', 0.0002], ['bacAcier', 0.00075]] },
+  'TOIT-SANDW': { nom: 'Toiture panneau sandwich PIR 100', kind: 'roof', ctx: 'toiture', layers: [['bacAcier', 0.0005], ['PIR', 0.10], ['bacAcier', 0.0004]] },
+  'TOIT-FIBRO': { nom: 'Couverture fibres-ciment (non isolée)', kind: 'roof', ctx: 'toiture', layers: [['fibroCiment', 0.0065]] },
+};
+const PHYS_T = 86400;
+const Cx = {
+  m: (a, b) => [a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]], a: (a, b) => [a[0] + b[0], a[1] + b[1]], s: (a, b) => [a[0] - b[0], a[1] - b[1]],
+  abs: (a) => Math.hypot(a[0], a[1]), arg: (a) => Math.atan2(a[1], a[0]), div: (a, b) => { const d = b[0] * b[0] + b[1] * b[1]; return [(a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d]; },
+};
+const Phys = (() => {
+  const mm2 = (A, B) => [[Cx.a(Cx.m(A[0][0], B[0][0]), Cx.m(A[0][1], B[1][0])), Cx.a(Cx.m(A[0][0], B[0][1]), Cx.m(A[0][1], B[1][1]))],
+    [Cx.a(Cx.m(A[1][0], B[0][0]), Cx.m(A[1][1], B[1][0])), Cx.a(Cx.m(A[1][0], B[0][1]), Cx.m(A[1][1], B[1][1]))]];
+  const mat = (id) => matOf(id) || { nom: id, rho: 1000, lambda: 1, c: 1000, mu: 10, gwp: 0 };
+  const layerR = (m, e) => (m.R != null ? m.R : e / m.lambda);
+  const sdOf = (m, e) => (m.R != null ? e : m.mu * e);
+  const psat = (t) => (t >= 0 ? 610.5 * Math.exp(17.269 * t / (237.3 + t)) : 610.5 * Math.exp(21.875 * t / (265.5 + t)));
+
+  function thermal(layers, ctx = 'mur') {
+    const rs = RS[ctx] || RS.mur; let R = rs.si + rs.se; const parts = [];
+    for (const [id, e] of layers) { const r = layerR(mat(id), e); parts.push(r); R += r; }
+    return { R, Rp: R - rs.si - rs.se, U: 1 / R, si: rs.si, se: rs.se, parts };
+  }
+  function dynamic(layers, ctx = 'mur') {
+    const rs = RS[ctx] || RS.mur, res = (r) => [[[1, 0], [-r, 0]], [[0, 0], [1, 0]]];
+    let Z = res(rs.si);
+    for (const [id, e] of layers) {
+      const m = mat(id); let L;
+      if (m.R != null || e <= 0) L = res(m.R != null ? m.R : 0);
+      else {
+        const d = Math.sqrt(m.lambda * PHYS_T / (Math.PI * m.rho * m.c)), x = e / d;
+        const ch = Math.cosh(x), sh = Math.sinh(x), co = Math.cos(x), si = Math.sin(x);
+        const z11 = [ch * co, sh * si], k12 = -d / (2 * m.lambda), z12 = [k12 * (sh * co + ch * si), k12 * (ch * si - sh * co)];
+        const k21 = -m.lambda / d, z21 = [k21 * (sh * co - ch * si), k21 * (sh * co + ch * si)];
+        L = [[z11, z12], [z21, z11]];
+      }
+      Z = mm2(L, Z);
+    }
+    Z = mm2(res(rs.se), Z);
+    const Y12 = Cx.div([-1, 0], Z[0][1]), U = thermal(layers, ctx).U;
+    let dt = PHYS_T / (2 * Math.PI) * Cx.arg(Y12) / 3600; dt = ((-dt % 24) + 24) % 24;
+    return { Y12: Cx.abs(Y12), f: Cx.abs(Y12) / U, phase: dt };
+  }
+  function acoustic(layers) {
+    let m = 0; const leaves = []; let cur = 0, cav = 0, gap = 0;
+    const soft = (id) => ['laineRoche', 'laineRocheD', 'laineVerre', 'airNV', 'airFV'].includes(id);
+    for (const [id, e] of layers) {
+      const mt = mat(id), ms = (mt.R != null ? 0 : mt.rho) * e; m += ms;
+      if (soft(id)) { if (cur > 0) { leaves.push(cur); cur = 0; } gap += e; cav = Math.max(cav, gap); } else { cur += ms; gap = 0; }
+    }
+    if (cur > 0) leaves.push(cur);
+    const law = (mm) => (mm >= 150 ? 37.5 * Math.log10(mm) - 42 : Math.max(0, 12.4 * Math.log10(Math.max(mm, 1)) + 12.6));
+    let Rw = law(m), f0 = null, kind = 'Paroi simple (loi de masse)';
+    if (leaves.length >= 2 && cav >= 0.02) {
+      const m1 = leaves[0], m2 = leaves[leaves.length - 1];
+      f0 = 60 * Math.sqrt((1 / m1 + 1 / m2) / cav);
+      const raw = 20 * Math.log10(Math.max(1, 100 / f0)) + 8 + 8 * Math.log10(cav / 0.05 + 1);
+      const bonus = Math.max(0, Math.min(m1 + m2 > 150 ? 12 : 22, (m1 + m2 > 150 ? 0.5 : 1) * raw));
+      Rw = law(m1 + m2) + bonus; kind = 'Double paroi (masse-ressort-masse)';
+    }
+    return { m, Rw: Math.round(Math.max(0, Rw)), f0, kind };
+  }
+  function glaser(layers, ctx = 'mur', cond = { ti: 20, hi: 0.5, te: -5, he: 0.8 }) {
+    const th = thermal(layers, ctx), pi = cond.hi * psat(cond.ti), pe = cond.he * psat(cond.te);
+    let sdTot = 0; for (const [id, e] of layers) sdTot += sdOf(mat(id), e);
+    /* parcours de l'intérieur vers l'extérieur : murs décrits de l'extérieur vers l'intérieur, toitures et planchers du haut vers le bas
+       (intérieur en bas pour une toiture, en haut pour un plancher bas ou un dallage) */
+    const inner = ctx === 'mur' || ctx === 'toiture' ? layers.slice().reverse() : layers.slice();
+    const pts = []; let Rc = th.si, sdc = 0;
+    const T = (R) => cond.ti - (cond.ti - cond.te) * R / th.R;
+    pts.push({ t: T(Rc), ps: psat(T(Rc)), p: pi });
+    for (const [id, e] of inner) { const m = mat(id); Rc += layerR(m, e); sdc += sdOf(m, e); const t = T(Rc); pts.push({ t, ps: psat(t), p: pi - (pi - pe) * (sdTot ? sdc / sdTot : 0) }); }
+    const risk = pts.filter((q) => q.p > q.ps * 1.0001).length;
+    return { pts, risk, sdTot };
+  }
+  /* Bilan complet d'une composition */
+  function report(layers, ctx = 'mur') {
+    const th = thermal(layers, ctx), dyn = dynamic(layers, ctx), ac = acoustic(layers), gl = glaser(layers, ctx);
+    let mass = 0, T = 0, co2 = 0;
+    for (const [id, e] of layers) { const m = mat(id), mm = (m.R != null ? 0 : m.rho) * e; mass += mm; T += e; co2 += mm * (m.gwp || 0); }
+    return { th, dyn, ac, gl, mass, T, co2 };
+  }
+  const composOf = (id) => COMPOS[id] || null;
+  const thickness = (id) => { const c = COMPOS[id]; return c ? c.layers.reduce((s, [, e]) => s + e, 0) * 1000 : 0; };
+  return { thermal, dynamic, acoustic, glaser, report, composOf, thickness, psat };
+})();
+
+/* ---------------- Mécanique ---------------- */
+const Mech = (() => {
+  const SUPPORTS = {
+    simple: { label: 'Sur deux appuis simples', fq: 5 / 384, Mq: 1 / 8, Vq: 1 / 2, fP: 1 / 48, MP: 1 / 4, VP: 1 / 2, Pwhere: 'à mi-portée' },
+    encastre: { label: 'Encastrée aux deux extrémités', fq: 1 / 384, Mq: 1 / 12, Vq: 1 / 2, fP: 1 / 192, MP: 1 / 8, VP: 1 / 2, Pwhere: 'à mi-portée' },
+    console: { label: 'Console (encastrée à une extrémité)', fq: 1 / 8, Mq: 1 / 2, Vq: 1, fP: 1 / 3, MP: 1, VP: 1, Pwhere: 'en bout' },
+  };
+  /* Poutre : L (mm), q (kN/m = N/mm, charge répartie totale), P (kN), E (MPa), I (mm⁴), W (mm³), fy (MPa).
+     f (mm) = kq·q·L⁴/(E·I) + kP·P·L³/(E·I) ; M (kN·m) ; V (kN) ; σ = M/W (MPa). */
+  function beam({ L, q = 0, P = 0, support = 'simple', E, I, W, fy }) {
+    const s = SUPPORTS[support] || SUPPORTS.simple, Pn = P * 1000;
+    const f = s.fq * q * L ** 4 / (E * I) + s.fP * Pn * L ** 3 / (E * I);
+    const M = (s.Mq * q * L * L + s.MP * Pn * L) / 1e6;          /* N·mm → kN·m */
+    const V = (s.Vq * q * L + s.VP * Pn) / 1000;                   /* N → kN */
+    const sigma = W ? M * 1e6 / W : null;
+    return { f, M, V, sigma, ratio: sigma != null && fy ? sigma / fy : null, Lf: f > 0 ? L / f : Infinity, support: s.label };
+  }
+  /* Flambement (Euler) : Lcr (mm) ; Ncr (kN) ; λ = Lcr/i ; λ̄ = λ/λ1 avec λ1 = π√(E/fy). */
+  function euler({ E, I, A, Lcr, fy }) {
+    const Ncr = Math.PI ** 2 * E * I / (Lcr * Lcr) / 1000, i = Math.sqrt(I / A), lam = Lcr / i;
+    const lam1 = fy ? Math.PI * Math.sqrt(E / fy) : null;
+    return { Ncr, i, lam, lamBar: lam1 ? lam / lam1 : null, Npl: fy ? A * fy / 1000 : null };
+  }
+  /* Dilatation thermique : α (1/K), L (mm), ΔT (K) → ΔL (mm) */
+  const dilat = (alpha, L, dT) => alpha * L * dT;
+  return { SUPPORTS, beam, euler, dilat };
+})();
 
 /* ==== 20-canvas.js ==== */
 /* Canevas 2D : grille adaptative, axes, déplacement (molette enfoncée, barre d'espace ou outil Main), zoom à la molette
@@ -1137,7 +1448,7 @@ const Doc = (() => {
 
   function fresh() {
     const layers = LAYER_DEFAULTS.map((l, i) => ({ id: i + 1, name: l.name, color: l.color, group: l.group, visible: true, locked: false }));
-    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT } };
+    return { schemaVersion: 1, name: 'Projet sans titre', units: 'mm', layers, objects: [], nextId: 1, nextLayerId: layers.length + 1, active: 1, sheet: { ...SHEET_DEFAULT }, sketches: [], features: [], comps: [], site: null, nextSk: 1, nextF: 1, nextC: 1 };
   }
 
   function emit(reason) { for (const f of subs) f(reason); }
@@ -1216,12 +1527,17 @@ const Doc = (() => {
         default: bad(where + ` (type « ${String(o.type).slice(0, 20)} » inconnu).`);
       }
       out.layer = layerIds.has(o.layer) ? o.layer : layers[0].id;
+      if (Number.isInteger(o.sk) && o.sk > 0) out.sk = o.sk;
+      { const m = cleanMatId(o.mat); if (m && (out.net || out.st || out.type === 'sym')) out.mat = m; }
+      if (out.st && o.st && typeof o.st.comp === 'string' && COMPOS[o.st.comp] && out.st.kind === 'mur') out.st.comp = o.st.comp;
       let id = Number.isInteger(o.id) && o.id > 0 && !seenO.has(o.id) ? o.id : 0;
       if (id) { seenO.add(id); maxO = Math.max(maxO, id); }
       out.id = id;
       objects.push(out);
     });
     for (const o of objects) if (!o.id) o.id = ++maxO;
+    const M = Model.clean(raw, objects, layerIds, layers[0].id);
+    const nx = (arr) => arr.reduce((m, x) => Math.max(m, x.id), 0) + 1;
 
     return {
       schemaVersion: 1,
@@ -1232,6 +1548,8 @@ const Doc = (() => {
       nextLayerId: maxL + 1,
       active: layerIds.has(raw.active) ? raw.active : layers[0].id,
       sheet: cleanSheet(raw.sheet),
+      sketches: M.sketches, features: M.features, comps: M.comps, site: M.site,
+      nextSk: nx(M.sketches), nextF: nx(M.features), nextC: nx(M.comps),
     };
   }
 
@@ -1252,6 +1570,7 @@ const Doc = (() => {
     /* À appeler dans mutate : ajoute un objet sur le calque actif. */
     add(o) {
       o.id = data.nextId++; o.layer = data.active;
+      if (state.sketch && Model.sketch(state.sketch)) o.sk = state.sketch;
       if (state.mode !== 'none' && (o.type === 'line' || (o.type === 'poly' && (!o.closed || state.mode !== 'net')))) {
         if (state.mode === 'net') { const nt = cleanNet({ dn: state.net.dn, mat: state.net.mat, tag: '' }); if (nt) o.net = nt; }
         else { const k = state.mode, sc = cleanSt({ kind: k, w: state.st.w[k], prof: state.st.prof[k], tag: '' }); if (sc) o.st = sc; }
@@ -1285,6 +1604,301 @@ const Doc = (() => {
       } catch (e) { return false; }
     },
   };
+})();
+
+/* ==== 41-model.js ==== */
+/* ============ Modèle 3D paramétrique : esquisses sur plans, fonctions (extrusion, révolution), composants d'assemblage ============
+   Principe des modeleurs volumiques (SolidWorks, Inventor) : on dessine une ESQUISSE 2D sur un plan (Dessus, Face, Droite, décalé
+   d'une cote), puis on lui applique une FONCTION 3D (bossage extrudé, révolution). Les fonctions restent liées à l'esquisse :
+   modifier l'esquisse ou la profondeur régénère le volume. L'ASSEMBLAGE place des composants (pièces paramétriques de la
+   bibliothèque) avec une position, une rotation et des contraintes simples (fixe, posé sur, axe aligné, décalage).
+   Données du projet (toutes facultatives, format schemaVersion 1) :
+     objects[].sk  id de l'esquisse qui contient l'objet (absent : plan général)
+     sketches[]    {id, name, plane: 'top'|'front'|'right', off (mm)}
+     features[]    {id, type: 'extrude'|'revolve', name, sk, d (mm), dir: '+'|'-'|'mid', ang (°), axis (id d'une ligne), mat, layer, hide}
+     comps[]       {id, name, part: {t, …paramètres}, pos: [x, y, z] (mm), rot (° autour de Z), mat, layer, fix, mate: {t, ref, d}}
+   Repère du plan : x vers l'est, y vers le nord, z vers le haut, en mm. */
+const PLANES = {
+  top: { label: 'Dessus', U: [1, 0, 0], V: [0, 1, 0], W: [0, 0, 1], axes: 'X · Y', norm: 'Z' },
+  front: { label: 'Face', U: [1, 0, 0], V: [0, 0, 1], W: [0, -1, 0], axes: 'X · Z', norm: '−Y' },
+  right: { label: 'Droite', U: [0, 1, 0], V: [0, 0, 1], W: [1, 0, 0], axes: 'Y · Z', norm: 'X' },
+};
+const FEATURE_TYPES = { extrude: 'Bossage extrudé', revolve: 'Révolution' };
+const MATE_TYPES = { '': 'Libre', fix: 'Fixe', sur: 'Posé sur', axe: 'Axe aligné (même centre en plan)', decal: 'Décalage' };
+
+/* Pièces paramétriques de la bibliothèque d'assemblage. p : paramètres (mm). geo(p) → solides locaux ; bb(p) → boîte locale [x0,y0,z0,x1,y1,z1]. */
+const PARTS = {
+  profil: { label: 'Profilé acier', icon: 'I', fam: 'Charpente métallique',
+    def: { prof: 'HEA 200', L: 6000, orient: 'v' }, mat: 'S355',
+    fields: [['prof', 'Profilé', 'prof'], ['L', 'Longueur (mm)', 'num', 100, 60000], ['orient', 'Orientation', 'sel', { v: 'Verticale (poteau)', x: 'Horizontale suivant X', y: 'Horizontale suivant Y' }]] },
+  platine: { label: 'Platine percée', icon: '▣', fam: 'Assemblages',
+    def: { Lx: 300, Ly: 300, e: 20, dt: 22, m: 50 }, mat: 'S235',
+    fields: [['Lx', 'Longueur X (mm)', 'num', 20, 3000], ['Ly', 'Longueur Y (mm)', 'num', 20, 3000], ['e', 'Épaisseur (mm)', 'num', 2, 200], ['dt', 'Ø des trous (mm)', 'num', 0, 100], ['m', 'Pince des trous (mm)', 'num', 5, 500]] },
+  dalle: { label: 'Dalle / massif', icon: '▭', fam: 'Génie civil',
+    def: { Lx: 6000, Ly: 4000, e: 200 }, mat: 'C25',
+    fields: [['Lx', 'Longueur X (mm)', 'num', 50, 200000], ['Ly', 'Longueur Y (mm)', 'num', 50, 200000], ['e', 'Épaisseur (mm)', 'num', 20, 5000]] },
+  massif: { label: 'Massif de fondation', icon: '▦', fam: 'Génie civil',
+    def: { Lx: 1200, Ly: 1200, e: 600 }, mat: 'C25',
+    fields: [['Lx', 'Longueur X (mm)', 'num', 100, 20000], ['Ly', 'Longueur Y (mm)', 'num', 100, 20000], ['e', 'Hauteur (mm)', 'num', 100, 5000]] },
+  cuve: { label: 'Cuve cylindrique', icon: '◯', fam: 'Fluides',
+    def: { D: 2000, H: 3000, e: 8 }, mat: 'inox304',
+    fields: [['D', 'Diamètre (mm)', 'num', 100, 30000], ['H', 'Hauteur (mm)', 'num', 100, 40000], ['e', 'Épaisseur de virole (mm)', 'num', 1, 100]] },
+  regard: { label: 'Regard béton', icon: '⊡', fam: 'Réseaux humides',
+    def: { Lx: 1000, Ly: 1000, H: 1500, e: 150 }, mat: 'C25',
+    fields: [['Lx', 'Intérieur X (mm)', 'num', 300, 5000], ['Ly', 'Intérieur Y (mm)', 'num', 300, 5000], ['H', 'Hauteur (mm)', 'num', 300, 10000], ['e', 'Épaisseur des parois (mm)', 'num', 50, 500]] },
+  pompe: { label: 'Groupe motopompe', icon: '⊕', fam: 'Fluides',
+    def: { L: 1200, l: 500, H: 700 }, mat: 'fonteGS',
+    fields: [['L', 'Longueur (mm)', 'num', 200, 10000], ['l', 'Largeur (mm)', 'num', 100, 5000], ['H', 'Hauteur (mm)', 'num', 100, 5000]] },
+  gardecorps: { label: 'Garde-corps', icon: '⊓', fam: 'Serrurerie',
+    def: { L: 3000, H: 1100, ent: 1000, D: 42.4 }, mat: 'acierGalva',
+    fields: [['L', 'Longueur (mm)', 'num', 300, 30000], ['H', 'Hauteur (mm)', 'num', 500, 2000], ['ent', 'Entraxe des montants (mm)', 'num', 300, 3000], ['D', 'Ø des tubes (mm)', 'num', 20, 100]] },
+};
+
+const Model = (() => {
+  const num = (v) => typeof v === 'number' && Number.isFinite(v);
+  const str = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+  const add3 = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+  const mul3 = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const area2 = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
+  const inPoly = (x, y, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; } return c; };
+  const circle = (c, r, n = 48) => Array.from({ length: n }, (_, i) => [c[0] + r * Math.cos(i * 2 * Math.PI / n), c[1] + r * Math.sin(i * 2 * Math.PI / n)]);
+
+  /* ---------- validation (appelée par Doc.sanitize) ---------- */
+  function clean(raw, objects, layerIds, firstLayer) {
+    const sketches = [], features = [], comps = [];
+    const seenS = new Set();
+    for (const s of Array.isArray(raw.sketches) ? raw.sketches.slice(0, 500) : []) {
+      if (!s || !Number.isInteger(s.id) || s.id <= 0 || seenS.has(s.id) || !PLANES[s.plane]) continue;
+      seenS.add(s.id);
+      sketches.push({ id: s.id, name: str(s.name, 60) || `Esquisse ${s.id}`, plane: s.plane, off: num(s.off) && Math.abs(s.off) < 1e7 ? s.off : 0 });
+    }
+    for (const o of objects) if (o.sk !== undefined && !seenS.has(o.sk)) delete o.sk;
+    const objIds = new Set(objects.map((o) => o.id));
+    const seenF = new Set();
+    for (const f of Array.isArray(raw.features) ? raw.features.slice(0, 2000) : []) {
+      if (!f || !Number.isInteger(f.id) || f.id <= 0 || seenF.has(f.id) || !FEATURE_TYPES[f.type] || !seenS.has(f.sk)) continue;
+      seenF.add(f.id);
+      const out = { id: f.id, type: f.type, name: str(f.name, 60) || `${FEATURE_TYPES[f.type]} ${f.id}`, sk: f.sk,
+        d: num(f.d) && f.d > 0 && f.d <= 1e6 ? f.d : 1000, dir: ['+', '-', 'mid'].includes(f.dir) ? f.dir : '+',
+        mat: cleanMatId(f.mat), layer: layerIds.has(f.layer) ? f.layer : firstLayer, hide: f.hide === true };
+      if (f.type === 'revolve') { out.ang = num(f.ang) && f.ang > 0 && f.ang <= 360 ? f.ang : 360; out.axis = Number.isInteger(f.axis) && objIds.has(f.axis) ? f.axis : 0; }
+      features.push(out);
+    }
+    const seenC = new Set();
+    for (const c of Array.isArray(raw.comps) ? raw.comps.slice(0, 5000) : []) {
+      if (!c || !Number.isInteger(c.id) || c.id <= 0 || seenC.has(c.id) || !c.part || !PARTS[c.part.t]) continue;
+      seenC.add(c.id);
+      const part = cleanPart(c.part);
+      const pos = Array.isArray(c.pos) && c.pos.length === 3 && c.pos.every((v) => num(v) && Math.abs(v) < 1e8) ? c.pos.slice() : [0, 0, 0];
+      const m = c.mate && typeof c.mate === 'object' && MATE_TYPES[c.mate.t] !== undefined ? c.mate : { t: '' };
+      comps.push({ id: c.id, name: str(c.name, 60) || `${PARTS[part.t].label} ${c.id}`, part, pos, rot: num(c.rot) ? ((c.rot % 360) + 360) % 360 : 0,
+        mat: cleanMatId(c.mat) || PARTS[part.t].mat, layer: layerIds.has(c.layer) ? c.layer : firstLayer, fix: c.fix === true,
+        mate: { t: m.t || '', ref: Number.isInteger(m.ref) ? m.ref : 0, d: Array.isArray(m.d) && m.d.length === 3 && m.d.every(num) ? m.d.slice() : [0, 0, 0] } });
+    }
+    for (const c of comps) if (c.mate.t && c.mate.t !== 'fix' && !seenC.has(c.mate.ref)) c.mate = { t: '', ref: 0, d: [0, 0, 0] };
+    const site = raw.site && num(raw.site.lat) && num(raw.site.lon) && Math.abs(raw.site.lat) <= 90 && Math.abs(raw.site.lon) <= 180
+      ? { label: str(raw.site.label, 160), lat: raw.site.lat, lon: raw.site.lon, size: [500, 1000, 1600].includes(raw.site.size) ? raw.site.size : 500 } : null;
+    return { sketches, features, comps, site };
+  }
+  function cleanPart(p) {
+    const P = PARTS[p.t], out = { t: p.t };
+    for (const [k, , kind, mn, mx] of P.fields) {
+      const v = p[k], d = P.def[k];
+      if (kind === 'num') out[k] = num(v) && v >= mn && v <= mx ? v : d;
+      else if (kind === 'prof') out[k] = typeof v === 'string' && PROFILES[v] ? v : d;
+      else out[k] = typeof v === 'string' && Object.prototype.hasOwnProperty.call(P.fields.find((f) => f[0] === k)[3], v) ? v : d;
+    }
+    return out;
+  }
+
+  /* ---------- esquisses ---------- */
+  const sketch = (id) => (Doc.get().sketches || []).find((s) => s.id === id) || null;
+  const planeOf = (o) => { if (!o.sk) return 'top'; const s = sketch(o.sk); return s ? s.plane : 'top'; };
+  /* Visibilité dans la vue 2D : esquisse active → ses objets seulement (et le plan général en grisé si l'esquisse est en Dessus) ;
+     sans esquisse active → plan général et esquisses du plan Dessus. */
+  function visible2D(o) {
+    const cur = state.sketch;
+    if (cur) { if (o.sk === cur) return true; const s = sketch(cur); return !!s && s.plane === 'top' && planeOf(o) === 'top'; }
+    return planeOf(o) === 'top';
+  }
+  const faded2D = (o) => !!state.sketch && o.sk !== state.sketch;
+  /* Repère d'une esquisse : point (u, v) → (x, y, z) */
+  function frame(s) {
+    const P = PLANES[s.plane], t = mul3(P.W, s.off);
+    return { U: P.U, V: P.V, W: P.W, t, to3: (u, v, w = 0) => add3(add3(add3(t, mul3(P.U, u)), mul3(P.V, v)), mul3(P.W, w)) };
+  }
+  /* Contours fermés d'une esquisse (polylignes fermées, cercles) en (u, v), regroupés en contour extérieur + trous. */
+  function loops(skId, exclude = 0) {
+    const out = [];
+    for (const o of Doc.get().objects) {
+      if (o.sk !== skId || o.id === exclude) continue;
+      if (o.type === 'poly' && o.closed && o.pts.length >= 3) out.push({ id: o.id, pts: o.pts.map((p) => [p[0], p[1]]) });
+      else if (o.type === 'circle') out.push({ id: o.id, pts: circle(o.c, o.r) });
+    }
+    for (const l of out) { l.a = Math.abs(area2(l.pts)); if (area2(l.pts) < 0) l.pts.reverse(); }
+    out.sort((a, b) => b.a - a.a);
+    const regions = [];
+    for (const l of out) {
+      const host = regions.find((r) => inPoly(l.pts[0][0], l.pts[0][1], r.outer) && !r.holes.some((h) => inPoly(l.pts[0][0], l.pts[0][1], h)));
+      if (host) host.holes.push(l.pts.slice().reverse()); else regions.push({ outer: l.pts, holes: [], ids: [l.id] });
+    }
+    return regions;
+  }
+  const regionArea = (r) => Math.abs(area2(r.outer)) - r.holes.reduce((s, h) => s + Math.abs(area2(h)), 0);
+  /* Centre de gravité d'une région (contour moins trous), pour la règle de Guldin / Pappus. */
+  function regionCentroid(r) {
+    const mom = (P) => { let A = 0, cx = 0, cy = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length], k = p[0] * q[1] - q[0] * p[1]; A += k / 2; cx += (p[0] + q[0]) * k / 6; cy += (p[1] + q[1]) * k / 6; } return A < 0 ? [-A, -cx, -cy] : [A, cx, cy]; };
+    let [A, cx, cy] = mom(r.outer);
+    for (const h of r.holes) { const [a, x, y] = mom(h); A -= a; cx -= x; cy -= y; }
+    return A > 0 ? [cx / A, cy / A] : r.outer[0];
+  }
+
+  /* ---------- fonctions 3D → solides ---------- */
+  function featureSolids(f, col) {
+    const s = sketch(f.sk); if (!s || f.hide) return [];
+    const F = frame(s), out = [];
+    if (f.type === 'extrude' || f.type === 'cut') {
+      const w0 = f.dir === '+' ? 0 : f.dir === '-' ? -f.d : -f.d / 2, w1 = w0 + f.d;
+      for (const r of loops(f.sk)) out.push({ k: 'ext', outer: r.outer, holes: r.holes, w0, w1, M: [...F.U, ...F.V, ...F.W, ...F.t], col, cut: f.type === 'cut', fid: f.id });
+    } else if (f.type === 'revolve') {
+      const ax = Doc.get().objects.find((o) => o.id === f.axis && o.sk === f.sk && o.type === 'line');
+      if (!ax) return [];
+      const A2 = G.sub(ax.b, ax.a), L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return [];
+      const a = [A2[0] / L, A2[1] / L];
+      for (const r of loops(f.sk, ax.id)) {
+        const side = Math.sign(a[0] * (r.outer[0][1] - ax.a[1]) - a[1] * (r.outer[0][0] - ax.a[0])) || 1;
+        const R2 = [-a[1] * side, a[0] * side];
+        const prof = r.outer.map((p) => { const d = [p[0] - ax.a[0], p[1] - ax.a[1]]; return [Math.max(0, d[0] * R2[0] + d[1] * R2[1]), d[0] * a[0] + d[1] * a[1]]; });
+        const O = F.to3(ax.a[0], ax.a[1]), A3 = add3(mul3(F.U, a[0]), mul3(F.V, a[1])), R3 = add3(mul3(F.U, R2[0]), mul3(F.V, R2[1]));
+        out.push({ k: 'rev', prof, ang: f.ang * Math.PI / 180, X: cross(A3, R3), Y: A3, Z: R3, O, col, fid: f.id });
+      }
+    }
+    return out;
+  }
+  /* Volume (mm³) d'une fonction : extrusion = aire × profondeur ; révolution = règle de Guldin (θ · aire · distance du centre de gravité à l'axe). */
+  function featureVolume(f) {
+    const s = sketch(f.sk); if (!s) return 0;
+    if (f.type === 'extrude' || f.type === 'cut') return loops(f.sk).reduce((v, r) => v + regionArea(r), 0) * f.d;
+    const ax = Doc.get().objects.find((o) => o.id === f.axis && o.type === 'line'); if (!ax) return 0;
+    const A2 = G.sub(ax.b, ax.a), L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return 0;
+    let V = 0;
+    for (const r of loops(f.sk, ax.id)) { const c = regionCentroid(r), dist = Math.abs(A2[0] * (c[1] - ax.a[1]) - A2[1] * (c[0] - ax.a[0])) / L; V += f.ang * Math.PI / 180 * regionArea(r) * dist; }
+    return V;
+  }
+
+  /* ---------- pièces de la bibliothèque : solides locaux, boîte, volume ---------- */
+  const TOP = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+  const rectP = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+  function partGeo(p) {
+    const out = [];
+    switch (p.t) {
+      case 'profil': {
+        const ol = Sections.outline({ kind: 'prof', id: p.prof }); if (!ol) break;
+        if (p.orient === 'v') out.push({ k: 'ext', outer: ol.outer, holes: ol.holes, w0: 0, w1: p.L, M: TOP });
+        else if (p.orient === 'x') out.push({ k: 'ext', outer: ol.outer.map(([u, v]) => [u, v]), holes: [], w0: 0, w1: p.L, M: [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] });
+        else out.push({ k: 'ext', outer: ol.outer, holes: [], w0: 0, w1: p.L, M: [1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0] });
+        break;
+      }
+      case 'platine': {
+        const holes = p.dt > 0 ? [[p.m, p.m], [p.Lx - p.m, p.m], [p.Lx - p.m, p.Ly - p.m], [p.m, p.Ly - p.m]].map((c) => circle([c[0] - p.Lx / 2, c[1] - p.Ly / 2], p.dt / 2, 24).reverse()) : [];
+        out.push({ k: 'ext', outer: rectP(-p.Lx / 2, -p.Ly / 2, p.Lx / 2, p.Ly / 2), holes, w0: 0, w1: p.e, M: TOP });
+        break;
+      }
+      case 'dalle': case 'massif': out.push({ k: 'ext', outer: rectP(-p.Lx / 2, -p.Ly / 2, p.Lx / 2, p.Ly / 2), holes: [], w0: 0, w1: p.e, M: TOP }); break;
+      case 'cuve': out.push({ k: 'cyl', c: [0, 0], r: p.D / 2, z0: 0, z1: p.H }); break;
+      case 'regard': {
+        const X = p.Lx / 2 + p.e, Y = p.Ly / 2 + p.e;
+        out.push({ k: 'ext', outer: rectP(-X, -Y, X, Y), holes: [], w0: 0, w1: p.e, M: TOP });
+        out.push({ k: 'ext', outer: rectP(-X, -Y, X, Y), holes: [rectP(-p.Lx / 2, -p.Ly / 2, p.Lx / 2, p.Ly / 2).reverse()], w0: p.e, w1: p.H, M: TOP });
+        break;
+      }
+      case 'pompe': {
+        out.push({ k: 'ext', outer: rectP(-p.L / 2, -p.l / 2, p.L / 2, p.l / 2), holes: [], w0: 0, w1: p.H * 0.12, M: TOP });
+        const r = Math.min(p.l, p.H) * 0.38;
+        out.push({ k: 'ext', outer: circle([0, p.H * 0.12 + r], r, 32), holes: [], w0: -p.L * 0.45, w1: p.L * 0.05, M: [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] });
+        out.push({ k: 'cyl', c: [p.L * 0.27, 0], r: r * 1.1, z0: p.H * 0.12, z1: p.H });
+        break;
+      }
+      case 'gardecorps': {
+        const n = Math.max(2, Math.ceil(p.L / p.ent) + 1), r = p.D / 2;
+        for (let i = 0; i < n; i++) out.push({ k: 'cyl', c: [i * p.L / (n - 1), 0], r, z0: 0, z1: p.H });
+        for (const z of [p.H, p.H / 2]) out.push({ k: 'ext', outer: circle([0, z], r, 16), holes: [], w0: 0, w1: p.L, M: [0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0] });
+        break;
+      }
+    }
+    return out;
+  }
+  /* Boîte englobante locale d'une pièce [x0, y0, z0, x1, y1, z1] */
+  function partBox(p) {
+    switch (p.t) {
+      case 'profil': { const pr = PROFILES[p.prof] || { h: 200, b: 200 }; if (p.orient === 'v') return [-pr.b / 2, -pr.h / 2, 0, pr.b / 2, pr.h / 2, p.L];
+        if (p.orient === 'x') return [0, -pr.b / 2, -pr.h / 2, p.L, pr.b / 2, pr.h / 2]; return [-pr.b / 2, 0, -pr.h / 2, pr.b / 2, p.L, pr.h / 2]; }
+      case 'platine': return [-p.Lx / 2, -p.Ly / 2, 0, p.Lx / 2, p.Ly / 2, p.e];
+      case 'dalle': case 'massif': return [-p.Lx / 2, -p.Ly / 2, 0, p.Lx / 2, p.Ly / 2, p.e];
+      case 'cuve': return [-p.D / 2, -p.D / 2, 0, p.D / 2, p.D / 2, p.H];
+      case 'regard': return [-p.Lx / 2 - p.e, -p.Ly / 2 - p.e, 0, p.Lx / 2 + p.e, p.Ly / 2 + p.e, p.H];
+      case 'pompe': return [-p.L / 2, -p.l / 2, 0, p.L / 2, p.l / 2, p.H];
+      case 'gardecorps': return [-p.D / 2, -p.D / 2, 0, p.L + p.D / 2, p.D / 2, p.H + p.D / 2];
+    }
+    return [0, 0, 0, 0, 0, 0];
+  }
+  /* Volume de matière (mm³) d'une pièce */
+  function partVolume(p) {
+    switch (p.t) {
+      case 'profil': { const pr = PROFILES[p.prof]; return pr ? pr.A * 100 * p.L : 0; }
+      case 'platine': return p.Lx * p.Ly * p.e - 4 * Math.PI * (p.dt / 2) ** 2 * p.e * (p.dt > 0 ? 1 : 0);
+      case 'dalle': case 'massif': return p.Lx * p.Ly * p.e;
+      case 'cuve': { const r = p.D / 2, ri = r - p.e; return Math.PI * (r * r - ri * ri) * p.H + 2 * Math.PI * r * r * p.e; }
+      case 'regard': { const X = p.Lx + 2 * p.e, Y = p.Ly + 2 * p.e; return X * Y * p.e + (X * Y - p.Lx * p.Ly) * (p.H - p.e); }
+      case 'pompe': return null;
+      case 'gardecorps': { const n = Math.max(2, Math.ceil(p.L / p.ent) + 1), t = Math.min(3.2, p.D / 10), A = Math.PI / 4 * (p.D ** 2 - (p.D - 2 * t) ** 2); return A * (n * p.H + 2 * p.L); }
+    }
+    return 0;
+  }
+
+  /* ---------- assemblage : contraintes, placement ---------- */
+  /* Position résolue de chaque composant (les contraintes sont appliquées dans l'ordre des dépendances ; un cycle est ignoré et signalé). */
+  function resolve(comps) {
+    const byId = new Map(comps.map((c) => [c.id, c])), out = new Map(), warn = [];
+    const visit = (c, stack) => {
+      if (out.has(c.id)) return out.get(c.id);
+      if (stack.has(c.id)) { warn.push(c.id); return c.pos; }
+      stack.add(c.id);
+      let pos = c.pos.slice();
+      const m = c.mate, ref = m && m.t && m.t !== 'fix' ? byId.get(m.ref) : null;
+      if (ref && !c.fix) {
+        const rp = visit(ref, stack), rb = worldBox(ref, rp), mb = partBox(c.part);
+        if (m.t === 'sur') pos = [pos[0], pos[1], rb[5] - mb[2] + (m.d[2] || 0)];
+        else if (m.t === 'axe') pos = [(rb[0] + rb[3]) / 2 - (mb[0] + mb[3]) / 2 + (m.d[0] || 0), (rb[1] + rb[4]) / 2 - (mb[1] + mb[4]) / 2 + (m.d[1] || 0), pos[2]];
+        else if (m.t === 'decal') pos = add3(rp, m.d);
+      }
+      stack.delete(c.id);
+      out.set(c.id, pos);
+      return pos;
+    };
+    for (const c of comps) visit(c, new Set());
+    return { pos: out, warn };
+  }
+  /* Boîte englobante dans le plan (rotation autour de Z incluse) */
+  function worldBox(c, pos) {
+    const b = partBox(c.part), th = c.rot * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of [[b[0], b[1]], [b[3], b[1]], [b[3], b[4]], [b[0], b[4]]]) { const X = pos[0] + x * cs - y * sn, Y = pos[1] + x * sn + y * cs; x0 = Math.min(x0, X); x1 = Math.max(x1, X); y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
+    return [x0, y0, pos[2] + b[2], x1, y1, pos[2] + b[5]];
+  }
+  /* Empreinte au sol (pour le plan 2D) : rectangle de la boîte locale tourné */
+  function footprint(c, pos) {
+    const b = partBox(c.part), th = c.rot * Math.PI / 180, cs = Math.cos(th), sn = Math.sin(th);
+    return [[b[0], b[1]], [b[3], b[1]], [b[3], b[4]], [b[0], b[4]]].map(([x, y]) => [pos[0] + x * cs - y * sn, pos[1] + x * sn + y * cs]);
+  }
+  /* Solides d'un composant, avec sa transformation (position résolue + rotation) */
+  function compSolids(c, pos, col) {
+    return partGeo(c.part).map((s) => ({ ...s, col, tf: { pos, rot: c.rot }, cid: c.id }));
+  }
+
+  return { clean, cleanPart, sketch, planeOf, visible2D, faded2D, frame, loops, regionArea, regionCentroid, featureSolids, featureVolume,
+    partGeo, partBox, partVolume, resolve, worldBox, footprint, compSolids, area2 };
 })();
 
 /* ==== 45-symbols.js ==== */
@@ -1433,6 +2047,8 @@ const PROP_DEFS = {
   t:     { label: 'Température', unit: '°C', min: -273, max: 2000, dec: 1, kinds: ['net', 'sym'] },
   z:     { label: 'Altitude / niveau', unit: 'm', min: -1000, max: 10000, dec: 3, kinds: ['st', 'sym'] },
   h:     { label: 'Hauteur', unit: 'mm', min: 1, max: 100000, dec: 1, kinds: ['st'] },
+  ql:    { label: 'Charge répartie (service)', unit: 'kN/m', min: 0, max: 10000, dec: 2, kinds: ['st'] },
+  dt:    { label: 'Écart de température', unit: 'K', min: -200, max: 500, dec: 1, kinds: ['net'] },
 };
 const Props = (() => {
   const kindOf = (o) => (o.net ? 'net' : o.st ? 'st' : o.type === 'sym' ? 'sym' : null);
@@ -1526,7 +2142,7 @@ const Snap = {
     const ends = [], mids = [], centers = [], segs = [];
     for (const o of Doc.get().objects) {
       const l = Doc.layer(o.layer);
-      if (!l || !l.visible) continue;
+      if (!l || !l.visible || !Model.visible2D(o)) continue;
       if (o.type === 'line') { ends.push(o.a, o.b); mids.push(G.mid(o.a, o.b)); segs.push([o.a, o.b]); }
       else if (o.type === 'poly') {
         ends.push(...o.pts);
@@ -1699,6 +2315,23 @@ const Render = (() => {
     ctx.restore();
   }
 
+  /* Composants d'assemblage vus en plan : empreinte en tirets et nom (lecture seule, ils se modifient dans l'onglet Assemblage). */
+  function drawComps(ctx, d) {
+    if (!d.comps || !d.comps.length) return;
+    const R = Model.resolve(d.comps);
+    ctx.save(); ctx.setLineDash([6, 4]);
+    for (const c of d.comps) {
+      const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
+      const fp = Model.footprint(c, R.pos.get(c.id)), sel = state.compSel === c.id;
+      ctx.strokeStyle = sel ? css('--sel') : shade(l.color); ctx.lineWidth = sel ? 2.4 : 1.4;
+      strokePath(ctx, fp, true);
+      const s = Canvas2D.toScreen(fp[0]);
+      ctx.fillStyle = ctx.strokeStyle; ctx.font = '600 11px Inter, system-ui, sans-serif'; ctx.textBaseline = 'bottom';
+      if (Math.abs(Canvas2D.toScreen(fp[1])[0] - s[0]) > 40) ctx.fillText(c.name, s[0] + 3, s[1] - 3);
+    }
+    ctx.restore();
+  }
+
   function scene(ctx) {
     const d = Doc.get();
     const byLayer = new Map();
@@ -1709,8 +2342,12 @@ const Render = (() => {
     for (const l of d.layers) {
       if (!l.visible) continue;
       const col = shade(l.color);
-      for (const o of byLayer.get(l.id) || []) drawObject(ctx, o, col, 1.6);
+      for (const o of byLayer.get(l.id) || []) {
+        if (!Model.visible2D(o)) continue;
+        if (Model.faded2D(o)) { ctx.save(); ctx.globalAlpha = 0.22; drawObject(ctx, o, col, 1.2); ctx.restore(); } else drawObject(ctx, o, col, 1.6);
+      }
     }
+    if (!state.sketch) drawComps(ctx, d);
     const selCol = css('--sel');
     for (const o of d.objects) {
       if (Tools.selection.has(o.id)) drawObject(ctx, o, selCol, 2.6);
@@ -1759,7 +2396,7 @@ const Tools = (() => {
   const css = (n) => Canvas2D.css(n);
   const R6 = (p) => [+p[0].toFixed(6), +p[1].toFixed(6)];
   const notify = (reason) => { for (const f of listeners) f(reason); Canvas2D.requestDraw(); };
-  const selectable = (o) => { const l = Doc.layer(o.layer); return !!l && l.visible && !l.locked; };
+  const selectable = (o) => { const l = Doc.layer(o.layer); return !!l && l.visible && !l.locked && Model.visible2D(o) && !Model.faded2D(o); };
 
   function pick(p) {
     let best = null, bd = 8 / state.view.scale;
@@ -2241,7 +2878,7 @@ const IO = (() => {
     const out = [];
     for (const o of Doc.get().objects) {
       const l = Doc.layer(o.layer);
-      if (!l || !l.visible) continue;
+      if (!l || !l.visible || Model.planeOf(o) !== 'top') continue;
       if (Sym.isComposite(o)) for (const e of Sym.expand(o)) out.push({ ...e, layer: o.layer });   /* symboles, murs, poutres : éléments vectoriels simples */
       else out.push(o);
     }
@@ -2687,7 +3324,7 @@ const BOM = (() => {
     const nets = new Map(), others = new Map(), syms = new Map(), structs = new Map(), techs = [];
     for (const o of d.objects) {
       const l = Doc.layer(o.layer);
-      if (!l || !l.visible) continue;
+      if (!l || !l.visible || o.sk) continue;
       if (o.props && Props.kindOf(o)) {
         const len = o.type === 'sym' ? null : (Geo.length(o) || 0) / 1000, sl = Props.slope(o);
         const what = o.net ? `Réseau DN${o.net.dn}${o.net.mat ? ' ' + o.net.mat : ''}` : o.st ? Sym.stLabel({ ...o.st, tag: '' }) : SYMBOLS[o.k].label;
@@ -2892,22 +3529,56 @@ const View3D = (() => {
   const area = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; a += p[0] * q[1] - q[0] * p[1]; } return Math.abs(a / 2); };
   const beamDepth = (o) => { const m = /(?:IPE|HEA|HEB|HEM|UPN|IPN)\s*(\d{2,3})/i.exec(o.st.prof || ''); return m ? +m[1] : (o.props && o.props.h) || 200; };
 
+  const matCol = (id) => (id && MATS[id] ? MATS[id].color : null);
+  /* Matériau effectif d'un objet (saisi, sinon valeur par défaut selon sa nature) */
+  function matIdOf(o) {
+    if (o.mat) return o.mat;
+    if (o.net) return MAT_DEFAULT.net[o.net.mat] || '';
+    if (o.st) return o.st.kind === 'poutre' ? MAT_DEFAULT.poutre : MAT_DEFAULT.mur;
+    if (o.type === 'sym' && (o.k === 'poteau' || o.k === 'poteauRond')) return MAT_DEFAULT.poteau;
+    return '';
+  }
+
   function solids() {
-    const out = [];
-    for (const o of Doc.get().objects) {
+    const out = [], d = Doc.get();
+    const consumed = new Set((d.features || []).filter((f) => !f.hide).map((f) => f.sk));
+    for (const o of d.objects) {
       const l = Doc.layer(o.layer);
       if (!l || !l.visible) continue;
-      const col = l.color, pr = o.props || {};
-      if (o.net && (o.type === 'line' || o.type === 'poly')) { const sg = []; netSegs(o, col, sg); for (const s of sg) out.push({ k: 'pipe', a: s.a, b: s.b, r: o.net.dn / 2, col }); continue; }
+      const col = l.color, pr = o.props || {}, mcol = matCol(matIdOf(o));
+      if (o.sk) {
+        /* esquisse sans fonction : ses traits sont montrés sur leur plan (comme une esquisse visible dans l'arbre) */
+        const sk = Model.sketch(o.sk); if (!sk || consumed.has(o.sk)) continue;
+        const F = Model.frame(sk);
+        for (const e of Sym.expand(o)) {
+          if (e.type === 'line') out.push({ k: 'line', pts: [F.to3(...e.a), F.to3(...e.b)], col });
+          else if (e.type === 'poly') out.push({ k: 'line', pts: e.pts.map((q) => F.to3(...q)).concat(e.closed ? [F.to3(...e.pts[0])] : []), col });
+          else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 49 }, (_, i) => F.to3(e.c[0] + e.r * Math.cos(i * Math.PI / 24), e.c[1] + e.r * Math.sin(i * Math.PI / 24))), col });
+        }
+        continue;
+      }
+      if (o.net && (o.type === 'line' || o.type === 'poly')) { const sg = []; netSegs(o, col, sg); for (const s of sg) out.push({ k: 'pipe', a: s.a, b: s.b, r: o.net.dn / 2, col, mcol }); continue; }
       if (o.st && (o.type === 'line' || o.type === 'poly')) {
         const pts = o.type === 'line' ? [o.a, o.b] : o.pts, closed = o.type === 'poly' && o.closed;
         const beam = o.st.kind === 'poutre';
         const top = (typeof pr.z === 'number' ? pr.z : beam ? DEF_BEAM_Z / 1000 : 0) * 1000;
+        const prof = beam ? Sections.find(o.st.prof) : null;
+        const util = beam && typeof Analysis !== 'undefined' ? Analysis.beamUtil(o) : null;
+        if (prof) {
+          /* section réelle du profilé (I ou U, sans congés) balayée le long de chaque tronçon, dessus de poutre à la cote z */
+          const ol = Sections.outline({ kind: 'prof', id: prof.id });
+          for (const [a, b] of Geo.segments(o)) {
+            const L = G.dist(a, b); if (L < 1e-6) continue;
+            const W = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, 0], U = [-W[1], W[0], 0];
+            out.push({ k: 'ext', outer: ol.outer, holes: [], w0: 0, w1: L, M: [...U, 0, 0, 1, ...W, a[0], a[1], top - prof.h / 2], col, mcol, util });
+          }
+          continue;
+        }
         const bands = Sym.band(pts, closed, o.st.w).map((b) => b.pts);
         const hh = beam ? beamDepth(o) : (pr.h || DEF_WALL_H);
         const z0 = beam ? top - hh : top;
         const rings = closed && bands.length === 2 ? (area(bands[0]) >= area(bands[1]) ? [bands[0], bands[1]] : [bands[1], bands[0]]) : bands;
-        out.push({ k: 'prism', rings, z0, z1: z0 + hh, col });
+        out.push({ k: 'prism', rings, z0, z1: z0 + hh, col, mcol, util });
         continue;
       }
       if (o.type === 'sym') {
@@ -2916,8 +3587,8 @@ const View3D = (() => {
         let base = null;
         const edges = [];
         for (const e of Sym.world(o)) {
-          if (!base && e.type === 'circle') base = { k: 'cyl', c: e.c, r: e.r, z0, z1: z0 + (h || 50), col };
-          else if (!base && e.type === 'poly' && e.closed && e.pts.length >= 3) base = { k: 'prism', rings: [e.pts], z0, z1: z0 + (h || 50), col };
+          if (!base && e.type === 'circle') base = { k: 'cyl', c: e.c, r: e.r, z0, z1: z0 + (h || 50), col, mcol };
+          else if (!base && e.type === 'poly' && e.closed && e.pts.length >= 3) base = { k: 'prism', rings: [e.pts], z0, z1: z0 + (h || 50), col, mcol };
           else if (e.type === 'line') edges.push([[e.a[0], e.a[1], z0 + h], [e.b[0], e.b[1], z0 + h]]);
           else if (e.type === 'poly') edges.push(e.pts.map((p) => [p[0], p[1], z0 + h]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], z0 + h]] : []));
         }
@@ -2929,6 +3600,19 @@ const View3D = (() => {
         if (e.type === 'line') out.push({ k: 'line', pts: [[e.a[0], e.a[1], 0], [e.b[0], e.b[1], 0]], col });
         else if (e.type === 'poly') out.push({ k: 'line', pts: e.pts.map((p) => [p[0], p[1], 0]).concat(e.closed ? [[e.pts[0][0], e.pts[0][1], 0]] : []), col });
         else if (e.type === 'circle') out.push({ k: 'line', pts: Array.from({ length: 37 }, (_, i) => [e.c[0] + e.r * Math.cos(i * Math.PI / 18), e.c[1] + e.r * Math.sin(i * Math.PI / 18), 0]), col });
+      }
+    }
+    /* fonctions 3D (esquisses extrudées ou révolutionnées) */
+    for (const f of d.features || []) {
+      const l = Doc.layer(f.layer); if (!l || !l.visible) continue;
+      for (const s of Model.featureSolids(f, l.color)) out.push({ ...s, mcol: matCol(f.mat) });
+    }
+    /* composants d'assemblage (position résolue par les contraintes) */
+    if (d.comps && d.comps.length) {
+      const R = Model.resolve(d.comps);
+      for (const c of d.comps) {
+        const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
+        for (const s of Model.compSolids(c, R.pos.get(c.id), l.color)) out.push({ ...s, mcol: matCol(c.mat), sel: state.compSel === c.id });
       }
     }
     return out;
@@ -4393,7 +5077,19 @@ let style = 'shaded', box = new THREE.Box3(), last = { n: 0, capped: false };
 
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#ffffff';
 const V = (x, y, z) => new THREE.Vector3(x / 1000, z / 1000, -y / 1000);
+/* Matrice Three d'un repère local du plan (U, V, W, t en mm, plan x/y/z haut) → scène (m, Y vers le haut). */
+function planMatrix(M) {
+  const P = (x, y, z) => [x / 1000, z / 1000, -y / 1000];
+  const U = P(M[0], M[1], M[2]), Vv = P(M[3], M[4], M[5]), W = P(M[6], M[7], M[8]), T = P(M[9], M[10], M[11]);
+  return new THREE.Matrix4().set(U[0], Vv[0], W[0], T[0], U[1], Vv[1], W[1], T[1], U[2], Vv[2], W[2], T[2], 0, 0, 0, 1);
+}
 
+/* Couleur d'affichage : calque (Ombré), matériau (Matériaux) ou taux d'utilisation (Utilisation : vert < 0,7 < orange < 1 < rouge). */
+function colorOf(s) {
+  if (style === 'mat' && s.mcol) return s.mcol;
+  if (style === 'util') { if (s.util == null) return '#C9CED4'; return s.util < 0.7 ? '#1E8E5A' : s.util < 1 ? '#E2861B' : '#B3261E'; }
+  return s.col;
+}
 function mats(col) {
   const c = new THREE.Color(col);
   const base = { color: c, roughness: 0.62, metalness: 0.08 };
@@ -4408,36 +5104,73 @@ function shapeOf(rings) {
   return sh;
 }
 
+function shapeMM(outer, holes) {
+  const sh = new THREE.Shape(outer.map((p) => new THREE.Vector2(p[0], p[1])));
+  for (const h of holes || []) sh.holes.push(new THREE.Path(h.map((p) => new THREE.Vector2(p[0], p[1]))));
+  return sh;
+}
 function buildSolids(solids, minR) {
   const g = new THREE.Group();
   const edgeMat = (col) => new THREE.LineBasicMaterial({ color: new THREE.Color(col).multiplyScalar(0.55) });
   let n = 0;
   for (const s of solids) {
     if (n++ >= MAX_SOLIDS) break;
+    const col = s.sel ? css('--sel') || '#E2861B' : colorOf(s);
+    let obj = null;
     if (s.k === 'pipe') {
       const a = V(...s.a), b = V(...s.b), len = a.distanceTo(b);
       if (len < 1e-6) continue;
       const r = Math.max(s.r / 1000, minR);
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14, 1), mats(s.col));
+      const grp = new THREE.Group();
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14, 1), mats(col));
       m.position.copy(a).add(b).multiplyScalar(0.5);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-      g.add(m);
-      const j = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mats(s.col)); j.position.copy(b); g.add(j);
+      grp.add(m);
+      const j = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), mats(col)); j.position.copy(b); grp.add(j);
+      obj = grp;
     } else if (s.k === 'prism') {
       if (!s.rings.length || s.rings[0].length < 3 || s.z1 <= s.z0) continue;
       const geo = new THREE.ExtrudeGeometry(shapeOf(s.rings), { depth: (s.z1 - s.z0) / 1000, bevelEnabled: false });
-      const m = new THREE.Mesh(geo, mats(s.col));
-      m.rotation.x = -Math.PI / 2; m.position.y = s.z0 / 1000;
-      g.add(m);
-      if (style !== 'wire') { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(s.col)); e.rotation.x = -Math.PI / 2; e.position.y = s.z0 / 1000; g.add(e); }
+      const grp = new THREE.Group(), m = new THREE.Mesh(geo, mats(col));
+      m.rotation.x = -Math.PI / 2; m.position.y = s.z0 / 1000; grp.add(m);
+      if (style !== 'wire') { const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(col)); e.rotation.x = -Math.PI / 2; e.position.y = s.z0 / 1000; grp.add(e); }
+      obj = grp;
+    } else if (s.k === 'ext') {
+      /* extrusion dans un repère local (u, v) → w, en mm ; la matrice place le volume (esquisse sur plan, profilé le long d'un tronçon) */
+      if (!s.outer || s.outer.length < 3 || s.w1 <= s.w0) continue;
+      const geo = new THREE.ExtrudeGeometry(shapeMM(s.outer, s.holes), { depth: s.w1 - s.w0, bevelEnabled: false, curveSegments: 24 });
+      geo.translate(0, 0, s.w0);
+      const grp = new THREE.Group(); grp.matrixAutoUpdate = false;
+      grp.matrix.copy(planMatrix(s.M));
+      const m = new THREE.Mesh(geo, mats(col)); grp.add(m);
+      if (style !== 'wire') grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), edgeMat(col)));
+      obj = grp;
+    } else if (s.k === 'rev') {
+      /* révolution : profil (r, h) en mm autour de l'axe local Y, repère (X, Y, Z, O) dans le plan */
+      if (!s.prof || s.prof.length < 3) continue;
+      const pts = s.prof.concat([s.prof[0]]).map(([r, h]) => new THREE.Vector2(Math.max(0, r), h));
+      const geo = new THREE.LatheGeometry(pts, 48, 0, s.ang);
+      const grp = new THREE.Group(); grp.matrixAutoUpdate = false;
+      grp.matrix.copy(planMatrix([...s.X, ...s.Y, ...s.Z, ...s.O]));
+      grp.add(new THREE.Mesh(geo, mats(col)));
+      obj = grp;
     } else if (s.k === 'cyl') {
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(s.r / 1000, s.r / 1000, (s.z1 - s.z0) / 1000, 28), mats(s.col));
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(s.r / 1000, s.r / 1000, (s.z1 - s.z0) / 1000, 28), mats(col));
       m.position.copy(V(s.c[0], s.c[1], (s.z0 + s.z1) / 2));
-      g.add(m);
+      obj = m;
     } else if (s.k === 'line') {
       const geo = new THREE.BufferGeometry().setFromPoints(s.pts.map((p) => V(...p)));
-      g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(s.col) })));
+      obj = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(col) }));
     }
+    if (!obj) continue;
+    if (s.tf) {
+      /* composant : la pièce est décrite autour de son origine ; on applique sa position et sa rotation */
+      /* rotation dans le plan (autour de Z) = rotation autour de Y dans la scène ; même sens (vu de dessus) */
+      const holder = new THREE.Group(); holder.position.copy(V(...s.tf.pos)); holder.rotation.y = (s.tf.rot || 0) * Math.PI / 180;
+      holder.add(obj); g.add(holder);
+    } else g.add(obj);
+    if (s.cid) obj.userData.cid = s.cid;
+    if (s.fid) obj.userData.fid = s.fid;
   }
   last = { n: Math.min(n, MAX_SOLIDS), capped: solids.length > MAX_SOLIDS };
   return g;
@@ -4445,12 +5178,15 @@ function buildSolids(solids, minR) {
 
 function extentOf(solids) {
   const b = new THREE.Box3();
-  const add = (x, y, z) => b.expandByPoint(V(x, y, z));
   for (const s of solids) {
+    const o = s.tf ? s.tf.pos : [0, 0, 0];
+    const add = (x, y, z) => b.expandByPoint(V(x + o[0], y + o[1], z + o[2]));
     if (s.k === 'pipe') { add(...s.a); add(...s.b); }
     else if (s.k === 'prism') { for (const p of s.rings[0]) { add(p[0], p[1], s.z0); add(p[0], p[1], s.z1); } }
     else if (s.k === 'cyl') { add(s.c[0] - s.r, s.c[1] - s.r, s.z0); add(s.c[0] + s.r, s.c[1] + s.r, s.z1); }
     else if (s.k === 'line') for (const p of s.pts) add(...p);
+    else if (s.k === 'ext') { const M = s.M; for (const [u, v] of s.outer) for (const w of [s.w0, s.w1]) add(M[9] + u * M[0] + v * M[3] + w * M[6], M[10] + u * M[1] + v * M[4] + w * M[7], M[11] + u * M[2] + v * M[5] + w * M[8]); }
+    else if (s.k === 'rev') { const R = Math.max(...s.prof.map((q) => q[0])), H = Math.max(...s.prof.map((q) => Math.abs(q[1]))); add(s.O[0] - R - H, s.O[1] - R - H, s.O[2] - R - H); add(s.O[0] + R + H, s.O[1] + R + H, s.O[2] + R + H); }
   }
   return b;
 }
@@ -4497,6 +5233,7 @@ function build(solids) {
   const ext = box.isEmpty() ? 10 : box.getSize(new THREE.Vector3()).length();
   root = buildSolids(solids, Math.max(ext / 900, 0.004));
   scene.add(root);
+  { const b2 = new THREE.Box3().setFromObject(root); if (!b2.isEmpty()) box = b2; }
   if (grid) scene.remove(grid);
   const sz = Math.max(10, Math.ceil(ext * 1.5));
   grid = new THREE.GridHelper(sz, Math.min(100, sz), new THREE.Color(css('--grid-major')), new THREE.Color(css('--grid-minor')));

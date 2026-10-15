@@ -39,7 +39,7 @@ const IO = (() => {
     const out = [];
     for (const o of Doc.get().objects) {
       const l = Doc.layer(o.layer);
-      if (!l || !l.visible) continue;
+      if (!l || !l.visible || Model.planeOf(o) !== 'top') continue;
       if (Sym.isComposite(o)) for (const e of Sym.expand(o)) out.push({ ...e, layer: o.layer });   /* symboles, murs, poutres : éléments vectoriels simples */
       else out.push(o);
     }
