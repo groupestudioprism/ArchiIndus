@@ -155,7 +155,7 @@ const Model = (() => {
     } else if (f.type === 'revolve') {
       const ax = Doc.get().objects.find((o) => o.id === f.axis && o.sk === f.sk && o.type === 'line');
       if (!ax) return [];
-      const A2 = G.sub(ax.b, ax.a), L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return [];
+      const A2 = [ax.b[0] - ax.a[0], ax.b[1] - ax.a[1]], L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return [];
       const a = [A2[0] / L, A2[1] / L];
       for (const r of loops(f.sk, ax.id)) {
         const side = Math.sign(a[0] * (r.outer[0][1] - ax.a[1]) - a[1] * (r.outer[0][0] - ax.a[0])) || 1;
@@ -172,7 +172,7 @@ const Model = (() => {
     const s = sketch(f.sk); if (!s) return 0;
     if (f.type === 'extrude' || f.type === 'cut') return loops(f.sk).reduce((v, r) => v + regionArea(r), 0) * f.d;
     const ax = Doc.get().objects.find((o) => o.id === f.axis && o.type === 'line'); if (!ax) return 0;
-    const A2 = G.sub(ax.b, ax.a), L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return 0;
+    const A2 = [ax.b[0] - ax.a[0], ax.b[1] - ax.a[1]], L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return 0;
     let V = 0;
     for (const r of loops(f.sk, ax.id)) { const c = regionCentroid(r), dist = Math.abs(A2[0] * (c[1] - ax.a[1]) - A2[1] * (c[0] - ax.a[0])) / L; V += f.ang * Math.PI / 180 * regionArea(r) * dist; }
     return V;

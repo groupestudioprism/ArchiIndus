@@ -224,15 +224,17 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 #panelBtn{display:none}
 @media (max-width:900px){
   #app,#app.no-tree{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "ribbon" "stage" "status"}
-  #tree{display:none}
+  #tree{position:fixed;left:0;top:96px;bottom:34px;width:min(300px,86vw);z-index:40;box-shadow:var(--shadow)}
+  #app.no-tree #tree{display:none}
+  .rb-tabs .modes{position:sticky;right:0;background:var(--chip)}
   .rb-btn{min-width:52px}
   .rb-lbl{display:none}
   #panel{position:fixed;right:0;top:53px;bottom:30px;z-index:40;width:min(320px,92vw);box-shadow:var(--shadow);transform:translateX(105%);visibility:hidden;transition:transform .18s,visibility .18s}
   #app.pn-open #panel{transform:none;visibility:visible}
   #panelBtn{display:inline-flex}
   .ib .lb{display:none}
-  .tool kbd{display:none}
-  .tool span{font-size:9.5px}
+  .rb-btn kbd{display:none}
+  .rb-btn span{font-size:10px}
   .cs{display:none}
   .modes{margin-left:auto}
   #hint{display:none}

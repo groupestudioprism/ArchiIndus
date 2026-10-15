@@ -11,7 +11,7 @@ const Site = (() => {
   const WMS_R = 'https://data.geopf.fr/wms-r', WFS_URL = 'https://data.geopf.fr/wfs/ows';
   const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
   const DATA_VER = 1, SIZES = [500, 1000, 1600];
-  let data = null, show = true, token = 0, status = '';
+  let data = null, show = true, token = 0, status = '', lastErr = '';
 
   async function fetchJSON(url, ms = 15000, opt = {}) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
@@ -139,7 +139,7 @@ const Site = (() => {
       Status.msg(`Site chargé : ${data.W.bld.length} bâtiments, ${data.W.roads.length} voies, altitude NGF ${data.z0.toFixed(2)} m au point d'origine.`, 7000);
       Workbench.renderTree();
     } catch (e) {
-      status = 'error';
+      status = 'error'; lastErr = String(e && e.message || e);
       if (tok === token) Status.msg('Impossible de charger le site : vérifiez la connexion, puis « Mettre à jour » (onglet Site).', 9000);
     }
   }
@@ -176,5 +176,5 @@ const Site = (() => {
     Status.msg(show ? 'Site affiché.' : 'Site masqué.');
   }
   const lieu = () => { const s = Doc.get().site; return s ? { latitude: s.lat, longitude: s.lon, altitude: data ? data.z0 : null, adresse: s.label } : null; };
-  return { search, load, dialog, toggle, H, lieu, data: () => data, visible: () => show, status: () => status };
+  return { search, load, dialog, toggle, H, lieu, data: () => data, visible: () => show, status: () => status, lastError: () => lastErr };
 })();

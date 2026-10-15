@@ -49,6 +49,22 @@ const BOM = (() => {
         r.area += Geo.area(o) || 0;
       }
     }
+    /* composants d'assemblage : regroupés par pièce, paramètres et matériau ; fonctions 3D : volume et masse */
+    const parts = new Map(), vols = [];
+    for (const c of d.comps || []) {
+      const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
+      const P = PARTS[c.part.t], desc = P.fields.map(([k, lab, kind]) => (kind === 'num' ? `${k} ${c.part[k]}` : String(c.part[k]))).join(' · ');
+      const key = `${c.part.t}|${desc}|${c.mat}`;
+      let r = parts.get(key);
+      const V = Model.partVolume(c.part), m = matOf(c.mat);
+      if (!r) { r = { label: P.label, desc, mat: m ? m.nom : c.mat, count: 0, unit: V && m ? V / 1e9 * m.rho : null }; parts.set(key, r); }
+      r.count++;
+    }
+    for (const f of d.features || []) {
+      const l = Doc.layer(f.layer); if (!l || !l.visible || f.hide) continue;
+      const V = Model.featureVolume(f), m = matOf(f.mat);
+      vols.push({ name: f.name, mat: m ? m.nom : '—', V: V / 1e9, mass: m ? V / 1e9 * m.rho : null });
+    }
     const byGroup = (a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.layer.localeCompare(b.layer, 'fr');
     return {
       nets: [...nets.values()].sort((a, b) => byGroup(a, b) || b.dn - a.dn || a.mat.localeCompare(b.mat, 'fr')).map((r) => ({ ...r, tags: [...r.tags].sort() })),
@@ -56,6 +72,8 @@ const BOM = (() => {
       structs: [...structs.values()].sort((a, b) => byGroup(a, b) || a.kind.localeCompare(b.kind, 'fr') || a.prof.localeCompare(b.prof, 'fr') || a.w - b.w).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       others: [...others.values()].sort(byGroup),
       techs: techs.sort(byGroup),
+      parts: [...parts.values()].sort((a, b) => a.label.localeCompare(b.label, 'fr') || a.desc.localeCompare(b.desc, 'fr')),
+      vols,
     };
   }
 
@@ -69,7 +87,11 @@ const BOM = (() => {
   const ST_HEAD = ['Calque', 'Type', 'Profilé / matériau', 'Largeur (mm)', 'Repères', 'Tronçons', 'Longueur (m)'], ST_NUM = [3, 5, 6];
   const TECH_HEAD = ['Calque', 'Objet', 'Repère', 'Longueur (m)', 'Pente (%)', 'Données techniques'], TECH_NUM = [3, 4];
   const techRow = (r) => [r.layer, r.what, r.tag || '—', r.length === null ? '—' : f2(r.length), r.slope === null ? '—' : f2(r.slope), r.data];
-  const isEmpty = (b) => !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
+  const PART_HEAD = ['Composant', 'Paramètres (mm)', 'Matériau', 'Quantité', 'Masse unitaire (kg)', 'Masse totale (kg)'], PART_NUM = [3, 4, 5];
+  const partRow = (r) => [r.label, r.desc, r.mat, String(r.count), r.unit == null ? '—' : f2(r.unit), r.unit == null ? '—' : f2(r.unit * r.count)];
+  const VOL_HEAD = ['Fonction 3D', 'Matériau', 'Volume (m³)', 'Masse (kg)'], VOL_NUM = [2, 3];
+  const volRow = (r) => [r.name, r.mat, f2(r.V), r.mass == null ? '—' : f2(r.mass)];
+  const isEmpty = (b) => !(b.parts || []).length && !(b.vols || []).length && !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
   const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
   const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
   const NET_NUM = [2, 4, 5], OTHER_NUM = [2, 3, 4, 5];
@@ -99,6 +121,8 @@ const BOM = (() => {
       } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
       if (b.syms.length) body.append(table('Équipements et poteaux', SYM_HEAD, b.syms.map(symRow), SYM_NUM, ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))]));
       if (b.structs.length) body.append(table('Structures (murs et poutres)', ST_HEAD, b.structs.map(stRow), ST_NUM, ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), f2(b.structs.reduce((a, r) => a + r.length, 0))]));
+      if (b.parts.length) body.append(table('Composants d\'assemblage', PART_HEAD, b.parts.map(partRow), PART_NUM, ['Total', '', '', String(b.parts.reduce((a, r) => a + r.count, 0)), '', f2(b.parts.reduce((a, r) => a + (r.unit || 0) * r.count, 0))]));
+      if (b.vols.length) body.append(table('Volumes des fonctions 3D', VOL_HEAD, b.vols.map(volRow), VOL_NUM, ['Total', '', f2(b.vols.reduce((a, r) => a + r.V, 0)), f2(b.vols.reduce((a, r) => a + (r.mass || 0), 0))]));
       if (b.techs.length) body.append(table('Propriétés techniques renseignées', TECH_HEAD, b.techs.map(techRow), TECH_NUM));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
@@ -127,6 +151,16 @@ const BOM = (() => {
       for (const r of b.structs) lines.push(stRow(r).map(q).join(';'));
       lines.push(['Total', '', '', '', '', b.structs.reduce((a, r) => a + r.segments, 0), f2(b.structs.reduce((a, r) => a + r.length, 0))].map(q).join(';'), '');
     }
+    if (b.parts.length) {
+      lines.push(q('Composants d\'assemblage'), PART_HEAD.map(q).join(';'));
+      for (const r of b.parts) lines.push(partRow(r).map(q).join(';'));
+      lines.push('');
+    }
+    if (b.vols.length) {
+      lines.push(q('Volumes des fonctions 3D'), VOL_HEAD.map(q).join(';'));
+      for (const r of b.vols) lines.push(volRow(r).map(q).join(';'));
+      lines.push('');
+    }
     if (b.techs.length) {
       lines.push(q('Propriétés techniques renseignées'), TECH_HEAD.map(q).join(';'));
       for (const r of b.techs) lines.push(techRow(r).map(q).join(';'));
@@ -140,5 +174,5 @@ const BOM = (() => {
     Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
   }
 
-  return { TECH_HEAD, TECH_NUM, techRow, compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+  return { PART_HEAD, PART_NUM, partRow, VOL_HEAD, VOL_NUM, volRow, TECH_HEAD, TECH_NUM, techRow, compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
 })();

@@ -4,7 +4,21 @@ Application de conception de plans industriels et de réseaux techniques (résea
 
 > **État : éditeur 2D avec réseaux, nomenclature, PDF, et compte / cloud codés mais non activés.** Le bloc de règles `ai*` est publié dans le projet commun (v1 le 14/10/2026, v2 avec les dossiers le 15/10/2026 ; relecture en ligne identique au fichier testé à l'émulateur). Le SDK Firebase réel n'a été testé qu'à travers une simulation ; les règles l'ont été à l'émulateur. Rien n'a été testé sur téléphone ni dans un logiciel de CAO.
 
-## Ce qui fonctionne (testé dans Chromium sans interface, `tests/e2e.py`)
+## Poste de conception (type SolidWorks / Inventor / Revit) — testé dans Chromium sans interface, `tests/e2e_cao.py`
+
+- **Ruban à onglets** : Esquisse, Fonctions 3D, Assemblage, Métiers, Site, Matériaux, Analyse, Affichage ; **arbre de création** à gauche (plans Dessus / Face / Droite, esquisses, fonctions, composants, site ; affiché par défaut à partir de 1440 px de large, bouton à gauche des onglets sinon) ; **propriétés** à droite selon l'élément sélectionné.
+- **Esquisses sur plans** (`src/engine/41-model.js`) : nouvelle esquisse sur Dessus (X·Y), Face (X·Z) ou Droite (Y·Z), décalable ; le dessin 2D se fait dans l'esquisse (bandeau « Quitter l'esquisse »). Les esquisses de face et de droite n'apparaissent pas dans la vue en plan ni dans ses exports.
+- **Fonctions 3D** : **bossage extrudé** (contours fermés, un contour intérieur fait un trou ; sens normal, opposé ou symétrique) et **révolution** autour d'une ligne de l'esquisse (angle). Paramétriques : modifier l'esquisse, la profondeur ou l'angle régénère le volume. Volume exact (aire × profondeur ; règle de Guldin pour la révolution ; cercles approchés par des polygones de 48 côtés), masse selon le matériau. Pas d'enlèvement de matière (pas de booléens) pour l'instant.
+- **Assemblage** : bibliothèque de pièces paramétriques (profilé acier IPE / HEA / HEB / UPN, platine percée, dalle, massif, cuve, regard, groupe motopompe, garde-corps), position, rotation, matériau ; **contraintes** fixe, posé sur, axe aligné, décalage (résolues dans l'ordre des dépendances, cycles signalés). La 3D se met à jour en direct.
+- **Générateur de bâtiment d'activité** : portiques (poteaux HEA/HEB sur massifs, traverses IPE), sablières, dallage, bardage périphérique en composition ; tout est lié par des contraintes « posé sur » et s'annule d'un seul Ctrl+Z. Structure de principe (sans pente, pannes ni contreventement).
+- **Site réel** (même système qu'ARCHITRAFFIC, `src/engine/49-site.js`) : adresse (géocodage IGN), relief NGF (IGN RGE ALTI®), bâtiments et hauteurs (IGN BD TOPO®, OSM en repli), voirie (OpenStreetMap) ; origine du projet au point d'adresse, cote 0 à l'altitude du terrain ; cache 30 jours sur l'appareil. L'export GLB contient le lieu au format d'ARCHIPLAN (`extras.archiplan.lieu`) pour qu'ARCHITRAFFIC place la maquette à son adresse. **Testé uniquement avec des réponses simulées** des services IGN et Overpass.
+- **Matériaux** (`src/engine/12-materials.js`, 47 matériaux) : propriétés mécaniques (E, G, ν, fy / fk, fu, α) tirées des Eurocodes et normes produits (EN 1993-1-1, EN 1993-1-4, EN 1999-1-1, EN 1992-1-1, EN 338, EN 14080, EN 1563…), thermiques (λ, c, μ), carbone ; valeurs « typiques » signalées comme telles (plastiques, cuivre).
+- **Profilés** (`src/engine/13-sections.js`) : catalogue IPE 100 à 400, HEA / HEB 160 à 240, UPN 160 (dimensions, aire, masse, inerties, module) ; cohérence vérifiée par le test (aire et masse à 1 % près de la géométrie, I tabulé ≥ I sans congés) ; sections réelles des poutres en 3D.
+- **Compositions de parois** (`src/engine/14-physics.js`, méthodes d'ARCHIPLAN) : bardages simple / double peau, panneaux sandwich, voiles BA, parpaing, dallages industriels, toitures bac acier : U (EN ISO 6946), déphasage (EN ISO 13786), Rw (loi de masse), condensation (Glaser), masse, carbone. Application aux murs sélectionnés (épaisseur = somme des couches).
+- **Analyse** (`src/engine/48-analysis.js`) : poutres (flèche, moment, effort tranchant, contrainte, taux de travail ; appuis simples, encastrés ou console ; charge saisie + poids propre), poteaux (flambement d'Euler, élancement réduit), réseaux (dilatation thermique) ; carte « Taux » en 3D. **Pré-dimensionnement indicatif** : ni coefficients partiels, ni déversement, ni assemblages — ne remplace pas une note de calcul aux Eurocodes.
+- **Nomenclature** complétée : composants d'assemblage (quantités, masses) et volumes des fonctions 3D (écran, CSV, PDF).
+
+## Ce qui fonctionne aussi (testé dans Chromium sans interface, `tests/e2e.py` et suivants)
 
 - **Dessin 2D en millimètres** : ligne, polyligne, rectangle, cercle, cote alignée, texte.
 - **Édition** : sélection (clic, fenêtre, capture), déplacer, copier, supprimer, annuler / rétablir (100 niveaux).
@@ -35,7 +49,7 @@ Application de conception de plans industriels et de réseaux techniques (résea
 ### Limites connues
 
 - Le DXF n'a pas été ouvert dans un logiciel de CAO : seule sa structure a été contrôlée. Les accents sont supprimés, les couleurs sont ramenées aux indices AutoCAD.
-- Vue 3D / ArchiVision **n'existe pas encore** (phase 7). Les symboles sont des schémas de principe, pas des symboles normalisés ; pas de bibliothèque personnalisée, pas de jonction automatique des murs entre eux (chevauchements visibles). Phase 4 et nouveau panneau testés dans Chromium sans interface uniquement, pas sur un téléphone réel.
+- Les symboles sont des schémas de principe, pas des symboles normalisés ; pas de bibliothèque personnalisée, pas de jonction automatique des murs entre eux (chevauchements visibles). Phase 4 et nouveau panneau testés dans Chromium sans interface uniquement, pas sur un téléphone réel.
 - Compte : pas de code PIN ni de verrouillage. Pas de partage de projets ou de dossiers (par email ou lien), pas de « Partagés avec moi », pas de miniatures de projets, pas de vérification d'email. Les règles n'empêchent pas un dossier d'être déplacé dans son propre sous-dossier (contrôlé par l'application seulement). Le lien projet courant ↔ projet cloud n'est gardé qu'en mémoire. Le compteur d'usage cloud dépend des règles ; non vérifié en production.
 - L'export PDF n'a pas été ouvert dans tous les lecteurs (seulement qpdf, pypdf, poppler).
 - Pas de gestion du tactile à deux doigts ; l'outil Main permet de déplacer la vue au doigt.
@@ -50,6 +64,7 @@ Application de conception de plans industriels et de réseaux techniques (résea
 | `src/css/app.css`, `src/css/home.css` | Mise en page et composants ; connexion et accueil (repris d'`auth.css` / `home.css` d'ArchiPlan). |
 | `src/engine/` | Moteur (script classique, fichiers concaténés dans l'ordre alphabétique) : `00-util`, `10-state`, `20-canvas`, `30-geometry`, `40-doc` (calques, historique, import validé), `50-snap`, `60-render`, `70-tools`, `75-io` (JSON, SVG, DXF), `76-pdf`, `77-bom`, `78-ui`, `79-cloudstore`, `79-account`, `79-home` (page de connexion et accueil), `80-main`. |
 | `tools/build.py` | Assemble le tout : `python3 tools/build.py` → `index.html`. |
+| `tests/e2e_cao.py` | Poste de conception : ruban, arbre, esquisses, fonctions, assemblage, générateur, matériaux, analyse, site (réponses IGN / OSM simulées), GLB avec lieu, import validé. |
 | `tests/e2e_3d.py` | Vue 3D et export GLB (WebGL logiciel ; Three.js servi depuis `THREE_DIR`, voir l'en-tête du test). |
 | `tests/e2e_reseaux.py`, `tests/e2e_equip.py`, `tests/e2e_compte.py` | Tests Playwright des réseaux / nomenclature / PDF, des équipements / structures / panneau, et du compte / cloud (ce dernier avec `tests/fake-firebase-compat.js`, **simulation** du SDK, pas Firebase). |
 | `tests/rules/` | Règles Firestore testées à l'émulateur contre les règles publiées d'ArchiPlan + le bloc `ai*` proposé : `cd tests/rules && npm install && PUBLISHED_RULES=<chemin firestore.rules> npm test`. |

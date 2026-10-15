@@ -255,15 +255,17 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 #panelBtn{display:none}
 @media (max-width:900px){
   #app,#app.no-tree{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "ribbon" "stage" "status"}
-  #tree{display:none}
+  #tree{position:fixed;left:0;top:96px;bottom:34px;width:min(300px,86vw);z-index:40;box-shadow:var(--shadow)}
+  #app.no-tree #tree{display:none}
+  .rb-tabs .modes{position:sticky;right:0;background:var(--chip)}
   .rb-btn{min-width:52px}
   .rb-lbl{display:none}
   #panel{position:fixed;right:0;top:53px;bottom:30px;z-index:40;width:min(320px,92vw);box-shadow:var(--shadow);transform:translateX(105%);visibility:hidden;transition:transform .18s,visibility .18s}
   #app.pn-open #panel{transform:none;visibility:visible}
   #panelBtn{display:inline-flex}
   .ib .lb{display:none}
-  .tool kbd{display:none}
-  .tool span{font-size:9.5px}
+  .rb-btn kbd{display:none}
+  .rb-btn span{font-size:10px}
   .cs{display:none}
   .modes{margin-left:auto}
   #hint{display:none}
@@ -588,7 +590,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
     <div id="v3dView" hidden>
       <canvas id="cv3d" aria-label="Vue 3D : glisser pour tourner, molette pour zoomer, clic droit ou Maj pour déplacer"></canvas>
       <div class="vtools" role="toolbar" aria-label="Affichage 3D">
-        <div class="vgrp" id="v3dStyle"><button type="button" data-style="shaded" aria-pressed="true">Ombré</button><button type="button" data-style="wire" aria-pressed="false">Filaire</button><button type="button" data-style="xray" aria-pressed="false">Rayons X</button></div>
+        <div class="vgrp" id="v3dStyle"><button type="button" data-style="shaded" aria-pressed="true">Ombré</button><button type="button" data-style="mat" aria-pressed="false">Matériaux</button><button type="button" data-style="util" aria-pressed="false" title="Taux de travail des poutres (onglet Analyse)">Taux</button><button type="button" data-style="wire" aria-pressed="false">Filaire</button><button type="button" data-style="xray" aria-pressed="false">Rayons X</button></div>
         <div class="vgrp" id="v3dCams"><button type="button" data-cam="iso">ISO</button><button type="button" data-cam="top">Dessus</button><button type="button" data-cam="front">Face</button><button type="button" data-cam="right">Droite</button><button type="button" data-cam="iso" data-fit="1">Tout voir</button></div>
       </div>
       <div class="v3d-note" id="v3dNote" role="status"></div>
@@ -1806,7 +1808,7 @@ const Model = (() => {
     } else if (f.type === 'revolve') {
       const ax = Doc.get().objects.find((o) => o.id === f.axis && o.sk === f.sk && o.type === 'line');
       if (!ax) return [];
-      const A2 = G.sub(ax.b, ax.a), L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return [];
+      const A2 = [ax.b[0] - ax.a[0], ax.b[1] - ax.a[1]], L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return [];
       const a = [A2[0] / L, A2[1] / L];
       for (const r of loops(f.sk, ax.id)) {
         const side = Math.sign(a[0] * (r.outer[0][1] - ax.a[1]) - a[1] * (r.outer[0][0] - ax.a[0])) || 1;
@@ -1823,7 +1825,7 @@ const Model = (() => {
     const s = sketch(f.sk); if (!s) return 0;
     if (f.type === 'extrude' || f.type === 'cut') return loops(f.sk).reduce((v, r) => v + regionArea(r), 0) * f.d;
     const ax = Doc.get().objects.find((o) => o.id === f.axis && o.type === 'line'); if (!ax) return 0;
-    const A2 = G.sub(ax.b, ax.a), L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return 0;
+    const A2 = [ax.b[0] - ax.a[0], ax.b[1] - ax.a[1]], L = Math.hypot(A2[0], A2[1]); if (L < 1e-9) return 0;
     let V = 0;
     for (const r of loops(f.sk, ax.id)) { const c = regionCentroid(r), dist = Math.abs(A2[0] * (c[1] - ax.a[1]) - A2[1] * (c[0] - ax.a[0])) / L; V += f.ang * Math.PI / 180 * regionArea(r) * dist; }
     return V;
@@ -2273,7 +2275,7 @@ const Site = (() => {
   const WMS_R = 'https://data.geopf.fr/wms-r', WFS_URL = 'https://data.geopf.fr/wfs/ows';
   const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
   const DATA_VER = 1, SIZES = [500, 1000, 1600];
-  let data = null, show = true, token = 0, status = '';
+  let data = null, show = true, token = 0, status = '', lastErr = '';
 
   async function fetchJSON(url, ms = 15000, opt = {}) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
@@ -2401,7 +2403,7 @@ const Site = (() => {
       Status.msg(`Site chargé : ${data.W.bld.length} bâtiments, ${data.W.roads.length} voies, altitude NGF ${data.z0.toFixed(2)} m au point d'origine.`, 7000);
       Workbench.renderTree();
     } catch (e) {
-      status = 'error';
+      status = 'error'; lastErr = String(e && e.message || e);
       if (tok === token) Status.msg('Impossible de charger le site : vérifiez la connexion, puis « Mettre à jour » (onglet Site).', 9000);
     }
   }
@@ -2438,7 +2440,7 @@ const Site = (() => {
     Status.msg(show ? 'Site affiché.' : 'Site masqué.');
   }
   const lieu = () => { const s = Doc.get().site; return s ? { latitude: s.lat, longitude: s.lon, altitude: data ? data.z0 : null, adresse: s.label } : null; };
-  return { search, load, dialog, toggle, H, lieu, data: () => data, visible: () => show, status: () => status };
+  return { search, load, dialog, toggle, H, lieu, data: () => data, visible: () => show, status: () => status, lastError: () => lastErr };
 })();
 
 /* ==== 50-snap.js ==== */
@@ -3500,6 +3502,8 @@ const PDF = (() => {
       net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
       other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
       sym: { head: BOM.SYM_HEAD, num: BOM.SYM_NUM, frac: [0.26, 0.26, 0.14, 0.22, 0.12] },
+      part: { head: BOM.PART_HEAD, num: BOM.PART_NUM, frac: [0.16, 0.34, 0.16, 0.08, 0.13, 0.13] },
+      vol: { head: BOM.VOL_HEAD, num: BOM.VOL_NUM, frac: [0.40, 0.30, 0.15, 0.15] },
       tech: { head: BOM.TECH_HEAD, num: BOM.TECH_NUM, frac: [0.13, 0.19, 0.08, 0.09, 0.08, 0.43] },
       st: { head: BOM.ST_HEAD, num: BOM.ST_NUM, frac: [0.20, 0.10, 0.22, 0.11, 0.17, 0.09, 0.11] },
     };
@@ -3519,6 +3523,14 @@ const PDF = (() => {
       items.push({ t: 'title', text: 'Nomenclature : structures (murs et poutres)' }, { t: 'head', s: specs.st });
       b.structs.forEach((r) => items.push({ t: 'row', s: specs.st, cells: BOM.stRow(r) }));
       items.push({ t: 'row', s: specs.st, bold: true, cells: ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), BOM.f2(b.structs.reduce((a, r) => a + r.length, 0))] });
+    }
+    if (b.parts.length) {
+      items.push({ t: 'title', text: 'Nomenclature : composants d\'assemblage' }, { t: 'head', s: specs.part });
+      b.parts.forEach((r) => items.push({ t: 'row', s: specs.part, cells: BOM.partRow(r) }));
+    }
+    if (b.vols.length) {
+      items.push({ t: 'title', text: 'Nomenclature : volumes des fonctions 3D' }, { t: 'head', s: specs.vol });
+      b.vols.forEach((r) => items.push({ t: 'row', s: specs.vol, cells: BOM.volRow(r) }));
     }
     if (b.techs.length) {
       items.push({ t: 'title', text: 'Nomenclature : propriétés techniques renseignées' }, { t: 'head', s: specs.tech });
@@ -3679,6 +3691,22 @@ const BOM = (() => {
         r.area += Geo.area(o) || 0;
       }
     }
+    /* composants d'assemblage : regroupés par pièce, paramètres et matériau ; fonctions 3D : volume et masse */
+    const parts = new Map(), vols = [];
+    for (const c of d.comps || []) {
+      const l = Doc.layer(c.layer); if (!l || !l.visible) continue;
+      const P = PARTS[c.part.t], desc = P.fields.map(([k, lab, kind]) => (kind === 'num' ? `${k} ${c.part[k]}` : String(c.part[k]))).join(' · ');
+      const key = `${c.part.t}|${desc}|${c.mat}`;
+      let r = parts.get(key);
+      const V = Model.partVolume(c.part), m = matOf(c.mat);
+      if (!r) { r = { label: P.label, desc, mat: m ? m.nom : c.mat, count: 0, unit: V && m ? V / 1e9 * m.rho : null }; parts.set(key, r); }
+      r.count++;
+    }
+    for (const f of d.features || []) {
+      const l = Doc.layer(f.layer); if (!l || !l.visible || f.hide) continue;
+      const V = Model.featureVolume(f), m = matOf(f.mat);
+      vols.push({ name: f.name, mat: m ? m.nom : '—', V: V / 1e9, mass: m ? V / 1e9 * m.rho : null });
+    }
     const byGroup = (a, b) => (GROUP_ORDER[a.group] - GROUP_ORDER[b.group]) || a.layer.localeCompare(b.layer, 'fr');
     return {
       nets: [...nets.values()].sort((a, b) => byGroup(a, b) || b.dn - a.dn || a.mat.localeCompare(b.mat, 'fr')).map((r) => ({ ...r, tags: [...r.tags].sort() })),
@@ -3686,6 +3714,8 @@ const BOM = (() => {
       structs: [...structs.values()].sort((a, b) => byGroup(a, b) || a.kind.localeCompare(b.kind, 'fr') || a.prof.localeCompare(b.prof, 'fr') || a.w - b.w).map((r) => ({ ...r, tags: [...r.tags].sort() })),
       others: [...others.values()].sort(byGroup),
       techs: techs.sort(byGroup),
+      parts: [...parts.values()].sort((a, b) => a.label.localeCompare(b.label, 'fr') || a.desc.localeCompare(b.desc, 'fr')),
+      vols,
     };
   }
 
@@ -3699,7 +3729,11 @@ const BOM = (() => {
   const ST_HEAD = ['Calque', 'Type', 'Profilé / matériau', 'Largeur (mm)', 'Repères', 'Tronçons', 'Longueur (m)'], ST_NUM = [3, 5, 6];
   const TECH_HEAD = ['Calque', 'Objet', 'Repère', 'Longueur (m)', 'Pente (%)', 'Données techniques'], TECH_NUM = [3, 4];
   const techRow = (r) => [r.layer, r.what, r.tag || '—', r.length === null ? '—' : f2(r.length), r.slope === null ? '—' : f2(r.slope), r.data];
-  const isEmpty = (b) => !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
+  const PART_HEAD = ['Composant', 'Paramètres (mm)', 'Matériau', 'Quantité', 'Masse unitaire (kg)', 'Masse totale (kg)'], PART_NUM = [3, 4, 5];
+  const partRow = (r) => [r.label, r.desc, r.mat, String(r.count), r.unit == null ? '—' : f2(r.unit), r.unit == null ? '—' : f2(r.unit * r.count)];
+  const VOL_HEAD = ['Fonction 3D', 'Matériau', 'Volume (m³)', 'Masse (kg)'], VOL_NUM = [2, 3];
+  const volRow = (r) => [r.name, r.mat, f2(r.V), r.mass == null ? '—' : f2(r.mass)];
+  const isEmpty = (b) => !(b.parts || []).length && !(b.vols || []).length && !b.nets.length && !b.others.length && !b.syms.length && !b.structs.length;
   const NET_HEAD = ['Calque', 'Matériau', 'DN (mm)', 'Repères', 'Tronçons', 'Longueur (m)'];
   const OTHER_HEAD = ['Calque', 'Groupe', 'Lignes / polylignes', 'Cercles', 'Longueur (m)', 'Surface fermée (m²)'];
   const NET_NUM = [2, 4, 5], OTHER_NUM = [2, 3, 4, 5];
@@ -3729,6 +3763,8 @@ const BOM = (() => {
       } else body.append(el('p', { class: 'mut' }, 'Aucun réseau défini (sélectionner des lignes ou polylignes, puis « Appliquer comme réseau »).'));
       if (b.syms.length) body.append(table('Équipements et poteaux', SYM_HEAD, b.syms.map(symRow), SYM_NUM, ['Total', '', '', '', String(b.syms.reduce((a, r) => a + r.count, 0))]));
       if (b.structs.length) body.append(table('Structures (murs et poutres)', ST_HEAD, b.structs.map(stRow), ST_NUM, ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), f2(b.structs.reduce((a, r) => a + r.length, 0))]));
+      if (b.parts.length) body.append(table('Composants d\'assemblage', PART_HEAD, b.parts.map(partRow), PART_NUM, ['Total', '', '', String(b.parts.reduce((a, r) => a + r.count, 0)), '', f2(b.parts.reduce((a, r) => a + (r.unit || 0) * r.count, 0))]));
+      if (b.vols.length) body.append(table('Volumes des fonctions 3D', VOL_HEAD, b.vols.map(volRow), VOL_NUM, ['Total', '', f2(b.vols.reduce((a, r) => a + r.V, 0)), f2(b.vols.reduce((a, r) => a + (r.mass || 0), 0))]));
       if (b.techs.length) body.append(table('Propriétés techniques renseignées', TECH_HEAD, b.techs.map(techRow), TECH_NUM));
       if (b.others.length) body.append(table('Autres éléments par calque', OTHER_HEAD, b.others.map(otherRow), OTHER_NUM));
     }
@@ -3757,6 +3793,16 @@ const BOM = (() => {
       for (const r of b.structs) lines.push(stRow(r).map(q).join(';'));
       lines.push(['Total', '', '', '', '', b.structs.reduce((a, r) => a + r.segments, 0), f2(b.structs.reduce((a, r) => a + r.length, 0))].map(q).join(';'), '');
     }
+    if (b.parts.length) {
+      lines.push(q('Composants d\'assemblage'), PART_HEAD.map(q).join(';'));
+      for (const r of b.parts) lines.push(partRow(r).map(q).join(';'));
+      lines.push('');
+    }
+    if (b.vols.length) {
+      lines.push(q('Volumes des fonctions 3D'), VOL_HEAD.map(q).join(';'));
+      for (const r of b.vols) lines.push(volRow(r).map(q).join(';'));
+      lines.push('');
+    }
     if (b.techs.length) {
       lines.push(q('Propriétés techniques renseignées'), TECH_HEAD.map(q).join(';'));
       for (const r of b.techs) lines.push(techRow(r).map(q).join(';'));
@@ -3770,7 +3816,7 @@ const BOM = (() => {
     Status.msg('Nomenclature envoyée vers vos téléchargements (CSV, séparateur « ; »).');
   }
 
-  return { TECH_HEAD, TECH_NUM, techRow, compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
+  return { PART_HEAD, PART_NUM, partRow, VOL_HEAD, VOL_NUM, volRow, TECH_HEAD, TECH_NUM, techRow, compute, show, exportCSV, netRow, otherRow, symRow, stRow, SYM_HEAD, SYM_NUM, ST_HEAD, ST_NUM, isEmpty, NET_HEAD, OTHER_HEAD, NET_NUM, OTHER_NUM, totals, f2, GROUP_NAME };
 })();
 
 /* ==== 77-view3d.js ==== */
@@ -6005,7 +6051,7 @@ function buildSolids(solids, minR) {
 function disposeGrp(g) { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
 function buildSite(S) {
   const g = new THREE.Group(); g.name = 'Site';
-  const H = (x, y) => window.Site.H(x, y);
+  const H = (x, y) => Site.H(x, y);   // Site : constante globale du script classique (portée lexicale globale partagée avec le module)
   const P3 = (x, y, z) => new THREE.Vector3(x, z, -y);
   /* terrain */
   const n = Math.min(S.elev.N, 161), st = S.size / (n - 1), pos = [], idx = [];
@@ -6146,7 +6192,7 @@ const Scene3D = {
     const ex = new GLTFExporter();
     const tmp = new THREE.Scene(); tmp.add(root.clone(true));
     /* lieu du projet (même clé qu'ARCHIPLAN : ARCHITRAFFIC place la maquette à son adresse) */
-    const lieu = window.Site && window.Site.lieu ? window.Site.lieu() : null;
+    const lieu = typeof Site !== 'undefined' && Site.lieu ? Site.lieu() : null;
     tmp.userData = { archiindus: { version: 1, unites: 'm', axe: 'Y vers le haut' }, ...(lieu ? { archiplan: { lieu } } : {}) };
     return new Promise((res, rej) => ex.parse(tmp, (buf) => res(buf), (e) => rej(e), { binary: true }));
   },

@@ -117,7 +117,7 @@ function buildSolids(solids, minR) {
 function disposeGrp(g) { g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); }
 function buildSite(S) {
   const g = new THREE.Group(); g.name = 'Site';
-  const H = (x, y) => window.Site.H(x, y);
+  const H = (x, y) => Site.H(x, y);   // Site : constante globale du script classique (portée lexicale globale partagée avec le module)
   const P3 = (x, y, z) => new THREE.Vector3(x, z, -y);
   /* terrain */
   const n = Math.min(S.elev.N, 161), st = S.size / (n - 1), pos = [], idx = [];
@@ -258,7 +258,7 @@ const Scene3D = {
     const ex = new GLTFExporter();
     const tmp = new THREE.Scene(); tmp.add(root.clone(true));
     /* lieu du projet (même clé qu'ARCHIPLAN : ARCHITRAFFIC place la maquette à son adresse) */
-    const lieu = window.Site && window.Site.lieu ? window.Site.lieu() : null;
+    const lieu = typeof Site !== 'undefined' && Site.lieu ? Site.lieu() : null;
     tmp.userData = { archiindus: { version: 1, unites: 'm', axe: 'Y vers le haut' }, ...(lieu ? { archiplan: { lieu } } : {}) };
     return new Promise((res, rej) => ex.parse(tmp, (buf) => res(buf), (e) => rej(e), { binary: true }));
   },

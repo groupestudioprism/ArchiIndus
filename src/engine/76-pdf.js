@@ -147,6 +147,8 @@ const PDF = (() => {
       net: { head: BOM.NET_HEAD, num: BOM.NET_NUM, frac: [0.26, 0.17, 0.09, 0.28, 0.09, 0.11] },
       other: { head: BOM.OTHER_HEAD, num: BOM.OTHER_NUM, frac: [0.30, 0.18, 0.14, 0.10, 0.14, 0.14] },
       sym: { head: BOM.SYM_HEAD, num: BOM.SYM_NUM, frac: [0.26, 0.26, 0.14, 0.22, 0.12] },
+      part: { head: BOM.PART_HEAD, num: BOM.PART_NUM, frac: [0.16, 0.34, 0.16, 0.08, 0.13, 0.13] },
+      vol: { head: BOM.VOL_HEAD, num: BOM.VOL_NUM, frac: [0.40, 0.30, 0.15, 0.15] },
       tech: { head: BOM.TECH_HEAD, num: BOM.TECH_NUM, frac: [0.13, 0.19, 0.08, 0.09, 0.08, 0.43] },
       st: { head: BOM.ST_HEAD, num: BOM.ST_NUM, frac: [0.20, 0.10, 0.22, 0.11, 0.17, 0.09, 0.11] },
     };
@@ -166,6 +168,14 @@ const PDF = (() => {
       items.push({ t: 'title', text: 'Nomenclature : structures (murs et poutres)' }, { t: 'head', s: specs.st });
       b.structs.forEach((r) => items.push({ t: 'row', s: specs.st, cells: BOM.stRow(r) }));
       items.push({ t: 'row', s: specs.st, bold: true, cells: ['Total', '', '', '', '', String(b.structs.reduce((a, r) => a + r.segments, 0)), BOM.f2(b.structs.reduce((a, r) => a + r.length, 0))] });
+    }
+    if (b.parts.length) {
+      items.push({ t: 'title', text: 'Nomenclature : composants d\'assemblage' }, { t: 'head', s: specs.part });
+      b.parts.forEach((r) => items.push({ t: 'row', s: specs.part, cells: BOM.partRow(r) }));
+    }
+    if (b.vols.length) {
+      items.push({ t: 'title', text: 'Nomenclature : volumes des fonctions 3D' }, { t: 'head', s: specs.vol });
+      b.vols.forEach((r) => items.push({ t: 'row', s: specs.vol, cells: BOM.volRow(r) }));
     }
     if (b.techs.length) {
       items.push({ t: 'title', text: 'Nomenclature : propriétés techniques renseignées' }, { t: 'head', s: specs.tech });
