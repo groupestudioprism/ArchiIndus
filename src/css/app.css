@@ -266,3 +266,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 @media (max-width:760px){ .brand small{display:none} .pname{flex:0 1 120px} }
 @media (max-width:560px){ #top{gap:6px;padding:6px 8px} .brand,#pname,#redo,#bom,#theme{display:none} #exportBtn span{display:none} .modes{margin-left:auto} .modes button{padding:7px 12px} .acts{margin-left:6px} }
 @media (max-width:560px){ #top .ib{min-width:34px;height:34px;padding:0 8px} #top .ib.user{width:34px;padding:0} .acts{gap:4px} .modes{padding:2px} .modes button{padding:6px 10px} }
+
+/* ---- téléphone : barre d'état défilante (« Tout voir » restait coupé), onglets qui s'effacent sous le sélecteur Plan/3D ---- */
+@media (max-width:700px){
+  #status{overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+  #status::-webkit-scrollbar{display:none}
+  #status>*{flex:none}
+  .rb-tabs .modes{box-shadow:-18px 0 10px -6px var(--panel),14px 0 0 3px var(--panel);margin-left:14px}
+}
+#c,canvas{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}

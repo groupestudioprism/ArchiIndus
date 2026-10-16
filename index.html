@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="description" content="ARCHIINDUS · Studio Prism : conception de plans industriels et de réseaux techniques.">
 <meta name="theme-color" content="#071B55">
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('ai.theme')==='dark'?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>/* page figée : seule l'interface défile (rubans, listes, panneaux) ; un défilement arrivé au bout ne fait plus glisser ni rebondir la page (iPhone) */
+html{overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow:hidden;overscroll-behavior:none}*{overscroll-behavior-x:contain}</style>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin><link rel="preconnect" href="https://firestore.googleapis.com"><link rel="preconnect" href="https://identitytoolkit.googleapis.com"><link rel="preconnect" href="https://securetoken.googleapis.com"><link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"><link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></head><body>
 <style>
 /* Charte Studio Prism : valeurs reprises d'ArchiPlan (src/css/app.css du dépôt archiplan), relevées le 2026-10-14.
@@ -297,6 +299,15 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 @media (max-width:760px){ .brand small{display:none} .pname{flex:0 1 120px} }
 @media (max-width:560px){ #top{gap:6px;padding:6px 8px} .brand,#pname,#redo,#bom,#theme{display:none} #exportBtn span{display:none} .modes{margin-left:auto} .modes button{padding:7px 12px} .acts{margin-left:6px} }
 @media (max-width:560px){ #top .ib{min-width:34px;height:34px;padding:0 8px} #top .ib.user{width:34px;padding:0} .acts{gap:4px} .modes{padding:2px} .modes button{padding:6px 10px} }
+
+/* ---- téléphone : barre d'état défilante (« Tout voir » restait coupé), onglets qui s'effacent sous le sélecteur Plan/3D ---- */
+@media (max-width:700px){
+  #status{overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+  #status::-webkit-scrollbar{display:none}
+  #status>*{flex:none}
+  .rb-tabs .modes{box-shadow:-18px 0 10px -6px var(--panel),14px 0 0 3px var(--panel);margin-left:14px}
+}
+#c,canvas{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 /* ===== Poste CAO : cube de vue, barre contextuelle, barre de raccourcis, arbre (retour arrière), formules, rapports ===== */
 .vcube{position:absolute;left:12px;top:12px;width:84px;height:96px;perspective:260px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:3}
 .vc-body{position:relative;width:56px;height:56px;margin-top:14px;transform-style:preserve-3d}
