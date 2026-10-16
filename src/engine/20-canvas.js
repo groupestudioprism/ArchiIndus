@@ -18,14 +18,14 @@ const Canvas2D = (() => {
 
   /* Pas de la grille fine (mm) : 10 mm, multiplié par 10 tant qu'il serait inférieur à 10 pixels. */
   function gridStep() {
-    let step = 10;
+    let step = AI_PREFS.base || 10;
     while (step * state.view.scale < 10) step *= 10;
     return step;
   }
 
   function resize() {
     const r = cv.getBoundingClientRect();
-    dpr = window.devicePixelRatio || 1;
+    dpr = Math.min(window.devicePixelRatio || 1, aiDprCap());
     cv.width = Math.max(1, Math.round(r.width * dpr));
     cv.height = Math.max(1, Math.round(r.height * dpr));
     if (!state.view.placed && r.width > 0) {
@@ -65,8 +65,7 @@ const Canvas2D = (() => {
     ctx.fillRect(0, 0, w, h);
 
     const step = gridStep();
-    gridLines(step, css('--grid-minor'), w, h);
-    gridLines(step * 10, css('--grid-major'), w, h);
+    if (AI_PREFS.grid) { gridLines(step, css('--grid-minor'), w, h); gridLines(step * 10, css('--grid-major'), w, h); }
 
     ctx.strokeStyle = css('--accent');
     ctx.globalAlpha = 0.55;
@@ -211,6 +210,7 @@ const Canvas2D = (() => {
     const [sx, sy] = local(e);
     const before = toWorld(sx, sy);
     let dl = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+    { const W = (window.PrismSettings?.wheel?.() || {k:1, inv:false}); dl *= W.k * (W.inv ? -1 : 1); }
     if (!dl || !Number.isFinite(dl)) return;
     if (e.ctrlKey) dl *= 2.5;
     const n = Math.max(-1.5, Math.min(1.5, dl / 100));

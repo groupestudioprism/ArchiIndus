@@ -493,7 +493,7 @@ const UI = (() => {
     bindTrade();
     applyTrade();
     document.querySelectorAll('.tool').forEach((b) => b.addEventListener('click', () => { Tools.setTool(b.dataset.tool); b.blur(); }));
-    const toggleTheme = () => { Theme.toggle(); Canvas2D.draw(); if (View3D.isOn()) View3D.refresh(); };
+    const toggleTheme = () => { Theme.toggle(); window.PrismSettings?.themeChanged(); Canvas2D.draw(); if (View3D.isOn()) View3D.refresh(); };
     $('#theme').addEventListener('click', toggleTheme);
     $('#themeMenu').addEventListener('click', toggleTheme);
     $('#bomMenu').addEventListener('click', () => BOM.show());

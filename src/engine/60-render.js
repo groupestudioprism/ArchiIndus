@@ -21,6 +21,8 @@ const Render = (() => {
     ctx.stroke();
   }
 
+  /* Réglages : unité et précision des cotes (dessin en mm) */
+  function aiDimFmt(L) { const u = AI_PREFS.dimUnit, k = u === 'm' ? 1000 : u === 'cm' ? 10 : 1, d = AI_PREFS.dimDec || 0; return (L / k).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }) + (u === 'mm' ? '' : ' ' + u); }
   function drawDim(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     const sc = state.view.scale;
@@ -49,7 +51,7 @@ const Render = (() => {
     ctx.rotate(ang);
     ctx.font = `600 ${px}px Inter, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    ctx.fillText(fmt(g.L), 0, -3);
+    ctx.fillText(aiDimFmt(g.L), 0, -3);
     ctx.restore();
   }
 
