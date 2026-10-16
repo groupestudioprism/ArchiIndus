@@ -308,6 +308,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
   .rb-tabs .modes{box-shadow:-18px 0 10px -6px var(--panel),14px 0 0 3px var(--panel);margin-left:14px}
 }
 #c,canvas{-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+@media (pointer:coarse){ .rb-tabs .modes button,.rb-tabs [role="tab"]{position:relative} .rb-tabs .modes button::after{content:"";position:absolute;inset:-6px 0} }
 /* ===== Poste CAO : cube de vue, barre contextuelle, barre de raccourcis, arbre (retour arrière), formules, rapports ===== */
 .vcube{position:absolute;left:12px;top:12px;width:84px;height:96px;perspective:260px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:3}
 .vc-body{position:relative;width:56px;height:56px;margin-top:14px;transform-style:preserve-3d}
@@ -915,6 +916,13 @@ window.AI_KERNEL = {vendor: "kernel/vendor/", src: "/* Noyau g\u00e9om\u00e9triq
 <script>
 /* ==== 00-util.js ==== */
 'use strict';
+/* Nombres à la française : un formateur par précision, réutilisé (toLocaleString en recrée un à chaque appel, très lent
+   quand on dessine des centaines de cotes à chaque image) */
+const FMT_FR = new Map();
+/* appareil tactile sans souris ni pavé (téléphone, tablette) */
+const MQ_COARSE = matchMedia('(pointer: coarse)'), MQ_FINE = matchMedia('(any-pointer: fine)');
+const touchOnly = () => MQ_COARSE.matches && !MQ_FINE.matches;
+function fmtFR(v, min, max){ const k = min * 100 + max; let f = FMT_FR.get(k); if (!f) FMT_FR.set(k, f = new Intl.NumberFormat('fr-FR', {minimumFractionDigits:min, maximumFractionDigits:max})); return f.format(v); }
 /* Outils communs : sélection d'éléments, création de nœuds, messages d'état, thème clair / sombre. */
 const $ = (sel, root = document) => root.querySelector(sel);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -1560,7 +1568,11 @@ const Canvas2D = (() => {
   let space = false;
   let raf = 0;
 
-  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  /* couleurs du thème lues une fois puis mémorisées ; relues dès que le thème, la classe ou le style de la page change */
+  const cssCache = new Map();
+  const css = (name) => { let v = cssCache.get(name); if (v === undefined) { v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); cssCache.set(name, v); } return v; };
+  new MutationObserver(() => cssCache.clear()).observe(document.documentElement, { attributes: true });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => cssCache.clear());
   const size = () => ({ w: cv.width / dpr, h: cv.height / dpr });
   const toWorld = (sx, sy) => [(sx - state.view.x) / state.view.scale, (state.view.y - sy) / state.view.scale];
   const toScreen = (p) => [p[0] * state.view.scale + state.view.x, state.view.y - p[1] * state.view.scale];
@@ -1772,7 +1784,7 @@ const Canvas2D = (() => {
   function wheelTick(now) {
     const dt = Math.min(50, now - (wz.last || now)); wz.last = now;
     if (Math.abs(wz.pend) < 1e-4) { wz.pend = 0; wz.raf = 0; return; }
-    const part = wz.pend * (1 - Math.exp(-dt / 55)); wz.pend -= part;
+    const part = Math.abs(wz.pend) < 2e-3 ? wz.pend : wz.pend * (1 - Math.exp(-dt / 55));   /* fin du glissement : on applique le reste, le pas par cran est exact */ wz.pend -= part;
     const before = toWorld(wz.sx, wz.sy);
     state.view.scale = clamp(state.view.scale * Math.exp(part), VIEW_LIMITS.min, VIEW_LIMITS.max);
     state.view.x = wz.sx - before[0] * state.view.scale;
@@ -2981,7 +2993,7 @@ const Props = (() => {
     const L = (Geo.length(o) || 0) / 1000;
     return L > 0 ? (p.zi - p.zf) / L * 100 : null;
   }
-  const f = (v, d) => v.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const f = (v, d) => fmtFR(v, 0, d);
   const fmtVal = (k, v) => `${f(v, PROP_DEFS[k].dec)} ${PROP_DEFS[k].unit}`;
   const slopeStr = (o) => { const s = slope(o); return s === null ? '' : f(s, 2) + ' %'; };
   /* « Altitude amont 12,5 m ; Débit 3 L/s » */
@@ -3101,7 +3113,7 @@ const Analysis = (() => {
   }
   const beams = () => Doc.get().objects.map(beamOf).filter(Boolean);
 
-  const f1 = (v, d = 1) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const f1 = (v, d = 1) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, d, d));
   function show() {
     const body = el('div');
     body.append(el('p', { class: 'mut small' }, 'Pré-dimensionnement indicatif (élasticité linéaire, sans coefficients partiels, sans déversement ni vérification des assemblages). Ne remplace pas une note de calcul aux Eurocodes.'));
@@ -3393,7 +3405,7 @@ const Render = (() => {
   }
 
   /* Réglages : unité et précision des cotes (dessin en mm) */
-  function aiDimFmt(L) { const u = AI_PREFS.dimUnit, k = u === 'm' ? 1000 : u === 'cm' ? 10 : 1, d = AI_PREFS.dimDec || 0; return (L / k).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }) + (u === 'mm' ? '' : ' ' + u); }
+  function aiDimFmt(L) { const u = AI_PREFS.dimUnit, k = u === 'm' ? 1000 : u === 'cm' ? 10 : 1, d = AI_PREFS.dimDec || 0; return fmtFR(L / k, d, d) + (u === 'mm' ? '' : ' ' + u); }
   function drawDim(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     const sc = state.view.scale;
@@ -3524,8 +3536,17 @@ const Render = (() => {
     ctx.restore();
   }
 
-  function scene(ctx) {
+  /* Objets hors de l'écran : ni calculés ni tracés (marge généreuse pour les traits épais, réseaux, repères et textes de cote).
+     Les textes tournés sont toujours dessinés (leur boîte ne tient pas compte de la rotation). */
+  function onScreen(o, w, h) {
+    if (o.type === 'text' && o.deg) return true;
+    const s = state.view.scale, m = ((o.net || Sym.isComposite(o)) ? 240 : 64) / s, b = Geo.bbox(o);
+    const x0 = -state.view.x / s, x1 = (w - state.view.x) / s, y1 = state.view.y / s, y0 = (state.view.y - h) / s;
+    return !(b[2] < x0 - m || b[0] > x1 + m || b[3] < y0 - m || b[1] > y1 + m);
+  }
+  function scene(ctx, vw, vh) {
     const d = Doc.get();
+    const cull = vw > 0 && vh > 0 ? (o) => onScreen(o, vw, vh) : () => true;
     const byLayer = new Map();
     for (const o of d.objects) {
       if (!byLayer.has(o.layer)) byLayer.set(o.layer, []);
@@ -3535,7 +3556,7 @@ const Render = (() => {
       if (!l.visible) continue;
       const col = shade(l.color);
       for (const o of byLayer.get(l.id) || []) {
-        if (!Model.visible2D(o)) continue;
+        if (!Model.visible2D(o) || !cull(o)) continue;
         if (Model.faded2D(o)) { ctx.save(); ctx.globalAlpha = 0.22; drawObject(ctx, o, col, 1.2); ctx.restore(); } else drawObject(ctx, o, col, 1.6);
       }
     }
@@ -3548,7 +3569,7 @@ const Render = (() => {
     }
     const selCol = css('--sel');
     for (const o of d.objects) {
-      if (Tools.selection.has(o.id)) drawObject(ctx, o, selCol, 2.6);
+      if (Tools.selection.has(o.id) && cull(o)) drawObject(ctx, o, selCol, 2.6);
     }
     const h = Tools.hover();
     if (h && !Tools.selection.has(h.id)) drawObject(ctx, h, css('--accent'), 2.4);
@@ -3585,6 +3606,26 @@ const Tools = (() => {
     mirror: 'Sélectionner d\'abord des objets. Cliquer deux points de l\'axe de symétrie : une copie symétrique est créée.',
     rotate: 'Sélectionner d\'abord des objets. Cliquer le centre, puis un point donnant l\'angle (ou taper l\'angle en degrés).',
     scale: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis taper le facteur (ex. 2 ou 0,5) et Entrée.',
+  };
+  /* consignes sur téléphone et tablette sans souris ni clavier */
+  const TOUCH_HINTS = {
+    select: 'Touchez un objet, ou glissez pour une fenêtre (gauche → droite : objets entiers ; droite → gauche : objets touchés). Deux doigts : déplacer et zoomer.',
+    line: 'Touchez le point de départ, puis les points suivants. Changez d\'outil pour terminer.',
+    poly: 'Touchez les sommets. Retouchez le dernier point pour terminer, le premier pour fermer.',
+    rect: 'Touchez deux coins opposés.',
+    circle: 'Touchez le centre, puis un point du cercle.',
+    dim: 'Touchez les deux points à coter, puis la position de la ligne de cote.',
+    text: 'Touchez l\'emplacement du texte, tapez-le puis validez.',
+    sym: 'Choisissez un symbole dans la bibliothèque du panneau, touchez pour le poser.',
+    move: 'Sélectionnez d\'abord des objets. Touchez le point de base, puis le point d\'arrivée.',
+    copy: 'Sélectionnez d\'abord des objets. Touchez le point de base, puis chaque point d\'arrivée.',
+    pan: 'Glissez pour déplacer la vue (ou deux doigts dans n\'importe quel outil).',
+    offset: 'Touchez une ligne, une polyligne ou un cercle, puis le côté du décalage.',
+    trim: 'Touchez la partie d\'une ligne ou d\'une polyligne à retirer : elle est coupée aux intersections voisines.',
+    extend: 'Touchez près de l\'extrémité d\'une ligne ou d\'une polyligne : elle est prolongée jusqu\'au premier objet rencontré.',
+    mirror: 'Sélectionnez d\'abord des objets. Touchez deux points de l\'axe de symétrie : une copie symétrique est créée.',
+    rotate: 'Sélectionnez d\'abord des objets. Touchez le centre, puis un point donnant l\'angle.',
+    scale: 'Sélectionnez d\'abord des objets. Touchez le point de base, puis tapez le facteur (ex. 2 ou 0,5).',
   };
   const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', e: 'sym', m: 'move', k: 'copy', h: 'pan', o: 'offset', a: 'trim', x: 'extend', i: 'mirror', q: 'rotate', u: 'scale' };
   const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy', 'rotate', 'scale'];
@@ -3632,7 +3673,7 @@ const Tools = (() => {
   function setTool(t) {
     if (!NAMES[t]) return;
     tool = t; pts = []; box = null; cur = null; hoverObj = null; target = null;
-    Status.msg(NAMES[t] + ' : ' + HINTS[t], 9000);
+    Status.msg(NAMES[t] + ' : ' + ((touchOnly() && TOUCH_HINTS[t]) || HINTS[t]), 9000);
     updateLive();
     notify('tool');
   }
@@ -3653,11 +3694,15 @@ const Tools = (() => {
         addObj({ type: 'line', a: pts[0], b: p });
         pts = [p];
         break;
-      case 'poly':
+      case 'poly': {
         if (!canCreate()) return;
-        if (pts.length && G.dist(pts[pts.length - 1], p) < 1e-6) return;
+        /* fin du tracé sans clavier : retoucher le dernier point termine, toucher le premier ferme (tolérance au doigt : 14 px) */
+        const tol = lastTouch ? 14 / state.view.scale : 1e-6;
+        if (pts.length >= 3 && G.dist(pts[0], p) < tol) { finishPoly(true); break; }
+        if (pts.length && G.dist(pts[pts.length - 1], p) < tol) { if (pts.length >= 2) finishPoly(false); break; }
         pts.push(p);
         break;
+      }
       case 'rect': {
         if (!canCreate()) return;
         if (!pts.length) { pts = [p]; return; }
@@ -3798,8 +3843,10 @@ const Tools = (() => {
     tb.focus();
   }
 
+  let lastTouch = false;
   function down(raw, e) {
     if (textBusy) return;
+    lastTouch = e?.pointerType === 'touch' || e?.pointerType === 'pen';
     if (tool === 'select') {
       const hit = pick(raw);
       if (hit) {
@@ -4661,7 +4708,7 @@ const BOM = (() => {
     };
   }
 
-  const f2 = (v) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const f2 = (v) => fmtFR(v, 2, 2);
 
   function netRow(r) { return [r.layer, r.mat || '—', String(r.dn), r.tags.join(', ') || '—', String(r.segments), f2(r.length)]; }
   function otherRow(r) { return [r.layer, GROUP_NAME[r.group] || r.group, String(r.lines), String(r.circles), f2(r.length), f2(r.area)]; }
@@ -4985,7 +5032,7 @@ const View3D = (() => {
     // zoom fluide : même pas par cran (×1,12), glissé sur ≈ 150 ms
     const wz = { pend: 0, raf: 0, last: 0 };
     const wzTick = (now) => { const dt = Math.min(50, now - (wz.last || now)); wz.last = now; if (Math.abs(wz.pend) < 1e-4) { wz.pend = 0; wz.raf = 0; return; }
-      const part = wz.pend * (1 - Math.exp(-dt / 55)); wz.pend -= part; st.k = Math.max(0.1, Math.min(20, st.k * Math.exp(part))); draw(); wz.raf = requestAnimationFrame(wzTick); };
+      const part = Math.abs(wz.pend) < 2e-3 ? wz.pend : wz.pend * (1 - Math.exp(-dt / 55));   /* fin du glissement : on applique le reste, le pas par cran est exact */ wz.pend -= part; st.k = Math.max(0.1, Math.min(20, st.k * Math.exp(part))); draw(); wz.raf = requestAnimationFrame(wzTick); };
     cv.addEventListener('wheel', (e) => { e.preventDefault(); wz.pend = Math.max(-1.5, Math.min(1.5, wz.pend + (((window.PrismSettings?.wheel?.() || {k:1, inv:false})).inv ? -1 : 1) * ((window.PrismSettings?.wheel?.() || {k:1, inv:false})).k * Math.log(e.deltaY < 0 ? 1.12 : 1 / 1.12))); if (!wz.raf) { wz.last = 0; wz.raf = requestAnimationFrame(wzTick); } }, { passive: false });
     const views = el('div', { class: 'v3d-bar' },
       ...[['Isométrique', -0.6, 0.6], ['Dessus', 0, 1.5], ['Face', 0, 0], ['Côté', -Math.PI / 2, 0]].map(([n, y, p]) => {
@@ -5383,7 +5430,7 @@ const UI = (() => {
     if (eq) dl.append(...kv('Équipements', String(eq)));
     const box = el('div', {}, dl);
     if (!d.objects.length) box.append(el('p', { class: 'mut small' }, 'Dessin vide. Choisissez un outil à gauche, ou posez un équipement depuis la bibliothèque ci-dessus.'));
-    else box.append(el('p', { class: 'mut small' }, 'Cliquez un objet pour modifier ses propriétés. Maj + clic ajoute à la sélection ; Ctrl+A sélectionne tout.'));
+    else box.append(el('p', { class: 'mut small' }, touchOnly() ? 'Touchez un objet pour modifier ses propriétés ; glissez une fenêtre pour en sélectionner plusieurs.' : 'Cliquez un objet pour modifier ses propriétés. Maj + clic ajoute à la sélection ; Ctrl+A sélectionne tout.'));
     const bom = el('button', { type: 'button', class: 'btn wide' }, 'Ouvrir la nomenclature');
     bom.addEventListener('click', () => BOM.show());
     box.append(bom);
@@ -5840,7 +5887,7 @@ const Workbench = (() => {
   };
   const layerSelect = (cur) => el('select', { 'aria-label': 'Calque' }, ...Doc.get().layers.map((l) => el('option', { value: l.id, selected: l.id === cur }, l.name)));
   const featureDialog = (type, edit) => Cad.dialog(type, edit);
-  const fmtV = (mm3) => `${(mm3 / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 3 })} m³`;
+  const fmtV = (mm3) => `${fmtFR(mm3 / 1e9, 0, 3)} m³`;
   const massOf = (mm3, matId) => { const m = matOf(matId); return m && mm3 ? mm3 / 1e9 * m.rho : null; };
 
   /* ---------- assemblage ---------- */
@@ -5949,7 +5996,7 @@ const Workbench = (() => {
   }
 
   /* ---------- matériaux ---------- */
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   function matLibDialog() {
     const q = el('input', { class: 'fld', type: 'search', placeholder: 'Rechercher (acier, béton, PE…)', 'aria-label': 'Rechercher un matériau' });
     const wrap = el('div', { class: 'tbl-wrap' });
@@ -6120,7 +6167,7 @@ const Workbench = (() => {
    arbre de création avec barre de retour arrière et réorganisation des fonctions. ============
    Les fonctions sont stockées dans Doc.features (ordre = ordre de reconstruction) ; Model.kernelInput les traduit pour le noyau. */
 const Cad = (() => {
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
   const feats = () => Doc.get().features || [];
   const featById = (id) => feats().find((f) => f.id === id) || null;
@@ -6837,7 +6884,7 @@ const Sample = (() => {
    Darcy-Weisbach avec la formule explicite de Swamee-Jain (approximation de Colebrook-White) pour les réseaux en charge.
    Les résultats ne remplacent pas une note de calcul hydraulique validée (débits de pointe, remplissage partiel, coups de bélier…). */
 const Networks = (() => {
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   /* coefficient de Strickler K (m^(1/3)/s) et rugosité absolue k (mm), valeurs usuelles de projet (réseau en service) */
   const ROUGH = [
@@ -7048,7 +7095,7 @@ const Networks = (() => {
    Vérifications INDICATIVES : contrainte élastique N/A + M/W, flambement (courbe b, longueur de barre), flèche relative.
    Ni coefficients partiels, ni combinaisons, ni déversement, ni assemblages : ce n'est pas une note de calcul aux Eurocodes. */
 const Frame = (() => {
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];

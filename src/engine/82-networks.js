@@ -3,7 +3,7 @@
    Darcy-Weisbach avec la formule explicite de Swamee-Jain (approximation de Colebrook-White) pour les réseaux en charge.
    Les résultats ne remplacent pas une note de calcul hydraulique validée (débits de pointe, remplissage partiel, coups de bélier…). */
 const Networks = (() => {
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   /* coefficient de Strickler K (m^(1/3)/s) et rugosité absolue k (mm), valeurs usuelles de projet (réseau en service) */
   const ROUGH = [

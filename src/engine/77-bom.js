@@ -77,7 +77,7 @@ const BOM = (() => {
     };
   }
 
-  const f2 = (v) => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const f2 = (v) => fmtFR(v, 2, 2);
 
   function netRow(r) { return [r.layer, r.mat || '—', String(r.dn), r.tags.join(', ') || '—', String(r.segments), f2(r.length)]; }
   function otherRow(r) { return [r.layer, GROUP_NAME[r.group] || r.group, String(r.lines), String(r.circles), f2(r.length), f2(r.area)]; }

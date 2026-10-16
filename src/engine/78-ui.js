@@ -335,7 +335,7 @@ const UI = (() => {
     if (eq) dl.append(...kv('Équipements', String(eq)));
     const box = el('div', {}, dl);
     if (!d.objects.length) box.append(el('p', { class: 'mut small' }, 'Dessin vide. Choisissez un outil à gauche, ou posez un équipement depuis la bibliothèque ci-dessus.'));
-    else box.append(el('p', { class: 'mut small' }, 'Cliquez un objet pour modifier ses propriétés. Maj + clic ajoute à la sélection ; Ctrl+A sélectionne tout.'));
+    else box.append(el('p', { class: 'mut small' }, touchOnly() ? 'Touchez un objet pour modifier ses propriétés ; glissez une fenêtre pour en sélectionner plusieurs.' : 'Cliquez un objet pour modifier ses propriétés. Maj + clic ajoute à la sélection ; Ctrl+A sélectionne tout.'));
     const bom = el('button', { type: 'button', class: 'btn wide' }, 'Ouvrir la nomenclature');
     bom.addEventListener('click', () => BOM.show());
     box.append(bom);

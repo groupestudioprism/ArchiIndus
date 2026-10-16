@@ -10,7 +10,11 @@ const Canvas2D = (() => {
   let space = false;
   let raf = 0;
 
-  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  /* couleurs du thème lues une fois puis mémorisées ; relues dès que le thème, la classe ou le style de la page change */
+  const cssCache = new Map();
+  const css = (name) => { let v = cssCache.get(name); if (v === undefined) { v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); cssCache.set(name, v); } return v; };
+  new MutationObserver(() => cssCache.clear()).observe(document.documentElement, { attributes: true });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => cssCache.clear());
   const size = () => ({ w: cv.width / dpr, h: cv.height / dpr });
   const toWorld = (sx, sy) => [(sx - state.view.x) / state.view.scale, (state.view.y - sy) / state.view.scale];
   const toScreen = (p) => [p[0] * state.view.scale + state.view.x, state.view.y - p[1] * state.view.scale];
@@ -222,7 +226,7 @@ const Canvas2D = (() => {
   function wheelTick(now) {
     const dt = Math.min(50, now - (wz.last || now)); wz.last = now;
     if (Math.abs(wz.pend) < 1e-4) { wz.pend = 0; wz.raf = 0; return; }
-    const part = wz.pend * (1 - Math.exp(-dt / 55)); wz.pend -= part;
+    const part = Math.abs(wz.pend) < 2e-3 ? wz.pend : wz.pend * (1 - Math.exp(-dt / 55));   /* fin du glissement : on applique le reste, le pas par cran est exact */ wz.pend -= part;
     const before = toWorld(wz.sx, wz.sy);
     state.view.scale = clamp(state.view.scale * Math.exp(part), VIEW_LIMITS.min, VIEW_LIMITS.max);
     state.view.x = wz.sx - before[0] * state.view.scale;

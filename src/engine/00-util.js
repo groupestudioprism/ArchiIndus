@@ -1,4 +1,11 @@
 'use strict';
+/* Nombres à la française : un formateur par précision, réutilisé (toLocaleString en recrée un à chaque appel, très lent
+   quand on dessine des centaines de cotes à chaque image) */
+const FMT_FR = new Map();
+/* appareil tactile sans souris ni pavé (téléphone, tablette) */
+const MQ_COARSE = matchMedia('(pointer: coarse)'), MQ_FINE = matchMedia('(any-pointer: fine)');
+const touchOnly = () => MQ_COARSE.matches && !MQ_FINE.matches;
+function fmtFR(v, min, max){ const k = min * 100 + max; let f = FMT_FR.get(k); if (!f) FMT_FR.set(k, f = new Intl.NumberFormat('fr-FR', {minimumFractionDigits:min, maximumFractionDigits:max})); return f.format(v); }
 /* Outils communs : sélection d'éléments, création de nœuds, messages d'état, thème clair / sombre. */
 const $ = (sel, root = document) => root.querySelector(sel);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));

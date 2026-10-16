@@ -3,7 +3,7 @@
    arbre de création avec barre de retour arrière et réorganisation des fonctions. ============
    Les fonctions sont stockées dans Doc.features (ordre = ordre de reconstruction) ; Model.kernelInput les traduit pour le noyau. */
 const Cad = (() => {
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   const kv = (k, v) => [el('dt', {}, k), el('dd', {}, v)];
   const feats = () => Doc.get().features || [];
   const featById = (id) => feats().find((f) => f.id === id) || null;

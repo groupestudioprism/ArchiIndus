@@ -246,7 +246,7 @@ const Workbench = (() => {
   };
   const layerSelect = (cur) => el('select', { 'aria-label': 'Calque' }, ...Doc.get().layers.map((l) => el('option', { value: l.id, selected: l.id === cur }, l.name)));
   const featureDialog = (type, edit) => Cad.dialog(type, edit);
-  const fmtV = (mm3) => `${(mm3 / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 3 })} m³`;
+  const fmtV = (mm3) => `${fmtFR(mm3 / 1e9, 0, 3)} m³`;
   const massOf = (mm3, matId) => { const m = matOf(matId); return m && mm3 ? mm3 / 1e9 * m.rho : null; };
 
   /* ---------- assemblage ---------- */
@@ -355,7 +355,7 @@ const Workbench = (() => {
   }
 
   /* ---------- matériaux ---------- */
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   function matLibDialog() {
     const q = el('input', { class: 'fld', type: 'search', placeholder: 'Rechercher (acier, béton, PE…)', 'aria-label': 'Rechercher un matériau' });
     const wrap = el('div', { class: 'tbl-wrap' });

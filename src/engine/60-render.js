@@ -22,7 +22,7 @@ const Render = (() => {
   }
 
   /* Réglages : unité et précision des cotes (dessin en mm) */
-  function aiDimFmt(L) { const u = AI_PREFS.dimUnit, k = u === 'm' ? 1000 : u === 'cm' ? 10 : 1, d = AI_PREFS.dimDec || 0; return (L / k).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }) + (u === 'mm' ? '' : ' ' + u); }
+  function aiDimFmt(L) { const u = AI_PREFS.dimUnit, k = u === 'm' ? 1000 : u === 'cm' ? 10 : 1, d = AI_PREFS.dimDec || 0; return fmtFR(L / k, d, d) + (u === 'mm' ? '' : ' ' + u); }
   function drawDim(ctx, o, col, lw) {
     const S = Canvas2D.toScreen;
     const sc = state.view.scale;
@@ -153,8 +153,17 @@ const Render = (() => {
     ctx.restore();
   }
 
-  function scene(ctx) {
+  /* Objets hors de l'écran : ni calculés ni tracés (marge généreuse pour les traits épais, réseaux, repères et textes de cote).
+     Les textes tournés sont toujours dessinés (leur boîte ne tient pas compte de la rotation). */
+  function onScreen(o, w, h) {
+    if (o.type === 'text' && o.deg) return true;
+    const s = state.view.scale, m = ((o.net || Sym.isComposite(o)) ? 240 : 64) / s, b = Geo.bbox(o);
+    const x0 = -state.view.x / s, x1 = (w - state.view.x) / s, y1 = state.view.y / s, y0 = (state.view.y - h) / s;
+    return !(b[2] < x0 - m || b[0] > x1 + m || b[3] < y0 - m || b[1] > y1 + m);
+  }
+  function scene(ctx, vw, vh) {
     const d = Doc.get();
+    const cull = vw > 0 && vh > 0 ? (o) => onScreen(o, vw, vh) : () => true;
     const byLayer = new Map();
     for (const o of d.objects) {
       if (!byLayer.has(o.layer)) byLayer.set(o.layer, []);
@@ -164,7 +173,7 @@ const Render = (() => {
       if (!l.visible) continue;
       const col = shade(l.color);
       for (const o of byLayer.get(l.id) || []) {
-        if (!Model.visible2D(o)) continue;
+        if (!Model.visible2D(o) || !cull(o)) continue;
         if (Model.faded2D(o)) { ctx.save(); ctx.globalAlpha = 0.22; drawObject(ctx, o, col, 1.2); ctx.restore(); } else drawObject(ctx, o, col, 1.6);
       }
     }
@@ -177,7 +186,7 @@ const Render = (() => {
     }
     const selCol = css('--sel');
     for (const o of d.objects) {
-      if (Tools.selection.has(o.id)) drawObject(ctx, o, selCol, 2.6);
+      if (Tools.selection.has(o.id) && cull(o)) drawObject(ctx, o, selCol, 2.6);
     }
     const h = Tools.hover();
     if (h && !Tools.selection.has(h.id)) drawObject(ctx, h, css('--accent'), 2.4);

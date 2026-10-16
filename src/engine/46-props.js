@@ -35,7 +35,7 @@ const Props = (() => {
     const L = (Geo.length(o) || 0) / 1000;
     return L > 0 ? (p.zi - p.zf) / L * 100 : null;
   }
-  const f = (v, d) => v.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const f = (v, d) => fmtFR(v, 0, d);
   const fmtVal = (k, v) => `${f(v, PROP_DEFS[k].dec)} ${PROP_DEFS[k].unit}`;
   const slopeStr = (o) => { const s = slope(o); return s === null ? '' : f(s, 2) + ' %'; };
   /* « Altitude amont 12,5 m ; Débit 3 L/s » */

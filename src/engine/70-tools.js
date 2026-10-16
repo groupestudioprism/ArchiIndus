@@ -24,6 +24,26 @@ const Tools = (() => {
     rotate: 'Sélectionner d\'abord des objets. Cliquer le centre, puis un point donnant l\'angle (ou taper l\'angle en degrés).',
     scale: 'Sélectionner d\'abord des objets. Cliquer le point de base, puis taper le facteur (ex. 2 ou 0,5) et Entrée.',
   };
+  /* consignes sur téléphone et tablette sans souris ni clavier */
+  const TOUCH_HINTS = {
+    select: 'Touchez un objet, ou glissez pour une fenêtre (gauche → droite : objets entiers ; droite → gauche : objets touchés). Deux doigts : déplacer et zoomer.',
+    line: 'Touchez le point de départ, puis les points suivants. Changez d\'outil pour terminer.',
+    poly: 'Touchez les sommets. Retouchez le dernier point pour terminer, le premier pour fermer.',
+    rect: 'Touchez deux coins opposés.',
+    circle: 'Touchez le centre, puis un point du cercle.',
+    dim: 'Touchez les deux points à coter, puis la position de la ligne de cote.',
+    text: 'Touchez l\'emplacement du texte, tapez-le puis validez.',
+    sym: 'Choisissez un symbole dans la bibliothèque du panneau, touchez pour le poser.',
+    move: 'Sélectionnez d\'abord des objets. Touchez le point de base, puis le point d\'arrivée.',
+    copy: 'Sélectionnez d\'abord des objets. Touchez le point de base, puis chaque point d\'arrivée.',
+    pan: 'Glissez pour déplacer la vue (ou deux doigts dans n\'importe quel outil).',
+    offset: 'Touchez une ligne, une polyligne ou un cercle, puis le côté du décalage.',
+    trim: 'Touchez la partie d\'une ligne ou d\'une polyligne à retirer : elle est coupée aux intersections voisines.',
+    extend: 'Touchez près de l\'extrémité d\'une ligne ou d\'une polyligne : elle est prolongée jusqu\'au premier objet rencontré.',
+    mirror: 'Sélectionnez d\'abord des objets. Touchez deux points de l\'axe de symétrie : une copie symétrique est créée.',
+    rotate: 'Sélectionnez d\'abord des objets. Touchez le centre, puis un point donnant l\'angle.',
+    scale: 'Sélectionnez d\'abord des objets. Touchez le point de base, puis tapez le facteur (ex. 2 ou 0,5).',
+  };
   const KEYS = { v: 'select', l: 'line', p: 'poly', r: 'rect', c: 'circle', d: 'dim', t: 'text', e: 'sym', m: 'move', k: 'copy', h: 'pan', o: 'offset', a: 'trim', x: 'extend', i: 'mirror', q: 'rotate', u: 'scale' };
   const TYPED_TOOLS = ['line', 'poly', 'circle', 'move', 'copy', 'rotate', 'scale'];
 
@@ -70,7 +90,7 @@ const Tools = (() => {
   function setTool(t) {
     if (!NAMES[t]) return;
     tool = t; pts = []; box = null; cur = null; hoverObj = null; target = null;
-    Status.msg(NAMES[t] + ' : ' + HINTS[t], 9000);
+    Status.msg(NAMES[t] + ' : ' + ((touchOnly() && TOUCH_HINTS[t]) || HINTS[t]), 9000);
     updateLive();
     notify('tool');
   }
@@ -91,11 +111,15 @@ const Tools = (() => {
         addObj({ type: 'line', a: pts[0], b: p });
         pts = [p];
         break;
-      case 'poly':
+      case 'poly': {
         if (!canCreate()) return;
-        if (pts.length && G.dist(pts[pts.length - 1], p) < 1e-6) return;
+        /* fin du tracé sans clavier : retoucher le dernier point termine, toucher le premier ferme (tolérance au doigt : 14 px) */
+        const tol = lastTouch ? 14 / state.view.scale : 1e-6;
+        if (pts.length >= 3 && G.dist(pts[0], p) < tol) { finishPoly(true); break; }
+        if (pts.length && G.dist(pts[pts.length - 1], p) < tol) { if (pts.length >= 2) finishPoly(false); break; }
         pts.push(p);
         break;
+      }
       case 'rect': {
         if (!canCreate()) return;
         if (!pts.length) { pts = [p]; return; }
@@ -236,8 +260,10 @@ const Tools = (() => {
     tb.focus();
   }
 
+  let lastTouch = false;
   function down(raw, e) {
     if (textBusy) return;
+    lastTouch = e?.pointerType === 'touch' || e?.pointerType === 'pen';
     if (tool === 'select') {
       const hit = pick(raw);
       if (hit) {

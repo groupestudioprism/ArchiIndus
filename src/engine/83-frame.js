@@ -6,7 +6,7 @@
    Vérifications INDICATIVES : contrainte élastique N/A + M/W, flambement (courbe b, longueur de barre), flèche relative.
    Ni coefficients partiels, ni combinaisons, ni déversement, ni assemblages : ce n'est pas une note de calcul aux Eurocodes. */
 const Frame = (() => {
-  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { maximumFractionDigits: dg, minimumFractionDigits: dg }));
+  const nf = (v, dg = 0) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, dg, dg));
   const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];

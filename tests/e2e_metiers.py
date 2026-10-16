@@ -147,9 +147,10 @@ with App(gl=False) as app:
     ok(E("Tools.current()") == 'line', 'geste vers la gauche : outil Ligne')
     pg.mouse.move(X, Y); pg.mouse.down(button='right'); pg.mouse.move(X, Y + 80, steps=6); pg.mouse.up(button='right')
     ok(E("Tools.current()") == 'select', 'geste vers le bas : Sélection')
-    s0 = E("state.view.scale"); pg.mouse.move(X, Y); pg.mouse.wheel(0, -100); pg.wait_for_timeout(100)
-    ok(near(E("state.view.scale") / s0, 1 / 0.96, 1e-6), 'molette : un cran = 4 % de zoom')
-    pg.mouse.wheel(0, -1000); pg.wait_for_timeout(100)
+    s0 = E("state.view.scale"); pg.mouse.move(X, Y); pg.mouse.wheel(0, -100); pg.wait_for_timeout(600)   # zoom molette fluide : ≈ 150 ms
+    r1 = E("state.view.scale") / s0; print("molette, un cran :", r1)
+    ok(near(r1, 1 / 0.96, 1e-6), "molette : un cran = 4 % de zoom")
+    pg.mouse.wheel(0, -1000); pg.wait_for_timeout(600)
     ok(E("state.view.scale") / s0 < 1.12, 'molette : grand écart plafonné à 1,5 cran')
     # pincement à deux doigts (événements tactiles simulés)
     s1 = E("state.view.scale")

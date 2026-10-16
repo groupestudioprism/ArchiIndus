@@ -66,7 +66,7 @@ const Analysis = (() => {
   }
   const beams = () => Doc.get().objects.map(beamOf).filter(Boolean);
 
-  const f1 = (v, d = 1) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d }));
+  const f1 = (v, d = 1) => (v == null || !Number.isFinite(v) ? '—' : fmtFR(v, d, d));
   function show() {
     const body = el('div');
     body.append(el('p', { class: 'mut small' }, 'Pré-dimensionnement indicatif (élasticité linéaire, sans coefficients partiels, sans déversement ni vérification des assemblages). Ne remplace pas une note de calcul aux Eurocodes.'));

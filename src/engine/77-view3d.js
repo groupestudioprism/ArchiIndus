@@ -221,7 +221,7 @@ const View3D = (() => {
     // zoom fluide : même pas par cran (×1,12), glissé sur ≈ 150 ms
     const wz = { pend: 0, raf: 0, last: 0 };
     const wzTick = (now) => { const dt = Math.min(50, now - (wz.last || now)); wz.last = now; if (Math.abs(wz.pend) < 1e-4) { wz.pend = 0; wz.raf = 0; return; }
-      const part = wz.pend * (1 - Math.exp(-dt / 55)); wz.pend -= part; st.k = Math.max(0.1, Math.min(20, st.k * Math.exp(part))); draw(); wz.raf = requestAnimationFrame(wzTick); };
+      const part = Math.abs(wz.pend) < 2e-3 ? wz.pend : wz.pend * (1 - Math.exp(-dt / 55));   /* fin du glissement : on applique le reste, le pas par cran est exact */ wz.pend -= part; st.k = Math.max(0.1, Math.min(20, st.k * Math.exp(part))); draw(); wz.raf = requestAnimationFrame(wzTick); };
     cv.addEventListener('wheel', (e) => { e.preventDefault(); wz.pend = Math.max(-1.5, Math.min(1.5, wz.pend + (((window.PrismSettings?.wheel?.() || {k:1, inv:false})).inv ? -1 : 1) * ((window.PrismSettings?.wheel?.() || {k:1, inv:false})).k * Math.log(e.deltaY < 0 ? 1.12 : 1 / 1.12))); if (!wz.raf) { wz.last = 0; wz.raf = requestAnimationFrame(wzTick); } }, { passive: false });
     const views = el('div', { class: 'v3d-bar' },
       ...[['Isométrique', -0.6, 0.6], ['Dessus', 0, 1.5], ['Face', 0, 0], ['Côté', -Math.PI / 2, 0]].map(([n, y, p]) => {
