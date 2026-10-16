@@ -214,11 +214,20 @@ const Canvas2D = (() => {
     if (!dl || !Number.isFinite(dl)) return;
     if (e.ctrlKey) dl *= 2.5;
     const n = Math.max(-1.5, Math.min(1.5, dl / 100));
-    const f = Math.pow(0.96, n);
-    state.view.scale = clamp(state.view.scale * f, VIEW_LIMITS.min, VIEW_LIMITS.max);
-    state.view.x = sx - before[0] * state.view.scale;
-    state.view.y = sy + before[1] * state.view.scale;
-    requestDraw();
+    // même pas par cran qu'avant (×0,96), mais appliqué en glissement sur ≈ 150 ms autour du curseur : plus de saccade
+    wz.pend = Math.max(-1.2, Math.min(1.2, wz.pend + n * Math.log(0.96))); wz.sx = sx; wz.sy = sy;
+    if (!wz.raf) { wz.last = 0; wz.raf = requestAnimationFrame(wheelTick); }
+  }
+  const wz = { pend: 0, sx: 0, sy: 0, raf: 0, last: 0 };
+  function wheelTick(now) {
+    const dt = Math.min(50, now - (wz.last || now)); wz.last = now;
+    if (Math.abs(wz.pend) < 1e-4) { wz.pend = 0; wz.raf = 0; return; }
+    const part = wz.pend * (1 - Math.exp(-dt / 55)); wz.pend -= part;
+    const before = toWorld(wz.sx, wz.sy);
+    state.view.scale = clamp(state.view.scale * Math.exp(part), VIEW_LIMITS.min, VIEW_LIMITS.max);
+    state.view.x = wz.sx - before[0] * state.view.scale;
+    state.view.y = wz.sy + before[1] * state.view.scale;
+    requestDraw(); wz.raf = requestAnimationFrame(wheelTick);
   }
 
   function init() {
