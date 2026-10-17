@@ -89,6 +89,37 @@ function cloud(db, uid, email, P) {
   ok(await code(B.lib('{}')) === 'ok' && await code(ctx('alice', 'alice@ex.fr').collection('aiLibrary').doc('bob').get()) === 'permission-denied', 'ai : bibliothèque personnelle privée');
   void fid;
 
+  /* ---- partages : la liste des invitations d'un e-mail n'est lisible qu'avec cet e-mail VÉRIFIÉ (toutes les apps) */
+  for (const P of ['ap', 'at', 'ai', 'sw', 'sc', 'ss']) {
+    await env.withSecurityRulesDisabled(async (c) => { await c.firestore().doc(`${P}Shares/x${P}__bob@ex.fr`).set({ kind: 'project', pid: 'x' + P, email: 'bob@ex.fr', role: 'view', ownerUid: 'alice', name: 'Secret', createdAt: new Date() }); });
+    const q = (db) => db.collection(P + 'Shares').where('email', '==', 'bob@ex.fr').get();
+    ok(await code(q(ctx('bob', 'bob@ex.fr'))) === 'ok', `${P} : invitations lisibles avec l'e-mail vérifié`);
+    ok(await code(q(ctx('bob2', 'bob@ex.fr', false))) === 'permission-denied', `${P} : invitations illisibles avec un e-mail non vérifié`);
+  }
+
+  /* ---- quota IA SPECTRA compté par la base (spectraAiUsage/{uid}_{app}) */
+  const today = (() => { const d = new Date(); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); })();
+  const aiRef = (db, id) => db.collection('spectraAiUsage').doc(id);
+  const bump = (db, id, n, day = today) => aiRef(db, id).set({ day, n, updatedAt: FV().serverTimestamp() });
+  const dbB = ctx('bob', 'bob@ex.fr');
+  ok(await code(bump(dbB, 'bob_spectracalc', 1)) === 'ok', 'IA : première demande du jour comptée');
+  ok(await code(bump(dbB, 'bob_spectracalc', 2)) === 'ok', 'IA : demande suivante (+1) comptée');
+  ok(await code(bump(dbB, 'bob_spectracalc', 2)) === 'permission-denied', 'IA : compteur qui ne monte pas refusé');
+  ok(await code(bump(dbB, 'bob_spectracalc', 10)) === 'permission-denied', 'IA : saut du compteur refusé');
+  ok(await code(bump(dbB, 'bob_spectracalc', 1, today - 1)) === 'permission-denied', 'IA : mauvaise date refusée');
+  ok(await code(aiRef(dbB, 'bob_spectracalc').delete()) === 'permission-denied', 'IA : remise à zéro par suppression refusée');
+  ok(await code(bump(dbB, 'alice_spectracalc', 1)) === 'permission-denied', 'IA : compteur d\'un autre compte refusé');
+  ok(await code(bump(dbB, 'bob_autreapp', 1)) === 'permission-denied', 'IA : app inconnue refusée');
+  await env.withSecurityRulesDisabled(async (c) => { const d = c.firestore();
+    await d.doc('spectraAiUsage/bob_spectrawriter').set({ day: today, n: 25, updatedAt: new Date() });
+    await d.doc('spectraAiUsage/bob_spectraslide').set({ day: today - 1, n: 25, updatedAt: new Date() });
+    await d.doc('spectraAiUsage/alice_spectracalc').set({ day: today, n: 25, updatedAt: new Date() });
+    await d.doc('licenses/alice_spectracalc').set({ userId: 'alice', productId: 'spectracalc', licenseType: 'pro', status: 'active', expiresAt: null }); });
+  ok(await code(bump(dbB, 'bob_spectrawriter', 26)) === 'permission-denied', 'IA : limite de 25 sans licence');
+  ok(await code(bump(dbB, 'bob_spectraslide', 1)) === 'ok', 'IA : le compteur repart le lendemain');
+  ok(await code(bump(ctx('alice', 'alice@ex.fr'), 'alice_spectracalc', 26)) === 'ok', 'IA : licence active → au-delà de 25');
+  ok(await code(bump(ctx('carol', 'c@ex.fr'), 'carol_spectracalc', 1)) === 'permission-denied', 'IA : compte désactivé refusé');
+
   /* ---- non-régression : ARCHIPLAN (ap*) et ARCHITRAFIC (at*) dans le même fichier */
   for (const P of ['ap', 'at']) {
     const X = cloud(ctx('bob', 'bob@ex.fr'), 'bob', 'bob@ex.fr', P);

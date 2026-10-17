@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Garde-fou avant toute publication des règles Firestore communes de Studio Prism.
 
-Le fichier de règles est UNIQUE pour le site, ARCHIPLAN, ARCHITRAFIC et ARCHIINDUS : publier un fichier auquel il manque le bloc
+Le fichier de règles est UNIQUE pour le site, ARCHIPLAN, ARCHITRAFIC, ARCHIINDUS et les trois apps SPECTRA : publier un fichier auquel il manque le bloc
 d'une app bloque le cloud de cette app (incident du 15/10/2026 : le bloc ai* écrasé par une publication faite sans lui).
 Ce script refuse un fichier incomplet. À lancer avant chaque publication (publier-regles.sh l'appelle).
 
@@ -13,6 +13,10 @@ REQUIRED = {
     'ARCHIPLAN (ap*)': ['match /apProjects/{pid}', 'match /apFolders/{fid}', 'match /apShares/', 'match /apGrants/', 'match /apUsage/{uid}', 'match /apLibrary/{uid}'],
     'ARCHITRAFIC (at*)': ['match /atProjects/{pid}', 'match /atFolders/{fid}', 'match /atShares/', 'match /atGrants/', 'match /atUsage/{uid}', 'match /atLibrary/{uid}'],
     'ARCHIINDUS (ai*)': ['match /aiProjects/{pid}', 'match /aiFolders/{fid}', 'match /aiShares/', 'match /aiGrants/', 'match /aiUsage/{uid}', 'match /aiLibrary/{uid}'],
+    'SPECTRA Writer (sw*)': ['match /swDocs/{pid}', 'match /swShares/', 'match /swGrants/', 'match /swUsage/{uid}', 'match /swPublic/'],
+    'SPECTRA Calc (sc*)': ['match /scDocs/{pid}', 'match /scShares/', 'match /scGrants/', 'match /scUsage/{uid}', 'match /scPublic/'],
+    'SPECTRA Slide (ss*)': ['match /ssDocs/{pid}', 'match /ssShares/', 'match /ssGrants/', 'match /ssUsage/{uid}', 'match /ssPublic/'],
+    'quota IA SPECTRA': ['match /spectraAiUsage/{id}'],
     'code PIN': ['match /userSecrets/{uid}'],
 }
 
@@ -31,6 +35,9 @@ def check(text):
         errs.append('la règle finale « tout refusé » (match /{document=**}) doit rester la dernière')
     if "uid + '_archiplan'" not in text: errs.append('quota ARCHIPLAN : licence _archiplan absente')
     if "uid + '_archiindus'" not in text: errs.append('quota ARCHIINDUS : licence _archiindus absente')
+    for pre in ['ap', 'at', 'ai', 'sw', 'sc', 'ss']:
+        if f'resource.data.email == {pre}Email() || isAdmin()' in text:
+            errs.append(f'partages {pre}* lisibles avec un e-mail non vérifié ({pre}Verified() manquant)')
     return errs
 
 if __name__ == '__main__':
@@ -38,4 +45,4 @@ if __name__ == '__main__':
     errs = check(text)
     if errs:
         print('RÈGLES NON PUBLIABLES :'); [print(' -', e) for e in errs]; sys.exit(1)
-    print(f'Règles complètes : site, ARCHIPLAN, ARCHITRAFIC, ARCHIINDUS, code PIN ({len(text.splitlines())} lignes).')
+    print(f'Règles complètes : site, ARCHIPLAN, ARCHITRAFIC, ARCHIINDUS, SPECTRA, quota IA, code PIN ({len(text.splitlines())} lignes).')

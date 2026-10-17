@@ -8572,7 +8572,7 @@ const FirebaseCloud = {
     return {projects:p.docs.map(d => this.meta(d)), folders:f.docs.map(d => ({...d.data(), id:d.id}))};
   },
   async listShared(){
-    const [s, g] = await Promise.all([this.db.collection('aiShares').where('email', '==', this.email()).get(), this.db.collection('aiGrants').where('uid', '==', this.uid()).get()]);
+    const [s, g] = await Promise.all([this.db.collection('aiShares').where('email', '==', this.email()).get().catch(e => { if (e?.code === 'permission-denied') return {docs:[], size:0, empty:true, forEach(){}}; throw e; }), this.db.collection('aiGrants').where('uid', '==', this.uid()).get()]);
     const projects = [], folders = [], seenP = new Set(), seenF = new Set();
     const getP = async (pid, role, via, extra = {}) => { if (seenP.has(pid)) return null; seenP.add(pid); try { const d = await this.P(pid).get(); if (!d.exists) return null; const m = this.meta(d); return {...m, role:role === 'link' ? m.linkMode : role, via, ...extra}; } catch(e){ return extra.fallback || null; } };
     const getF = async (fid, role, via, name, ownerName) => {
